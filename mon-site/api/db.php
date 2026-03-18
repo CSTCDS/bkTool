@@ -1,7 +1,7 @@
 <?php
 // api/db.php — create a PDO instance
 
-$config = '../config/database.php';
+$config = require __DIR__ . '/../config/database.php';
 
 $dsn = sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', $config['db_host'], $config['db_name']);
 
