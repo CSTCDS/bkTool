@@ -58,7 +58,12 @@ try {
 document.getElementById('syncBtn').addEventListener('click', function(){
   const status = document.getElementById('syncStatus');
   status.textContent = '… synchronisation en cours';
-  fetch('/sync.php', { method: 'GET' })
+  // Ask for token (simple protection). Leave empty if no token configured on server.
+  const token = prompt('Token de synchronisation (laisser vide si non configuré)');
+  const headers = {};
+  if (token && token.trim() !== '') headers['X-Sync-Token'] = token.trim();
+
+  fetch('/sync.php', { method: 'GET', headers })
     .then(r => r.json())
     .then(j => {
       if (j.status === 'ok') status.textContent = `OK comptes=${j.result.accounts} tx=${j.result.transactions}`;
