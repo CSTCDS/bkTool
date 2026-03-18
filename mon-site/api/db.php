@@ -2,7 +2,7 @@
 // api/db.php — create a PDO instance
 
 // Try to load configuration from expected config file
-$configPath = __DIR__ . '/../config/database.php';
+$configPath = __DIR__ . '/../config/database.php'; 
 if (file_exists($configPath)) {
     $config = require $configPath;
 } else {
