@@ -5,6 +5,10 @@ on:
     branches:
       - main   # Déploie à chaque push sur la branche main
 
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   ftp-deploy:
     name: 🟦 Deploy to FTP Server
@@ -21,5 +25,5 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./  # Répertoire local à envoyer
-          server-dir: /utils.asso.st/bkTool
+          server-dir: /utils.asso.st/bkTool/
           log-level: standard
