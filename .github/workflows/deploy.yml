@@ -25,5 +25,5 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./  # Répertoire local à envoyer
-          server-dir: /utils.asso.st/bkTool/
+          server-dir: bkTool/
           log-level: standard
