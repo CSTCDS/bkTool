@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 try {
   $pdo = require __DIR__ . '/mon-site/api/db.php';
 } catch (Throwable $e) {
-  echo '<h1>Erreur BDD</h1><pre>' . htmlspecialchars($e->getMessage()) . '</pre>';
+  echo '<h1>Erreur BDD</h1><pre>' . htmlspecialchars((string)$e) . '</pre>';
   exit;
 }
 
