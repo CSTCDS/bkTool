@@ -1,0 +1,5 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # deny access to parent folders
+  RewriteRule ^config/ - [F]
+</IfModule>

@@ -1,0 +1,13 @@
+# WinSCP script to upload mon-site/public to remote SFTP
+# Usage: winscp.com /script=deploy-winscp.txt
+
+option batch continue
+option confirm off
+
+# open session (username:password in URL) - consider replacing password with prompt
+open sftp://2707990xENpNp:mS9_sktjmFzmb8v@ftp.amapgeste.fr/ -hostkey="*"
+
+lcd C:\\Perso\\LWS\\bkTool\\mon-site\\public
+cd /
+put -r *
+exit
