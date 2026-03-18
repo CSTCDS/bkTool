@@ -64,8 +64,17 @@ document.getElementById('syncBtn').addEventListener('click', function(){
   if (token && token.trim() !== '') headers['X-Sync-Token'] = token.trim();
 
   fetch('/sync.php', { method: 'GET', headers })
-    .then(r => r.json())
-    .then(j => {
+    .then(r => r.text())
+    .then(text => {
+      // Try to parse JSON, otherwise show server response for debugging
+      let j = null;
+      try {
+        j = JSON.parse(text);
+      } catch (e) {
+        console.error('Réponse non-JSON de /sync.php:', text);
+        status.textContent = 'Erreur: réponse invalide du serveur. Voir console pour détails.';
+        return;
+      }
       if (j.status === 'ok') status.textContent = `OK comptes=${j.result.accounts} tx=${j.result.transactions}`;
       else status.textContent = 'Erreur: ' + (j.message||'');
     }).catch(e => { status.textContent = 'Erreur: '+e; });
