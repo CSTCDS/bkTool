@@ -1,4 +1,4 @@
-config/
+// Keep .gitignore but allow committing config/ (user requested)
 /vendor/
 /node_modules/
 C:\\perso\\LWS\\secrets\\
