@@ -47,10 +47,25 @@ try {
   </section>
 
   <p><a href="/transactions.php">Voir transactions</a></p>
+  <p>
+    <button id="syncBtn">Synchroniser maintenant</button>
+    <span id="syncStatus"></span>
+  </p>
 </main>
 
 <script src="/assets/js/app.js"></script>
 <script>
+document.getElementById('syncBtn').addEventListener('click', function(){
+  const status = document.getElementById('syncStatus');
+  status.textContent = '… synchronisation en cours';
+  fetch('/sync.php', { method: 'GET' })
+    .then(r => r.json())
+    .then(j => {
+      if (j.status === 'ok') status.textContent = `OK comptes=${j.result.accounts} tx=${j.result.transactions}`;
+      else status.textContent = 'Erreur: ' + (j.message||'');
+    }).catch(e => { status.textContent = 'Erreur: '+e; });
+});
+
 // Exemple de données pour Chart.js
 const ctx = document.getElementById('chart').getContext('2d');
 const chart = new Chart(ctx, {
