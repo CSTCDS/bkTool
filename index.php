@@ -75,8 +75,17 @@ document.getElementById('syncBtn').addEventListener('click', function(){
         status.textContent = 'Erreur: réponse invalide du serveur. Voir console pour détails.';
         return;
       }
-      if (j.status === 'ok') status.textContent = `OK comptes=${j.result.accounts} tx=${j.result.transactions}`;
-      else status.textContent = 'Erreur: ' + (j.message||'');
+      console.log('sync result', j);
+      if (j.status === 'ok') {
+        let msg = `OK comptes=${j.result.accounts} tx=${j.result.transactions}`;
+        if (j.result && Array.isArray(j.result.errors) && j.result.errors.length) {
+          msg += ' — erreurs: ' + j.result.errors.join(' | ');
+        }
+        status.textContent = msg;
+      } else {
+        // show detailed server message when available
+        status.textContent = 'Erreur: ' + (j.message || JSON.stringify(j));
+      }
     }).catch(e => { status.textContent = 'Erreur: '+e; });
 });
 
