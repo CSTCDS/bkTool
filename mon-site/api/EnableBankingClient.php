@@ -17,15 +17,18 @@ class EnableBankingClient
     private function request(string $method, string $path)
     {
         $url = $this->base . $path;
-
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+        // timeouts to avoid long hanging requests
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 
         $auth = base64_encode($this->clientId . ':' . $this->clientSecret);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Authorization: Basic ' . $auth,
-            'Accept: application/json'
+            'Accept: application/json',
+            'User-Agent: bkTool/1.0'
         ]);
 
         $resp = curl_exec($ch);
@@ -33,11 +36,15 @@ class EnableBankingClient
         if ($resp === false) {
             $err = curl_error($ch);
             curl_close($ch);
-            throw new RuntimeException('cURL error: ' . $err);
+            return ['status' => 0, 'body' => null, 'error' => 'cURL error: ' . $err];
         }
         curl_close($ch);
 
         $data = json_decode($resp, true);
+        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
+            // Return raw response when JSON parse fails
+            return ['status' => $http, 'body' => null, 'raw' => $resp];
+        }
         return ['status' => $http, 'body' => $data];
     }
 

@@ -35,29 +35,38 @@ function run_sync($pdo, $config)
     $client = new EnableBankingClient($config);
     $result = ['accounts' => 0, 'transactions' => 0, 'errors' => []];
 
-    try {
-        $res = $client->getAccounts();
-        if ($res['status'] >= 200 && $res['status'] < 300 && is_array($res['body'])) {
-            $accounts = $res['body']['data'] ?? $res['body'] ?? [];
-            foreach ($accounts as $acc) {
-                upsertAccount($pdo, $acc);
-                $result['accounts']++;
+    // Fetch accounts
+    $res = $client->getAccounts();
+    if (isset($res['error'])) {
+        $result['errors'][] = $res['error'];
+        return $result;
+    }
+    if (!isset($res['status']) || $res['status'] === 0) {
+        $result['errors'][] = 'Unknown error fetching accounts';
+        return $result;
+    }
+    if ($res['status'] >= 200 && $res['status'] < 300 && is_array($res['body'])) {
+        $accounts = $res['body']['data'] ?? $res['body'] ?? [];
+        foreach ($accounts as $acc) {
+            upsertAccount($pdo, $acc);
+            $result['accounts']++;
 
-                $aid = $acc['id'] ?? $acc['accountId'] ?? null;
-                if ($aid) {
-                    $tres = $client->getAccountTransactions($aid);
-                    if ($tres['status'] >= 200 && $tres['status'] < 300 && is_array($tres['body'])) {
-                        $txs = $tres['body']['data'] ?? $tres['body'] ?? [];
-                        foreach ($txs as $tx) {
-                            insertTransaction($pdo, array_merge($tx, ['accountId' => $aid]));
-                            $result['transactions']++;
-                        }
+            $aid = $acc['id'] ?? $acc['accountId'] ?? null;
+            if ($aid) {
+                $tres = $client->getAccountTransactions($aid);
+                if (isset($tres['error'])) {
+                    $result['errors'][] = $tres['error'];
+                    continue;
+                }
+                if ($tres['status'] >= 200 && $tres['status'] < 300 && is_array($tres['body'])) {
+                    $txs = $tres['body']['data'] ?? $tres['body'] ?? [];
+                    foreach ($txs as $tx) {
+                        insertTransaction($pdo, array_merge($tx, ['accountId' => $aid]));
+                        $result['transactions']++;
                     }
                 }
             }
         }
-    } catch (Throwable $e) {
-        $result['errors'][] = (string)$e;
     }
 
     return $result;
