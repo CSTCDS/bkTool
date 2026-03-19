@@ -30,8 +30,8 @@ try {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>bkTool - Dashboard</title>
-  <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="assets/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -46,14 +46,14 @@ try {
     <canvas id="chart"></canvas>
   </section>
 
-  <p><a href="/transactions.php">Voir transactions</a></p>
+  <p><a href="transactions.php">Voir transactions</a></p>
   <p>
     <button id="syncBtn">Synchroniser maintenant</button>
     <span id="syncStatus"></span>
   </p>
 </main>
 
-<script src="/assets/js/app.js"></script>
+  <script src="assets/js/app.js"></script>
 <script>
 document.getElementById('syncBtn').addEventListener('click', function(){
   const status = document.getElementById('syncStatus');
@@ -63,7 +63,7 @@ document.getElementById('syncBtn').addEventListener('click', function(){
   const headers = {};
   if (token && token.trim() !== '') headers['X-Sync-Token'] = token.trim();
 
-  fetch('/sync.php', { method: 'GET', headers })
+  fetch('sync.php', { method: 'GET', headers })
     .then(r => r.text())
     .then(text => {
       // Try to parse JSON, otherwise show server response for debugging
