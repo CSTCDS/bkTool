@@ -32,7 +32,7 @@ if (!is_array($secrets)) {
         'db_pass' => '',
         'enable_client_id' => 'YOUR_CLIENT_ID',
         'enable_client_secret' => 'YOUR_CLIENT_SECRET',
-        'enable_api_base' => 'https://api.sandbox.enablebanking.com'
+        'enable_api_base' => 'https://api.enablebanking.com'
     ];
 }
 
