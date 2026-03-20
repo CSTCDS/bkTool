@@ -6,7 +6,7 @@ Modif manuelle
 
 2) Architecture générale
 - Langage : PHP (scripts indépendants, pas de composer requis).
-- Emplacement clé : racine du projet (fichiers publics), code principal sous `mon-site/`.
+- Emplacement clé : racine du projet (fichiers publics), code principal sous `/`.
 - Principaux fichiers et rôles :
 	- `mon-site/api/JwtHelper.php` : génération de JWT signés RS256 (clés RSA privées).
 	- `mon-site/api/EnableBankingClient.php` : client central pour appeler l'API Enable Banking avec `Authorization: Bearer <JWT>`.

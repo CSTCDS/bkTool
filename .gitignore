@@ -1,0 +1,14 @@
+# Ignore sensitive keys and certs
+private.key
+public.crt
+*.key
+*.crt
+
+# Env and node deps
+.env
+/node_modules/
+/vendor/
+
+# OS files
+Thumbs.db
+.DS_Store
