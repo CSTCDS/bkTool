@@ -114,15 +114,14 @@ try {
 </head>
 <body>
 <main>
-  <h1>bkTool — Dashboard</h1>
   <div class="site-header">
     <div class="site-title">bkTool</div>
-    <div class="tabs">
+    <nav class="tabs">
       <a href="index.php" class="active">Dashboard</a>
       <a href="accounts.php">Comptes</a>
       <a href="transactions.php">Transactions</a>
       <a href="choix.php">Connecter banque</a>
-    </div>
+    </nav>
   </div>
   <section>
     <h2>Solde total : <?php echo htmlspecialchars($total); ?> </h2>
