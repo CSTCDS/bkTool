@@ -40,7 +40,7 @@ if (!empty($_GET['to']))      { $where[] = 't.booking_date <= :to';    $params['
 
 $sql = 'SELECT t.*, a.name AS account_name FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id';
 if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
-$sql .= ' ORDER BY t.booking_date DESC, t.status ASC LIMIT 1000';
+$sql .= ' ORDER BY FIELD(t.status, \'pending\', \'booked\'), t.booking_date DESC, a.name ASC LIMIT 1000';
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);

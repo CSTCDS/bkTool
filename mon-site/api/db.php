@@ -46,5 +46,9 @@ try {
     throw $e;
 }
 
+// Vérification / création des tables + migrations
+require_once __DIR__ . '/migrate.php';
+bkt_migrate($pdo);
+
 return $pdo;
 
