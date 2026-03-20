@@ -10,10 +10,10 @@ th{background:#f2f2f2}
 .tx-table .col-date{white-space:nowrap;width:12%}
 .tx-table .col-montant{white-space:nowrap;width:8%;text-align:right}
 .tx-table .col-compte{white-space:nowrap;width:5%}
-.tx-table .col-date{white-space:nowrap;width:auto}
-.tx-table .col-montant{white-space:nowrap;width:auto;text-align:right} /* allow auto width based on content */
-.tx-table .col-solde{white-space:nowrap;width:auto;text-align:right}
-.tx-table .col-devise{width:auto;text-align:center}
+.tx-table .col-date{white-space:nowrap;width:4%}
+.tx-table .col-montant{white-space:nowrap;width:6%;text-align:right} /* reduced ~20% */
+.tx-table .col-solde{white-space:nowrap;width:8%;text-align:right} /* reduced ~20% */
+.tx-table .col-devise{width:3%;text-align:center} /* reduced ~20% */
 .tx-table .col-desc{white-space:normal;width:1%;text-align:left} /* description column expands to fill remaining space */
 .tx-table th.col-desc{text-align:left}
 .tx-table .col-cat{width:10%}
