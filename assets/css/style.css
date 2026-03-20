@@ -1,8 +1,8 @@
 body{font-family:Arial,Helvetica,sans-serif;margin:20px;background:#f7f9fc;color:#222}
 main{max-width:1000px;margin:0 auto}
 main.full-width{max-width:100%}
-table{width:100%;border-collapse:collapse;table-layout:fixed}
-th,td{border:1px solid #ddd;padding:8px;overflow:hidden;text-overflow:ellipsis}
+table{width:100%;border-collapse:collapse;table-layout:auto}
+th,td{border:1px solid #ddd;padding:8px}
 th{background:#f2f2f2}
 
 /* Transactions table column widths */
@@ -10,11 +10,11 @@ th{background:#f2f2f2}
 .tx-table .col-date{white-space:nowrap;width:12%}
 .tx-table .col-montant{white-space:nowrap;width:8%;text-align:right}
 .tx-table .col-compte{white-space:nowrap;width:5%}
-.tx-table .col-date{white-space:nowrap;width:5%}
-.tx-table .col-montant{white-space:nowrap;width:7%;text-align:right} /* reduced -30% from 10% -> ~7% */
-.tx-table .col-solde{white-space:nowrap;width:10%;text-align:right}
-.tx-table .col-devise{width:4%;text-align:center} /* reduced -15% from 5% -> ~4% */
-.tx-table .col-desc{width:auto;text-align:left} /* description column expands to fill remaining space */
+.tx-table .col-date{white-space:nowrap;width:auto}
+.tx-table .col-montant{white-space:nowrap;width:auto;text-align:right} /* allow auto width based on content */
+.tx-table .col-solde{white-space:nowrap;width:auto;text-align:right}
+.tx-table .col-devise{width:auto;text-align:center}
+.tx-table .col-desc{white-space:normal;width:1%;text-align:left} /* description column expands to fill remaining space */
 .tx-table th.col-desc{text-align:left}
 .tx-table .col-cat{width:10%}
 .tx-table .col-cat select{width:100%;font-size:.82rem;padding:2px}
@@ -25,6 +25,19 @@ th{background:#f2f2f2}
   .tx-table th.col-cat,
   .tx-table td.col-cat { display: none; }
 }
+
+/* Ensure key numeric/date columns are not truncated */
+.tx-table .col-date,
+.tx-table .col-montant,
+.tx-table .col-solde,
+.tx-table .col-devise {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* Let description wrap and take remaining space */
+.tx-table .col-desc{white-space:normal;overflow:visible}
 .tx-table .col-status{white-space:nowrap;width:8%;text-align:center}
 .tx-table .col-cat select{width:100%;font-size:.82rem;padding:2px}
 
