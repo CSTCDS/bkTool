@@ -1,0 +1,6 @@
+Politique de confidentialité
+
+Nous recueillons et traitons uniquement les données nécessaires au fonctionnement de l'application bkTool.
+Les informations bancaires récupérées via enablebanking.com sont stockées localement sur le serveur administré par le responsable du site.
+Les données ne sont partagées avec des tiers que lorsque cela est nécessaire pour fournir le service (par exemple fournisseurs d'API bancaires) et conformément à la loi.
+Pour toute question relative à la confidentialité, contactez l'administrateur du site.
