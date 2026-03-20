@@ -179,8 +179,9 @@ const chart = new Chart(ctx, {
             const acc = ds.account || {};
             const value = context.parsed && context.parsed.y !== undefined ? context.parsed.y : context.formattedValue;
             const date = context.label;
+            // Use dataset label (which contains the account libellé) as primary label
             return [
-              `Compte: ${acc.name || acc.id || ds.label}`,
+              `Compte: ${ds.label || acc.name || acc.id}`,
               `Date: ${date}`,
               `Valeur cumulée: ${value}`,
               `Solde actuel: ${acc.balance || ''} ${acc.currency || ''}`
