@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   currency VARCHAR(8),
   description TEXT,
   booking_date DATE,
+  status VARCHAR(20) DEFAULT 'booked',
   raw JSON,
   created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX (account_id)

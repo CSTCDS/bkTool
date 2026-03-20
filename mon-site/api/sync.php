@@ -25,15 +25,32 @@ function insertTransaction($pdo, $tx)
         $amount = -$amount;
     }
 
-    $stmt = $pdo->prepare('INSERT IGNORE INTO transactions (id, account_id, amount, currency, description, booking_date, raw, created_at) VALUES (:id, :account_id, :amount, :currency, :description, :booking_date, :raw, NOW())');
+    // Date: prefer booking_date, fallback to value_date, then today
+    $bookingDate = $tx['booking_date'] ?? $tx['value_date'] ?? null;
+    // Status: pending if no booking_date in original data
+    $status = !empty($tx['booking_date']) ? 'booked' : 'pending';
+
+    $id = $tx['entry_reference'] ?? $tx['transaction_id'] ?? bin2hex(random_bytes(8));
+    $accountId = $tx['_account_id'] ?? null;
+    $currency = $tx['transaction_amount']['currency'] ?? 'EUR';
+    $description = is_array($tx['remittance_information'] ?? null) ? implode(' ', $tx['remittance_information']) : ($tx['remittance_information'] ?? null);
+    $raw = json_encode($tx);
+
+    // Use ON DUPLICATE KEY UPDATE so pending transactions get updated on next sync
+    $stmt = $pdo->prepare(
+        'INSERT INTO transactions (id, account_id, amount, currency, description, booking_date, status, raw, created_at) '
+      . 'VALUES (:id, :account_id, :amount, :currency, :description, :booking_date, :status, :raw, NOW()) '
+      . 'ON DUPLICATE KEY UPDATE amount = VALUES(amount), booking_date = VALUES(booking_date), status = VALUES(status), description = VALUES(description), raw = VALUES(raw)'
+    );
     $stmt->execute([
-        ':id' => $tx['entry_reference'] ?? $tx['transaction_id'] ?? bin2hex(random_bytes(8)),
-        ':account_id' => $tx['_account_id'] ?? null,
+        ':id' => $id,
+        ':account_id' => $accountId,
         ':amount' => $amount,
-        ':currency' => $tx['transaction_amount']['currency'] ?? 'EUR',
-        ':description' => is_array($tx['remittance_information'] ?? null) ? implode(' ', $tx['remittance_information']) : ($tx['remittance_information'] ?? null),
-        ':booking_date' => $tx['booking_date'] ?? null,
-        ':raw' => json_encode($tx)
+        ':currency' => $currency,
+        ':description' => $description,
+        ':booking_date' => $bookingDate,
+        ':status' => $status,
+        ':raw' => $raw
     ]);
 }
 

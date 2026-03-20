@@ -40,7 +40,7 @@ if (!empty($_GET['to']))      { $where[] = 't.booking_date <= :to';    $params['
 
 $sql = 'SELECT t.*, a.name AS account_name FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id';
 if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
-$sql .= ' ORDER BY t.booking_date DESC LIMIT 1000';
+$sql .= ' ORDER BY t.booking_date DESC, t.status ASC LIMIT 1000';
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
@@ -101,10 +101,12 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
       <tr><th class="col-compte">Compte</th><th class="col-date">Date</th><th class="col-montant">Montant</th><th class="col-devise">Devise</th><th class="col-desc">Commentaire</th></tr>
     </thead>
     <tbody>
-    <?php foreach ($txs as $t): ?>
-      <tr>
+    <?php foreach ($txs as $t):
+      $isPending = (($t['status'] ?? 'booked') === 'pending');
+    ?>
+      <tr<?php if ($isPending) echo ' class="row-pending"'; ?>>
         <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>"><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
-        <td class="col-date"><?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); ?></td>
+        <td class="col-date"><?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); if ($isPending) echo ' <span class="badge-pending">en attente</span>'; ?></td>
         <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
         <td class="col-devise"><?php echo htmlspecialchars((string)($t['currency'] ?? '')); ?></td>
         <td class="col-desc"><?php echo htmlspecialchars((string)($t['description'] ?? '')); ?></td>
