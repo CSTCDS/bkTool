@@ -33,7 +33,7 @@ $params = http_build_query([
 ]);
 $widgetUrl = $widgetBase . '?' . $params;
 // Use a server-side proxy so we can send Authorization header without exposing secrets
-$proxyUrl = '/widget_proxy.php?' . $params;
+$proxyUrl = 'widget_proxy.php?' . $params;
 
 ?><!doctype html>
 <html>
