@@ -119,6 +119,7 @@ try {
     <a href="index.php" class="active">Dashboard</a>
     <a href="accounts.php">Comptes</a>
     <a href="transactions.php">Transactions</a>
+    <a href="categories.php">Catégories</a>
     <a href="choix.php">Connecter banque</a>
   </nav>
 </div>

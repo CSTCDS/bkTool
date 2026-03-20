@@ -32,6 +32,32 @@ foreach ($accs as $a) {
   $ci++;
 }
 
+// Noms des critères
+$criterionNames = [];
+for ($i = 1; $i <= 4; $i++) {
+  $s = $pdo->prepare('SELECT `value` FROM settings WHERE `key` = :k');
+  $s->execute([':k' => "criterion_{$i}_name"]);
+  $criterionNames[$i] = $s->fetchColumn() ?: "Critère $i";
+}
+
+// Catégories hiérarchiques pour les 4 critères
+$allCats = $pdo->query('SELECT * FROM categories ORDER BY criterion, sort_order, label')->fetchAll(PDO::FETCH_ASSOC);
+$catTree = []; // criterion => [ parentId => ['info'=>..., 'children'=>[...]] ]
+foreach ($allCats as $c) {
+  $cr = $c['criterion'];
+  if (!isset($catTree[$cr])) $catTree[$cr] = [];
+  if ($c['parent_id'] === null) {
+    if (!isset($catTree[$cr][$c['id']])) $catTree[$cr][$c['id']] = ['info' => $c, 'children' => []];
+    else $catTree[$cr][$c['id']]['info'] = $c;
+  } else {
+    if (!isset($catTree[$cr][$c['parent_id']])) $catTree[$cr][$c['parent_id']] = ['info' => null, 'children' => []];
+    $catTree[$cr][$c['parent_id']]['children'][] = $c;
+  }
+}
+// Flat map id=>label for quick lookup
+$catLabels = [];
+foreach ($allCats as $c) { $catLabels[$c['id']] = $c['label']; }
+
 $where = [];
 $params = [];
 if (!empty($_GET['account'])) { $where[] = 't.account_id = :account'; $params[':account'] = $_GET['account']; }
@@ -72,6 +98,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
     <a href="index.php">Dashboard</a>
     <a href="accounts.php">Comptes</a>
     <a href="transactions.php" class="active">Transactions</a>
+    <a href="categories.php">Catégories</a>
     <a href="choix.php">Connecter banque</a>
   </nav>
 </div>
@@ -98,7 +125,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
 
   <table class="tx-table">
     <thead>
-      <tr><th class="col-compte">Compte</th><th class="col-date">Date</th><th class="col-montant">Montant</th><th class="col-devise">Devise</th><th class="col-desc">Commentaire</th></tr>
+      <tr><th class="col-compte">Compte</th><th class="col-date">Date</th><th class="col-montant">Montant</th><th class="col-devise">Devise</th><th class="col-desc">Commentaire</th><?php for($i=1;$i<=4;$i++): ?><th class="col-cat"><?php echo htmlspecialchars($criterionNames[$i]); ?></th><?php endfor; ?></tr>
     </thead>
     <tbody>
     <?php foreach ($txs as $t):
@@ -110,10 +137,45 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
         <td class="col-devise"><?php echo htmlspecialchars((string)($t['currency'] ?? '')); ?></td>
         <td class="col-desc"><?php echo htmlspecialchars((string)($t['description'] ?? '')); ?></td>
+        <?php for ($ci2 = 1; $ci2 <= 4; $ci2++):
+          $field = "cat{$ci2}_id";
+          $curVal = $t[$field] ?? null;
+        ?>
+        <td class="col-cat">
+          <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>">
+            <option value="">—</option>
+            <?php if (!empty($catTree[$ci2])): foreach ($catTree[$ci2] as $pid => $node): if (!$node['info']) continue; ?>
+              <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
+                <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)$curVal === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
+                <?php foreach ($node['children'] as $child): ?>
+                  <option value="<?php echo $child['id']; ?>" <?php echo ((int)$curVal === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
+                <?php endforeach; ?>
+              </optgroup>
+            <?php endforeach; endif; ?>
+          </select>
+        </td>
+        <?php endfor; ?>
       </tr>
     <?php endforeach; ?>
     </tbody>
   </table>
 </main>
+<script>
+// Save category selection via AJAX
+document.querySelectorAll('.cat-select').forEach(function(sel) {
+  sel.addEventListener('change', function() {
+    var data = new FormData();
+    data.append('tx_id', this.dataset.txid);
+    data.append('field', this.dataset.field);
+    data.append('value', this.value);
+    fetch('save_tx_category.php', { method: 'POST', body: data })
+      .then(function(r) { return r.json(); })
+      .then(function(j) {
+        if (!j.ok) console.error('Erreur save category', j);
+      })
+      .catch(function(e) { console.error(e); });
+  });
+});
+</script>
 </body>
 </html>

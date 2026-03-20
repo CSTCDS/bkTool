@@ -6,12 +6,14 @@ th,td{border:1px solid #ddd;padding:8px;overflow:hidden;text-overflow:ellipsis}
 th{background:#f2f2f2}
 
 /* Transactions table column widths */
-.tx-table .col-compte{white-space:nowrap;width:15%}
-.tx-table .col-date{white-space:nowrap;width:10%}
-.tx-table .col-montant{white-space:nowrap;width:15%;text-align:right}
-.tx-table .col-devise{width:5%;text-align:center}
+.tx-table .col-compte{white-space:nowrap;width:10%}
+.tx-table .col-date{white-space:nowrap;width:8%}
+.tx-table .col-montant{white-space:nowrap;width:8%;text-align:right}
+.tx-table .col-devise{width:4%;text-align:center}
 .tx-table .col-desc{width:auto;text-align:left}
 .tx-table th.col-desc{text-align:left}
+.tx-table .col-cat{width:9%}
+.tx-table .col-cat select{width:100%;font-size:.82rem;padding:2px}
 
 /* Pending transaction rows */
 .row-pending{background:#fff3e0;font-style:italic}
@@ -34,6 +36,7 @@ th{background:#f2f2f2}
 .tabs a:nth-child(2){background:#c8e6c9;border-color:#a5d6a7}
 .tabs a:nth-child(3){background:#fff9c4;border-color:#fff176}
 .tabs a:nth-child(4){background:#ffe0b2;border-color:#ffcc80}
+.tabs a:nth-child(5){background:#e1bee7;border-color:#ce93d8}
 .tabs a:hover{filter:brightness(1.06);color:#37474f}
 .tabs a.active{
   background:#fff !important;color:#37474f;
