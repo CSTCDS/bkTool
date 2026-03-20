@@ -5,8 +5,12 @@ session_start();
 $cfgPath = __DIR__ . '/mon-site/config/database.php';
 $config = require $cfgPath;
 
-$base = rtrim($config['enable_api_base'] ?? '', '/') ?: 'https://api.enablebanking.com';
-$isSandbox = (stripos($base, 'sandbox') !== false);
+$env = strtoupper($config['enable_environment'] ?? 'PRODUCTION');
+$isSandbox = ($env === 'SANDBOX');
+$base = rtrim($config['enable_api_base'] ?? '', '/');
+if (!$base) {
+    $base = $isSandbox ? 'https://api.sandbox.enablebanking.com' : 'https://api.enablebanking.com';
+}
 
 // Build callback URL
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
@@ -67,6 +71,9 @@ $country = $config['enable_country'] ?? 'FR';
 
   <?php if (!empty($error)): ?>
     <p style="color:red"><strong>Erreur :</strong> <?= htmlspecialchars($error) ?></p>
+    <?php if (!empty($_POST['aspsp_name'])): ?>
+      <p><small>Banque envoyée : <?= htmlspecialchars($_POST['aspsp_name']) ?> (<?= htmlspecialchars($_POST['aspsp_country'] ?? '') ?>), env=<?= htmlspecialchars($env) ?></small></p>
+    <?php endif; ?>
   <?php endif; ?>
 
   <p>Sélectionnez votre banque ci-dessous :</p>

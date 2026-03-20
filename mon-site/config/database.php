@@ -33,6 +33,7 @@ if (!is_array($secrets)) {
         'enable_app_id' => 'YOUR_APP_ID',
         'enable_private_key_path' => __DIR__ . '/../../secrets/private.key',
         'enable_api_base' => 'https://api.enablebanking.com',
+        'enable_environment' => 'SANDBOX',
         'enable_country' => 'FR'
     ];
 }
