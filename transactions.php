@@ -246,7 +246,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         <th class="col-montant">Montant</th>
         <th class="col-devise">Devise</th>
         <th class="col-desc">Commentaire</th>
-        <th class="col-categories" style="width:20%">Catégories</th>
+        <th class="col-categories" style="width:25%">Catégories</th>
         <?php if ($noDateFilter): ?><th class="col-solde">Solde</th><?php endif; ?>
       </tr>
     </thead>
