@@ -28,33 +28,27 @@ $palette = [
 ];
 $accColorMap = [];
 $ci = 0;
-foreach ($accs as $a) {
-  $c = trim((string)($a['color'] ?? ''));
-  $bg = null;
-  if ($c !== '') {
-    // hex #rrggbb
-    if (preg_match('/^#([0-9a-fA-F]{6})$/', $c, $m)) {
-      $hex = $m[1];
-      $r = hexdec(substr($hex,0,2));
-      $g = hexdec(substr($hex,2,2));
-      $b = hexdec(substr($hex,4,2));
-      $bg = "rgba($r,$g,$b,0.18)";
-    } elseif (strpos($c, 'rgba(') === 0) {
-      $bg = preg_replace('/,\s*([0-9\.]+)\)$/', ',0.18)', $c);
-    } elseif (strpos($c, 'rgb(') === 0) {
-      $rgb = preg_replace('/rgb\(([^)]+)\)/','rgba($1,0.18)',$c);
-      $bg = $rgb;
-    } else {
-      // fallback: use raw value as background
-      $bg = $c;
+  foreach ($accs as $a) {
+    $c = trim((string)($a['color'] ?? ''));
+    $bg = null;
+    if ($c !== '') {
+      // If stored as hex or rgb(a), prefer using it directly as background
+      if (preg_match('/^#([0-9a-fA-F]{6})$/', $c)) {
+        $bg = $c; // use hex as-is
+      } elseif (strpos($c, 'rgb') === 0) {
+        $bg = $c; // rgb(...) or rgba(...)
+      } else {
+        // fallback to using raw value
+        $bg = $c;
+      }
     }
+    if ($bg === null) {
+      // fallback to palette with light alpha
+      $bg = $palette[$ci % count($palette)];
+    }
+    $accColorMap[$a['id']] = $bg;
+    $ci++;
   }
-  if ($bg === null) {
-    $bg = $palette[$ci % count($palette)];
-  }
-  $accColorMap[$a['id']] = $bg;
-  $ci++;
-}
 
 // Noms des critères
 $criterionNames = [];
