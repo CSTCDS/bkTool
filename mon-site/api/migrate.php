@@ -25,6 +25,7 @@ function bkt_migrate(PDO $pdo): void
         id VARCHAR(191) PRIMARY KEY,
         name VARCHAR(255),
         balance DECIMAL(20,4) DEFAULT 0,
+        color VARCHAR(64) DEFAULT NULL,
         currency VARCHAR(8),
         raw JSON,
         updated_at TIMESTAMP NULL
@@ -96,6 +97,13 @@ function bkt_migrate(PDO $pdo): void
             $stmt = $pdo->prepare('INSERT IGNORE INTO settings (`key`, `value`) VALUES (:k, :v)');
             foreach ($defaults as $k => $v) {
                 $stmt->execute([':k' => $k, ':v' => $v]);
+            }
+        },
+        // Version 5 : add color column to accounts for chart/UX
+        5 => function (PDO $pdo) {
+            $cols = $pdo->query('SHOW COLUMNS FROM accounts LIKE \'color\'')->fetchAll();
+            if (empty($cols)) {
+                $pdo->exec("ALTER TABLE accounts ADD COLUMN color VARCHAR(64) DEFAULT NULL AFTER balance");
             }
         },
     ];

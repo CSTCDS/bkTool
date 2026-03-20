@@ -17,16 +17,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['account_id'])) {
   $id = $_POST['account_id'] ?? null;
   $name = trim((string)($_POST['name'] ?? ''));
   $currency = trim((string)($_POST['currency'] ?? ''));
+  $color = trim((string)($_POST['color'] ?? '')) ?: null;
   if ($id && $name !== '') {
-    $stmt = $pdo->prepare('UPDATE accounts SET name = :name, currency = :currency, updated_at = NOW() WHERE id = :id');
-    $stmt->execute([':name' => $name, ':currency' => $currency, ':id' => $id]);
+    $stmt = $pdo->prepare('UPDATE accounts SET name = :name, currency = :currency, color = :color, updated_at = NOW() WHERE id = :id');
+    $stmt->execute([':name' => $name, ':currency' => $currency, ':color' => $color, ':id' => $id]);
     $notice = 'Compte mis à jour.';
   } else {
     $notice = 'Données invalides.';
   }
 }
 
-$stmt = $pdo->query('SELECT id, name, currency, balance, updated_at FROM accounts ORDER BY name');
+$stmt = $pdo->query('SELECT id, name, currency, balance, color, updated_at FROM accounts ORDER BY name');
 $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!doctype html>
@@ -59,7 +60,7 @@ $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <?php else: ?>
     <table>
       <thead>
-        <tr><th>Libellé</th><th>Devise</th><th>Solde</th><th>Dernière MAJ</th><th></th></tr>
+        <tr><th>Libellé</th><th>Devise</th><th>Couleur</th><th>Solde</th><th>Dernière MAJ</th><th></th></tr>
       </thead>
       <tbody>
       <?php foreach ($accounts as $acc): ?>
@@ -70,6 +71,9 @@ $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </td>
             <td>
               <input type="text" name="currency" value="<?php echo htmlspecialchars($acc['currency'] ?? ''); ?>" style="width:60px">
+            </td>
+            <td>
+              <input type="color" name="color" value="<?php echo htmlspecialchars($acc['color'] ?? '#000000'); ?>" title="Couleur du compte">
             </td>
             <td><?php echo htmlspecialchars((string)($acc['balance'] ?? '0')); ?></td>
             <td><?php echo htmlspecialchars((string)($acc['updated_at'] ?? '')); ?></td>

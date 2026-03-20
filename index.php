@@ -34,7 +34,7 @@ try {
   }
   $labels = array_map(function($d){ $dt = DateTime::createFromFormat('Y-m-d', $d); return $dt->format('d/m'); }, $dates);
 
-  $stmt = $pdo->query('SELECT id, name, currency, balance FROM accounts');
+  $stmt = $pdo->query('SELECT id, name, currency, balance, color FROM accounts');
   $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
   $datasets = [];
@@ -76,8 +76,37 @@ try {
       }
     }
 
-    $color = $palette[$ci % count($palette)];
-    $bg = preg_replace('/1\)$/','0.15)',$color);
+    // round values to 2 decimals for Chart clarity
+    $data = array_map(function($v){ return round((float)$v, 2); }, $data);
+
+    // prefer stored account color when available
+    $color = null;
+    $bg = null;
+    if (!empty($acc['color'])) {
+      $c = trim($acc['color']);
+      // hex -> rgba
+      if (preg_match('/^#([0-9a-fA-F]{6})$/', $c, $m)) {
+        $hex = $m[1];
+        $r = hexdec(substr($hex,0,2));
+        $g = hexdec(substr($hex,2,2));
+        $b = hexdec(substr($hex,4,2));
+        $color = $c;
+        $bg = "rgba($r,$g,$b,0.15)";
+      } elseif (strpos($c, 'rgba(') === 0) {
+        $color = $c;
+        $bg = preg_replace('/,\s*([0-9\.]+)\)$/', ',0.15)', $c);
+      } elseif (strpos($c, 'rgb(') === 0) {
+        $color = preg_replace('/rgb\(/','rgba(',$c) . ',0.15)';
+        $bg = preg_replace('/rgb\(([^)]+)\)/','rgba($1,0.15)',$c);
+      } else {
+        // fallback to raw value as border, and use palette if bg needed
+        $color = $c;
+      }
+    }
+    if ($color === null) {
+      $color = $palette[$ci % count($palette)];
+      $bg = preg_replace('/1\)$/','0.15)',$color);
+    }
 
     $datasets[] = [
       'label' => ($acc['name'] ?? $acc['id']) . ' (' . ($acc['currency'] ?? '') . ')',
@@ -197,13 +226,14 @@ const chart = new Chart(ctx, {
           label: function(context) {
             const ds = context.dataset || {};
             const acc = ds.account || {};
-            const value = context.parsed && context.parsed.y !== undefined ? context.parsed.y : context.formattedValue;
+            const rawValue = context.parsed && context.parsed.y !== undefined ? context.parsed.y : context.formattedValue;
+            const value = (rawValue !== null && rawValue !== undefined) ? Number(rawValue).toFixed(2) : rawValue;
             const date = context.label;
             // Use dataset label (which contains the account libellé) as primary label
             return [
               `Compte: ${ds.label || acc.name || acc.id}`,
               `Date: ${date}`,
-              `Valeur cumulée: ${value}`,
+              `Solde: ${value}`,
               `Solde actuel: ${acc.balance || ''} ${acc.currency || ''}`
             ];
           }
