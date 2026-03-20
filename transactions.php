@@ -208,8 +208,8 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
           </option>
         <?php endforeach; ?>
         <?php if (!empty($catTree[0])): foreach ($catTree[0] as $pid => $node): if (!$node['info']) continue; ?>
-          <option value="g:<?php echo (int)$node['info']['id']; ?>" <?php echo (($_GET['account'] ?? '') === ('g:' . (int)$node['info']['id'])) ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($node['info']['label']); ?>
+          <option value="g:<?php echo (int)$node['info']['id']; ?>" <?php echo (($_GET['account'] ?? '') === ('g:' . (int)$node['info']['id'])) ? 'selected' : ''; ?> style="background:#f5f5f5">
+            <?php echo 'G: ' . htmlspecialchars($node['info']['label']); ?>
           </option>
         <?php endforeach; endif; ?>
       </select>
