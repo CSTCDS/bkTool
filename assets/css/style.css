@@ -6,14 +6,15 @@ th,td{border:1px solid #ddd;padding:8px;overflow:hidden;text-overflow:ellipsis}
 th{background:#f2f2f2}
 
 /* Transactions table column widths */
-.tx-table .col-compte{white-space:nowrap;width:18%}
+.tx-table .col-compte{white-space:nowrap;width:15%}
 .tx-table .col-date{white-space:nowrap;width:10%}
-.tx-table .col-montant{white-space:nowrap;width:12%;text-align:right}
-.tx-table .col-devise{width:6%;text-align:center}
-.tx-table .col-desc{width:auto}
+.tx-table .col-montant{white-space:nowrap;width:15%;text-align:right}
+.tx-table .col-devise{width:5%;text-align:center}
+.tx-table .col-desc{width:auto;text-align:left}
+.tx-table th.col-desc{text-align:left}
 
 /* Header / tabs — classeur pastel */
-.site-header{background:linear-gradient(135deg,#e8eaf6 0%,#fce4ec 100%);padding:16px 24px 0;margin:-20px -20px 24px;border-bottom:2px solid #d1c4e9}
+.site-header{background:linear-gradient(135deg,#e8eaf6 0%,#fce4ec 100%);padding:16px 24px 0;margin:-20px;margin-bottom:24px;border-bottom:2px solid #d1c4e9;width:calc(100% + 40px)}
 .site-title{font-weight:800;font-size:1.35rem;color:#5c6bc0;margin-bottom:10px;letter-spacing:.5px}
 .tabs{display:flex;gap:0;margin:0;padding:0}
 .tabs a{

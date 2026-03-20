@@ -98,7 +98,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
 
   <table class="tx-table">
     <thead>
-      <tr><th class="col-compte">Compte</th><th class="col-date">Date</th><th class="col-montant">Montant</th><th class="col-devise">Devise</th><th class="col-desc">Description</th></tr>
+      <tr><th class="col-compte">Compte</th><th class="col-date">Date</th><th class="col-montant">Montant</th><th class="col-devise">Devise</th><th class="col-desc">Commentaire</th></tr>
     </thead>
     <tbody>
     <?php foreach ($txs as $t): ?>
