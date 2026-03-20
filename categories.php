@@ -21,6 +21,10 @@ for ($i = 1; $i <= 4; $i++) {
 
 $notice = null;
 
+// Liste des comptes (pour l'association de regroupements)
+$accounts = $pdo->query('SELECT id, name FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+$accMap = [];
+foreach ($accounts as $ac) $accMap[$ac['id']] = $ac['name'];
 // --- Actions POST ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -39,45 +43,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Ajouter un niveau 1 (parent)
     if ($action === 'add_level1') {
-        $crit = (int)($_POST['criterion'] ?? 0);
-        $label = trim((string)($_POST['label'] ?? ''));
-        if ($crit >= 1 && $crit <= 4 && $label !== '') {
-            $stmt = $pdo->prepare('INSERT INTO categories (criterion, parent_id, label, sort_order) VALUES (:c, NULL, :l, :s)');
-            $max = $pdo->prepare('SELECT COALESCE(MAX(sort_order),0)+1 FROM categories WHERE criterion = :c AND parent_id IS NULL');
-            $max->execute([':c' => $crit]);
-            $stmt->execute([':c' => $crit, ':l' => $label, ':s' => $max->fetchColumn()]);
-            $notice = 'Niveau 1 ajouté.';
-        }
+      $critRaw = $_POST['criterion'] ?? '';
+      $crit = ($critRaw === 'group') ? 0 : (int)$critRaw;
+      $label = trim((string)($_POST['label'] ?? ''));
+      if (($crit === 0 || ($crit >= 1 && $crit <= 4)) && $label !== '') {
+        $stmt = $pdo->prepare('INSERT INTO categories (criterion, parent_id, label, sort_order) VALUES (:c, NULL, :l, :s)');
+        $max = $pdo->prepare('SELECT COALESCE(MAX(sort_order),0)+1 FROM categories WHERE criterion = :c AND parent_id IS NULL');
+        $max->execute([':c' => $crit]);
+        $stmt->execute([':c' => $crit, ':l' => $label, ':s' => $max->fetchColumn()]);
+        $notice = 'Niveau 1 ajouté.';
+      }
     }
 
     // Ajouter un niveau 2 (enfant)
     if ($action === 'add_level2') {
-        $parentId = (int)($_POST['parent_id'] ?? 0);
-        $label = trim((string)($_POST['label'] ?? ''));
-        if ($parentId > 0 && $label !== '') {
-            // Récupérer le critère du parent
-            $p = $pdo->prepare('SELECT criterion FROM categories WHERE id = :id');
-            $p->execute([':id' => $parentId]);
-            $crit = (int)$p->fetchColumn();
-            if ($crit) {
-                $max = $pdo->prepare('SELECT COALESCE(MAX(sort_order),0)+1 FROM categories WHERE parent_id = :pid');
-                $max->execute([':pid' => $parentId]);
-                $stmt = $pdo->prepare('INSERT INTO categories (criterion, parent_id, label, sort_order) VALUES (:c, :pid, :l, :s)');
-                $stmt->execute([':c' => $crit, ':pid' => $parentId, ':l' => $label, ':s' => $max->fetchColumn()]);
-                $notice = 'Niveau 2 ajouté.';
+      $parentId = (int)($_POST['parent_id'] ?? 0);
+      if ($parentId > 0) {
+        // Récupérer le critère du parent
+        $p = $pdo->prepare('SELECT criterion FROM categories WHERE id = :id');
+        $p->execute([':id' => $parentId]);
+        $crit = $p->fetchColumn();
+        $crit = ($crit === null) ? null : (int)$crit;
+        if ($crit !== null) {
+          $max = $pdo->prepare('SELECT COALESCE(MAX(sort_order),0)+1 FROM categories WHERE parent_id = :pid');
+          $max->execute([':pid' => $parentId]);
+          if ($crit === 0) {
+            // For group type, expect an account_id field
+            $accountId = trim((string)($_POST['account_id'] ?? ''));
+            if ($accountId !== '') {
+              $stmt = $pdo->prepare('INSERT INTO categories (criterion, parent_id, label, sort_order) VALUES (0, :pid, :l, :s)');
+              $stmt->execute([':pid' => $parentId, ':l' => $accountId, ':s' => $max->fetchColumn()]);
+              $notice = 'Compte ajouté au regroupement.';
             }
+          } else {
+            $label = trim((string)($_POST['label'] ?? ''));
+            if ($label !== '') {
+              $stmt = $pdo->prepare('INSERT INTO categories (criterion, parent_id, label, sort_order) VALUES (:c, :pid, :l, :s)');
+              $stmt->execute([':c' => $crit, ':pid' => $parentId, ':l' => $label, ':s' => $max->fetchColumn()]);
+              $notice = 'Niveau 2 ajouté.';
+            }
+          }
         }
+      }
     }
 
-    // Modifier un libellé
+    // Modifier un libellé / associer un compte pour regroupement
     if ($action === 'edit') {
-        $id = (int)($_POST['cat_id'] ?? 0);
-        $label = trim((string)($_POST['label'] ?? ''));
-        if ($id > 0 && $label !== '') {
-            $stmt = $pdo->prepare('UPDATE categories SET label = :l WHERE id = :id');
-            $stmt->execute([':l' => $label, ':id' => $id]);
-            $notice = 'Libellé modifié.';
+      $id = (int)($_POST['cat_id'] ?? 0);
+      if ($id > 0) {
+        // déterminer crit
+        $q = $pdo->prepare('SELECT criterion, parent_id FROM categories WHERE id = :id');
+        $q->execute([':id' => $id]);
+        $row = $q->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+          $crit = (int)$row['criterion'];
+          if ($crit === 0 && $row['parent_id'] !== null) {
+            // child of group: expect account_id
+            $accountId = trim((string)($_POST['account_id'] ?? ''));
+            if ($accountId !== '') {
+              $stmt = $pdo->prepare('UPDATE categories SET label = :l WHERE id = :id');
+              $stmt->execute([':l' => $accountId, ':id' => $id]);
+              $notice = 'Association compte modifiée.';
+            }
+          } else {
+            $label = trim((string)($_POST['label'] ?? ''));
+            if ($label !== '') {
+              $stmt = $pdo->prepare('UPDATE categories SET label = :l WHERE id = :id');
+              $stmt->execute([':l' => $label, ':id' => $id]);
+              $notice = 'Libellé modifié.';
+            }
+          }
         }
+      }
     }
 
     // Supprimer
@@ -110,7 +147,7 @@ foreach ($allCats as $c) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Catégories — bkTool</title>
+  <title>Paramètres — bkTool</title>
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
@@ -120,24 +157,25 @@ foreach ($allCats as $c) {
     <a href="index.php">Dashboard</a>
     <a href="accounts.php">Comptes</a>
     <a href="transactions.php">Transactions</a>
-    <a href="categories.php" class="active">Catégories</a>
+    <a href="categories.php" class="active">Paramètres</a>
     <a href="choix.php">Connecter banque</a>
   </nav>
 </div>
 <main>
-  <h1>Catégories de classement</h1>
+  <h1>Paramètres</h1>
   <?php if ($notice): ?>
     <p><strong><?php echo htmlspecialchars($notice); ?></strong></p>
   <?php endif; ?>
 
-  <!-- Sélection du critère à afficher -->
-  <?php $selectedCrit = isset($_GET['crit']) ? (int)$_GET['crit'] : 0; ?>
+  <!-- Sélection du type de paramètre à afficher -->
+  <?php $selectedCrit = isset($_GET['crit']) ? (string)$_GET['crit'] : ''; ?>
   <form method="get" style="margin-bottom:16px;display:flex;gap:12px;align-items:center">
-    <label><strong>Critère :</strong>
+    <label><strong>Type de paramètre :</strong>
       <select name="crit" onchange="this.form.submit()">
-        <option value="0">— Tous —</option>
+        <option value="">— Aucun —</option>
+        <option value="group" <?php echo ($selectedCrit === 'group') ? 'selected' : ''; ?>>Regroupement compte</option>
         <?php for ($i = 1; $i <= 4; $i++): ?>
-          <option value="<?php echo $i; ?>" <?php echo ($selectedCrit === $i) ? 'selected' : ''; ?>>
+          <option value="<?php echo $i; ?>" <?php echo ($selectedCrit === (string)$i) ? 'selected' : ''; ?>>
             <?php echo htmlspecialchars($criterionNames[$i]); ?>
           </option>
         <?php endfor; ?>
@@ -145,8 +183,96 @@ foreach ($allCats as $c) {
     </label>
   </form>
 
-  <?php for ($crit = 1; $crit <= 4; $crit++):
-    if ($selectedCrit > 0 && $selectedCrit !== $crit) continue;
+  <?php
+  // Show group section
+  if ($selectedCrit === 'group'):
+  ?>
+  <section class="cat-section">
+    <h2>Regroupement compte</h2>
+    <?php if (!empty($tree[0])): ?>
+    <table style="width:100%;margin-bottom:6px">
+      <thead><tr><th style="width:40%">Groupe</th><th style="width:40%">Membre (compte)</th><th style="width:20%">Actions</th></tr></thead>
+      <tbody>
+      <?php foreach ($tree[0] as $parentId => $node):
+        if (!$node['info']) continue;
+        $parent = $node['info'];
+        $children = $node['children'];
+        $rowspan = max(1, count($children) + 1);
+      ?>
+        <tr>
+          <td rowspan="<?php echo $rowspan; ?>" style="vertical-align:top;font-weight:600;background:#f9f9f9">
+            <form method="post" style="display:inline-flex;gap:4px">
+              <input type="hidden" name="action" value="edit">
+              <input type="hidden" name="cat_id" value="<?php echo $parent['id']; ?>">
+              <input type="text" name="label" value="<?php echo htmlspecialchars($parent['label']); ?>" style="width:130px" required>
+              <button type="submit" title="Modifier">💾</button>
+            </form>
+            <form method="post" style="display:inline">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="cat_id" value="<?php echo $parent['id']; ?>">
+              <button type="submit" title="Supprimer" onclick="return confirm('Supprimer ce groupe et ses membres ?')">🗑️</button>
+            </form>
+          </td>
+          <?php if (empty($children)): ?>
+          <td colspan="2"><em>Aucun compte associé</em></td>
+          <?php else: $first = true; foreach ($children as $child): if (!$first) echo '</tr><tr>'; $first = false; ?>
+          <td>
+            <form method="post" style="display:inline-flex;gap:4px">
+              <input type="hidden" name="action" value="edit">
+              <input type="hidden" name="cat_id" value="<?php echo $child['id']; ?>">
+              <select name="account_id" required>
+                <?php foreach ($accounts as $ac): ?>
+                  <option value="<?php echo htmlspecialchars($ac['id']); ?>" <?php echo ($child['label'] === $ac['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($ac['name'] ?: $ac['id']); ?></option>
+                <?php endforeach; ?>
+              </select>
+              <button type="submit" title="Modifier">💾</button>
+            </form>
+          </td>
+          <td>
+            <form method="post" style="display:inline">
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="cat_id" value="<?php echo $child['id']; ?>">
+              <button type="submit" title="Supprimer" onclick="return confirm('Supprimer ce membre ?')">🗑️</button>
+            </form>
+          </td>
+          <?php endforeach; endif; ?>
+        </tr>
+        <!-- Ajouter membre sous ce groupe -->
+        <tr>
+          <td colspan="2">
+            <form method="post" style="display:inline-flex;gap:4px">
+              <input type="hidden" name="action" value="add_level2">
+              <input type="hidden" name="parent_id" value="<?php echo $parent['id']; ?>">
+              <select name="account_id" required>
+                <option value="">— Choisir un compte —</option>
+                <?php foreach ($accounts as $ac): ?>
+                  <option value="<?php echo htmlspecialchars($ac['id']); ?>"><?php echo htmlspecialchars($ac['name'] ?: $ac['id']); ?></option>
+                <?php endforeach; ?>
+              </select>
+              <button type="submit">+ Ajouter au groupe</button>
+            </form>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+    <?php endif; ?>
+
+    <!-- Ajouter groupe -->
+    <form method="post" style="display:inline-flex;gap:6px;margin-top:4px">
+      <input type="hidden" name="action" value="add_level1">
+      <input type="hidden" name="criterion" value="group">
+      <input type="text" name="label" placeholder="Nouveau groupe…" style="width:160px" required>
+      <button type="submit">+ Nouveau groupe</button>
+    </form>
+  </section>
+  <hr>
+  <?php
+  endif;
+
+  // Show criteria sections (1..4) only when selected
+  for ($crit = 1; $crit <= 4; $crit++):
+    if ($selectedCrit !== '' && $selectedCrit !== (string)$crit) continue;
   ?>
   <section class="cat-section">
     <h2>

@@ -72,7 +72,7 @@ $country = $config['enable_country'] ?? 'FR';
     <a href="index.php">Dashboard</a>
     <a href="accounts.php">Comptes</a>
     <a href="transactions.php">Transactions</a>
-    <a href="categories.php">Catégories</a>
+    <a href="categories.php">Paramètres</a>
     <a href="choix.php" class="active">Connecter banque</a>
   </nav>
 </div>
