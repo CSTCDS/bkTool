@@ -6,13 +6,24 @@ require_once __DIR__ . '/EnableBankingClient.php';
 
 function upsertAccount($pdo, $acc)
 {
-    $stmt = $pdo->prepare('REPLACE INTO accounts (id, name, balance, currency, raw, updated_at) VALUES (:id, :name, :balance, :currency, :raw, NOW())');
+    $id = $acc['id'] ?? $acc['uid'] ?? null;
+    $name = $acc['name'] ?? $acc['accountName'] ?? null;
+    $balance = $acc['balance'] ?? 0;
+    $currency = $acc['currency'] ?? 'EUR';
+    $raw = json_encode($acc);
+
+    // Insert si nouveau, sinon mettre à jour balance/currency/raw sans écraser le nom
+    $stmt = $pdo->prepare(
+        'INSERT INTO accounts (id, name, balance, currency, raw, updated_at) '
+      . 'VALUES (:id, :name, :balance, :currency, :raw, NOW()) '
+      . 'ON DUPLICATE KEY UPDATE balance = VALUES(balance), currency = VALUES(currency), raw = VALUES(raw), updated_at = NOW()'
+    );
     $stmt->execute([
-        ':id' => $acc['id'] ?? $acc['uid'] ?? null,
-        ':name' => $acc['name'] ?? $acc['accountName'] ?? null,
-        ':balance' => $acc['balance'] ?? 0,
-        ':currency' => $acc['currency'] ?? 'EUR',
-        ':raw' => json_encode($acc)
+        ':id' => $id,
+        ':name' => $name,
+        ':balance' => $balance,
+        ':currency' => $currency,
+        ':raw' => $raw
     ]);
 }
 
