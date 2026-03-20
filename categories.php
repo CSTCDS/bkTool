@@ -126,6 +126,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $notice = 'Catégorie supprimée.';
         }
     }
+
+    // Edit account parameter (color) from Paramètres -> Comptes
+    if ($action === 'edit_account_param') {
+      $accountId = trim((string)($_POST['account_id'] ?? ''));
+      $color = trim((string)($_POST['color'] ?? '')) ?: null;
+      if ($accountId !== '') {
+        $stmt = $pdo->prepare('UPDATE accounts SET color = :color, updated_at = NOW() WHERE id = :id');
+        $stmt->execute([':color' => $color, ':id' => $accountId]);
+        $notice = 'Paramètre compte mis à jour.';
+        // refresh accounts list/map
+        $accounts = $pdo->query('SELECT id, name FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+        $accMap = [];
+        foreach ($accounts as $ac) $accMap[$ac['id']] = $ac['name'];
+      }
+    }
 }
 
 // Charger toutes les catégories regroupées par critère
@@ -173,6 +188,7 @@ foreach ($allCats as $c) {
     <label><strong>Type de paramètre :</strong>
       <select name="crit" onchange="this.form.submit()">
         <option value="">— Aucun —</option>
+        <option value="account" <?php echo ($selectedCrit === 'account') ? 'selected' : ''; ?>>Paramètres de compte</option>
         <option value="group" <?php echo ($selectedCrit === 'group') ? 'selected' : ''; ?>>Regroupement compte</option>
         <?php for ($i = 1; $i <= 4; $i++): ?>
           <option value="<?php echo $i; ?>" <?php echo ($selectedCrit === (string)$i) ? 'selected' : ''; ?>>
@@ -270,9 +286,45 @@ foreach ($allCats as $c) {
   <?php
   endif;
 
-  // Show criteria sections (1..4) only when selected
+  // Paramètres de compte
+  if ($selectedCrit === 'account'):
+?>
+  <section class="cat-section">
+    <h2>Paramètres de comptes</h2>
+    <p>Modifier les paramètres par compte (couleur affichée sur le graphique et transactions).</p>
+    <?php if (!empty($accounts)): ?>
+      <table style="width:100%"><thead><tr><th>Compte</th><th>Couleur</th><th></th></tr></thead><tbody>
+        <?php foreach ($accounts as $ac): ?>
+          <tr>
+            <td><?php echo htmlspecialchars($ac['name'] ?: $ac['id']); ?></td>
+            <td>
+              <?php
+                $c = $pdo->prepare('SELECT color FROM accounts WHERE id = :id');
+                $c->execute([':id' => $ac['id']]);
+                $cur = $c->fetchColumn() ?: '#000000';
+              ?>
+              <form method="post" style="display:inline-flex;gap:6px;align-items:center">
+                <input type="hidden" name="action" value="edit_account_param">
+                <input type="hidden" name="account_id" value="<?php echo htmlspecialchars($ac['id']); ?>">
+                <input type="color" name="color" value="<?php echo htmlspecialchars($cur); ?>">
+                <button type="submit">Enregistrer</button>
+              </form>
+            </td>
+            <td></td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody></table>
+    <?php else: ?>
+      <p>Aucun compte trouvé.</p>
+    <?php endif; ?>
+  </section>
+  <hr>
+  <?php
+  endif;
+
+  // Show criteria sections only when explicitly selected (hide on 'Aucun')
   for ($crit = 1; $crit <= 4; $crit++):
-    if ($selectedCrit !== '' && $selectedCrit !== (string)$crit) continue;
+    if ($selectedCrit === '' || $selectedCrit !== (string)$crit) continue;
   ?>
   <section class="cat-section">
     <h2>
