@@ -18,11 +18,18 @@ function upsertAccount($pdo, $acc)
 
 function insertTransaction($pdo, $tx)
 {
+    // Determine sign: Enable Banking uses credit_debit_indicator (CRDT / DBIT)
+    $amount = (float)($tx['transaction_amount']['amount'] ?? 0);
+    $indicator = strtoupper($tx['credit_debit_indicator'] ?? '');
+    if ($indicator === 'DBIT' && $amount > 0) {
+        $amount = -$amount;
+    }
+
     $stmt = $pdo->prepare('INSERT IGNORE INTO transactions (id, account_id, amount, currency, description, booking_date, raw, created_at) VALUES (:id, :account_id, :amount, :currency, :description, :booking_date, :raw, NOW())');
     $stmt->execute([
         ':id' => $tx['entry_reference'] ?? $tx['transaction_id'] ?? bin2hex(random_bytes(8)),
         ':account_id' => $tx['_account_id'] ?? null,
-        ':amount' => $tx['transaction_amount']['amount'] ?? 0,
+        ':amount' => $amount,
         ':currency' => $tx['transaction_amount']['currency'] ?? 'EUR',
         ':description' => is_array($tx['remittance_information'] ?? null) ? implode(' ', $tx['remittance_information']) : ($tx['remittance_information'] ?? null),
         ':booking_date' => $tx['booking_date'] ?? null,
