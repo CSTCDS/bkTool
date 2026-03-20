@@ -208,7 +208,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
           </option>
         <?php endforeach; ?>
         <?php if (!empty($catTree[0])): foreach ($catTree[0] as $pid => $node): if (!$node['info']) continue; ?>
-          <option value="g:<?php echo (int)$node['info']['id']; ?>" <?php echo (($_GET['account'] ?? '') === ('g:' . (int)$node['info']['id'])) ? 'selected' : ''; ?> style="background:#f5f5f5">
+          <option value="g:<?php echo (int)$node['info']['id']; ?>" <?php echo (($_GET['account'] ?? '') === ('g:' . (int)$node['info']['id'])) ? 'selected' : ''; ?> style="background:#e0e0e0">
             <?php echo 'G: ' . htmlspecialchars($node['info']['label']); ?>
           </option>
         <?php endforeach; endif; ?>
@@ -247,7 +247,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         <?php if ($noDateFilter): ?><th class="col-solde">Solde</th><?php endif; ?>
         <th class="col-devise">Devise</th>
         <th class="col-desc">Commentaire</th>
-        <?php for($i=1;$i<=4;$i++): ?><th class="col-cat"><?php echo htmlspecialchars($criterionNames[$i]); ?></th><?php endfor; ?>
+        <th class="col-categories">Catégories</th>
       </tr>
     </thead>
     <tbody>
@@ -270,24 +270,53 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         <?php if ($noDateFilter): ?><td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td><?php endif; ?>
         <td class="col-devise"><?php echo htmlspecialchars((string)($t['currency'] ?? '')); ?></td>
         <td class="col-desc"><?php echo htmlspecialchars((string)($t['description'] ?? '')); ?></td>
-        <?php for ($ci2 = 1; $ci2 <= 4; $ci2++):
-          $field = "cat{$ci2}_id";
-          $curVal = $t[$field] ?? null;
-        ?>
-        <td class="col-cat">
-          <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>">
-            <option value="">—</option>
-            <?php if (!empty($catTree[$ci2])): foreach ($catTree[$ci2] as $pid => $node): if (!$node['info']) continue; ?>
-              <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
-                <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)$curVal === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
-                <?php foreach ($node['children'] as $child): ?>
-                  <option value="<?php echo $child['id']; ?>" <?php echo ((int)$curVal === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
-                <?php endforeach; ?>
-              </optgroup>
-            <?php endforeach; endif; ?>
-          </select>
+        <td class="col-categories">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;gap:8px">
+              <?php // Catégorie 1 and 2 on first line ?>
+              <?php for ($ci2 = 1; $ci2 <= 2; $ci2++):
+                $field = "cat{$ci2}_id";
+                $curVal = $t[$field] ?? null;
+              ?>
+                <div style="flex:1">
+                  <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>" style="width:100%">
+                    <option value="">—</option>
+                    <?php if (!empty($catTree[$ci2])): foreach ($catTree[$ci2] as $pid => $node): if (!$node['info']) continue; ?>
+                      <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
+                        <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)$curVal === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
+                        <?php foreach ($node['children'] as $child): ?>
+                          <option value="<?php echo $child['id']; ?>" <?php echo ((int)$curVal === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
+                        <?php endforeach; ?>
+                      </optgroup>
+                    <?php endforeach; endif; ?>
+                  </select>
+                </div>
+              <?php endfor; ?>
+            </div>
+
+            <div style="display:flex;gap:8px">
+              <?php // Catégorie 3 and 4 on second line ?>
+              <?php for ($ci2 = 3; $ci2 <= 4; $ci2++):
+                $field = "cat{$ci2}_id";
+                $curVal = $t[$field] ?? null;
+              ?>
+                <div style="flex:1">
+                  <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>" style="width:100%">
+                    <option value="">—</option>
+                    <?php if (!empty($catTree[$ci2])): foreach ($catTree[$ci2] as $pid => $node): if (!$node['info']) continue; ?>
+                      <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
+                        <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)$curVal === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
+                        <?php foreach ($node['children'] as $child): ?>
+                          <option value="<?php echo $child['id']; ?>" <?php echo ((int)$curVal === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
+                        <?php endforeach; ?>
+                      </optgroup>
+                    <?php endforeach; endif; ?>
+                  </select>
+                </div>
+              <?php endfor; ?>
+            </div>
+          </div>
         </td>
-        <?php endfor; ?>
       </tr>
     <?php
       // mettre à jour cumul pour ce compte (après affichage)
