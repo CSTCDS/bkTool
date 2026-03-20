@@ -36,9 +36,9 @@ function insertTransaction($pdo, $tx)
         $amount = -$amount;
     }
 
-    // Date: prefer booking_date, fallback to value_date, then today
-    $bookingDate = $tx['booking_date'] ?? $tx['value_date'] ?? null;
-    // Status: pending if no booking_date in original data
+    // Date: prefer booking_date, fallback to value_date, then transaction_date, then today
+    $bookingDate = $tx['booking_date'] ?? $tx['value_date'] ?? $tx['transaction_date'] ?? $tx['date'] ?? date('Y-m-d');
+    // Status: pending if no booking_date in original data (we keep original semantics)
     $status = !empty($tx['booking_date']) ? 'booked' : 'pending';
 
     $id = $tx['entry_reference'] ?? $tx['transaction_id'] ?? bin2hex(random_bytes(8));

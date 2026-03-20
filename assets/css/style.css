@@ -9,6 +9,7 @@ th{background:#f2f2f2}
 .tx-table .col-compte{white-space:nowrap;width:10%}
 .tx-table .col-date{white-space:nowrap;width:8%}
 .tx-table .col-montant{white-space:nowrap;width:8%;text-align:right}
+.tx-table .col-solde{white-space:nowrap;width:8%;text-align:right}
 .tx-table .col-devise{width:4%;text-align:center}
 .tx-table .col-desc{width:auto;text-align:left}
 .tx-table th.col-desc{text-align:left}
