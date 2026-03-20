@@ -227,6 +227,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
       <tr>
         <th class="col-compte">Compte</th>
         <th class="col-date">Date</th>
+        <th class="col-status">Statut</th>
         <th class="col-montant">Montant</th>
         <?php if ($noDateFilter): ?><th class="col-solde">Solde</th><?php endif; ?>
         <th class="col-devise">Devise</th>
@@ -239,7 +240,8 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
     // Pour calculer le solde courant par compte, on itère dans l'ordre affiché
     $runningAcc = [];
     foreach ($txs as $t):
-      $isPending = (($t['status'] ?? 'booked') === 'pending');
+      // Consider BOOK as booked/current; any other status treated as pending
+      $isPending = (strtoupper((string)($t['status'] ?? '')) !== 'BOOK');
       $acctId = $t['account_id'];
       if (!isset($runningAcc[$acctId])) $runningAcc[$acctId] = 0.0; // cumul des montants déjà vus (newest->oldest)
       $startBal = $accBalances[$acctId] ?? 0.0;
@@ -248,7 +250,8 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
     ?>
       <tr<?php if ($isPending) echo ' class="row-pending"'; ?>>
         <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; "><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
-        <td class="col-date"><?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); if ($isPending) echo ' <span class="badge-pending">en attente</span>'; ?></td>
+        <td class="col-date"><?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); ?></td>
+        <td class="col-status"><?php echo htmlspecialchars((string)($t['status'] ?? '')); if ($isPending) echo ' <span class="badge-pending">en attente</span>'; ?></td>
         <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
         <?php if ($noDateFilter): ?><td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td><?php endif; ?>
         <td class="col-devise"><?php echo htmlspecialchars((string)($t['currency'] ?? '')); ?></td>
