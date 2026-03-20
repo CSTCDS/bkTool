@@ -24,6 +24,73 @@ try {
   exit;
 }
 
+// Préparer les données du graphique: dernières N journées
+try {
+  $days = 30;
+  $dates = [];
+  for ($i = $days - 1; $i >= 0; $i--) {
+    $d = new DateTime("-$i days");
+    $dates[] = $d->format('Y-m-d');
+  }
+  $labels = array_map(function($d){ $dt = DateTime::createFromFormat('Y-m-d', $d); return $dt->format('d/m'); }, $dates);
+
+  $stmt = $pdo->query('SELECT id, name, currency, balance FROM accounts');
+  $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+  $datasets = [];
+  $palette = [
+    'rgba(54,162,235,1)',
+    'rgba(255,99,132,1)',
+    'rgba(75,192,192,1)',
+    'rgba(255,159,64,1)',
+    'rgba(153,102,255,1)',
+    'rgba(255,205,86,1)'
+  ];
+  $ci = 0;
+  foreach ($accounts as $acc) {
+    // init daily buckets
+    $daily = array_fill_keys($dates, 0.0);
+    $txStmt = $pdo->prepare('SELECT booking_date, SUM(amount) as amt FROM transactions WHERE account_id = :aid AND booking_date BETWEEN :start AND :end GROUP BY booking_date');
+    $txStmt->execute([':aid' => $acc['id'], ':start' => $dates[0], ':end' => $dates[count($dates)-1]]);
+    while ($r = $txStmt->fetch(PDO::FETCH_ASSOC)) {
+      $d = $r['booking_date'];
+      if (isset($daily[$d])) $daily[$d] = (float)$r['amt'];
+    }
+
+    // cumulative series (activity) — starting at 0 (represents cumulative net activity)
+    $cum = 0.0;
+    $data = [];
+    foreach ($dates as $d) {
+      $cum += $daily[$d];
+      $data[] = $cum;
+    }
+
+    $color = $palette[$ci % count($palette)];
+    $bg = preg_replace('/1\)$/','0.15)',$color);
+
+    $datasets[] = [
+      'label' => ($acc['name'] ?? $acc['id']) . ' (' . ($acc['currency'] ?? '') . ')',
+      'borderColor' => $color,
+      'backgroundColor' => $bg,
+      'data' => $data,
+      'tension' => 0.2,
+      'pointRadius' => 3,
+      // meta utile pour les tooltips
+      'account' => ['id' => $acc['id'], 'name' => $acc['name'], 'balance' => (float)($acc['balance'] ?? 0), 'currency' => $acc['currency'] ?? '']
+    ];
+    $ci++;
+  }
+} catch (Throwable $e) {
+  // en cas d'erreur, revenir à l'exemple simple pour éviter casse complète
+  $labels = ['J-6','J-5','J-4','J-3','J-2','J-1','Aujourd\'hui'];
+  $datasets = [[
+    'label' => 'Solde (exemple)',
+    'backgroundColor' => 'rgba(54,162,235,0.2)',
+    'borderColor' => 'rgba(54,162,235,1)',
+    'data' => [1000,1200,1100,1300,1250,1400,(float)$total]
+  ]];
+}
+
 ?><!doctype html>
 <html>
 <head>
@@ -90,18 +157,43 @@ document.getElementById('syncBtn').addEventListener('click', function(){
     }).catch(e => { status.textContent = 'Erreur: '+e; });
 });
 
-// Exemple de données pour Chart.js
+// Données réelles par compte pour Chart.js
+const labels = <?php echo json_encode($labels); ?>;
+const datasets = <?php echo json_encode($datasets); ?>;
 const ctx = document.getElementById('chart').getContext('2d');
 const chart = new Chart(ctx, {
   type: 'line',
   data: {
-    labels: ['J-6','J-5','J-4','J-3','J-2','J-1','Aujourd\'hui'],
-    datasets: [{
-      label: 'Solde',
-      backgroundColor: 'rgba(54,162,235,0.2)',
-      borderColor: 'rgba(54,162,235,1)',
-      data: [1000, 1200, 1100, 1300, 1250, 1400, <?php echo (float)$total; ?>]
-    }]
+    labels: labels,
+    datasets: datasets.map(ds => Object.assign({}, ds, { fill: false }))
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'nearest', intersect: false },
+    plugins: {
+      tooltip: {
+        callbacks: {
+          title: function(items) { return items && items[0] ? items[0].label : ''; },
+          label: function(context) {
+            const ds = context.dataset || {};
+            const acc = ds.account || {};
+            const value = context.parsed && context.parsed.y !== undefined ? context.parsed.y : context.formattedValue;
+            const date = context.label;
+            return [
+              `Compte: ${acc.name || acc.id || ds.label}`,
+              `Date: ${date}`,
+              `Valeur cumulée: ${value}`,
+              `Solde actuel: ${acc.balance || ''} ${acc.currency || ''}`
+            ];
+          }
+        }
+      },
+      legend: { position: 'bottom' }
+    },
+    scales: {
+      x: { display: true },
+      y: { display: true, beginAtZero: true }
+    }
   }
 });
 </script>
