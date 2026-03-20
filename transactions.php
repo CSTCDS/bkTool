@@ -77,7 +77,26 @@ foreach ($allCats as $c) {
 
 $where = [];
 $params = [];
-if (!empty($_GET['account'])) { $where[] = 't.account_id = :account'; $params[':account'] = $_GET['account']; }
+// Account selection: supports single account id or group selection with prefix 'g:'
+if (!empty($_GET['account'])) {
+  $acctSel = $_GET['account'];
+  if (is_string($acctSel) && strpos($acctSel, 'g:') === 0) {
+    $gid = (int)substr($acctSel, 2);
+    $acctIds = $groupChildren[$gid] ?? [];
+    if (!empty($acctIds)) {
+      $placeholders = [];
+      foreach ($acctIds as $idx => $aid) {
+        $ph = ':g_' . $gid . '_' . $idx;
+        $placeholders[] = $ph;
+        $params[$ph] = $aid;
+      }
+      $where[] = 't.account_id IN (' . implode(',', $placeholders) . ')';
+    }
+  } else {
+    $where[] = 't.account_id = :account';
+    $params[':account'] = $acctSel;
+  }
+}
 if (!empty($_GET['from']))    { $where[] = 't.booking_date >= :from';  $params[':from'] = $_GET['from']; }
 if (!empty($_GET['to']))      { $where[] = 't.booking_date <= :to';    $params[':to'] = $_GET['to']; }
 
@@ -172,27 +191,13 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
             <?php echo htmlspecialchars($a['name'] ?: $a['id']); ?>
           </option>
         <?php endforeach; ?>
-      </select>
-    </label>
-    <label>Type de paramètre :
-      <select name="param_type" onchange="this.form.submit()">
-        <option value="" <?php echo (($_GET['param_type'] ?? '') === '') ? 'selected' : ''; ?>>— Aucun —</option>
-        <option value="group" <?php echo (($_GET['param_type'] ?? '') === 'group') ? 'selected' : ''; ?>>Regroupement compte</option>
-        <?php for ($i = 1; $i <= 4; $i++): ?>
-          <option value="<?php echo $i; ?>" <?php echo (string)(($_GET['param_type'] ?? '') ) === (string)$i ? 'selected' : ''; ?>><?php echo htmlspecialchars($criterionNames[$i]); ?></option>
-        <?php endfor; ?>
-      </select>
-    </label>
-    <?php if (isset($_GET['param_type']) && $_GET['param_type'] === 'group'): ?>
-    <label>Regroupement :
-      <select name="fgroup" onchange="this.form.submit()">
-        <option value="">— Tous —</option>
         <?php if (!empty($catTree[0])): foreach ($catTree[0] as $pid => $node): if (!$node['info']) continue; ?>
-          <option value="<?php echo $node['info']['id']; ?>" <?php echo (isset($_GET['fgroup']) && (int)$_GET['fgroup'] === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
+          <option value="g:<?php echo (int)$node['info']['id']; ?>" <?php echo (($_GET['account'] ?? '') === ('g:' . (int)$node['info']['id'])) ? 'selected' : ''; ?>>
+            <?php echo htmlspecialchars($node['info']['label']); ?>
+          </option>
         <?php endforeach; endif; ?>
       </select>
     </label>
-    <?php endif; ?>
     <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ''); ?>"></label>
     <label>Au : <input type="date" name="to" value="<?php echo htmlspecialchars($_GET['to'] ?? ''); ?>"></label>
     <?php for ($fi = 1; $fi <= 4; $fi++):
