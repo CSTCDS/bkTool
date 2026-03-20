@@ -66,22 +66,22 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
+<div class="site-header">
+  <div class="site-title">bkTool</div>
+  <nav class="tabs">
+    <a href="index.php">Dashboard</a>
+    <a href="accounts.php">Comptes</a>
+    <a href="transactions.php" class="active">Transactions</a>
+    <a href="choix.php">Connecter banque</a>
+  </nav>
+</div>
 <main class="full-width">
-  <div class="site-header">
-    <div class="site-title">bkTool</div>
-    <nav class="tabs">
-      <a href="index.php">Dashboard</a>
-      <a href="accounts.php">Comptes</a>
-      <a href="transactions.php" class="active">Transactions</a>
-      <a href="choix.php">Connecter banque</a>
-    </nav>
-  </div>
 
   <h1>Transactions</h1>
 
   <form method="get" style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:end">
     <label>Compte :
-      <select name="account">
+      <select name="account" onchange="this.form.submit()">
         <option value="">— Tous —</option>
         <?php foreach ($accs as $a): ?>
           <option value="<?php echo htmlspecialchars($a['id']); ?>" <?php echo (($_GET['account'] ?? '') === $a['id']) ? 'selected' : ''; ?>>
@@ -104,10 +104,10 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
     <?php foreach ($txs as $t): ?>
       <tr>
         <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>"><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
-        <td class="col-date"><?php echo htmlspecialchars($t['booking_date']); ?></td>
+        <td class="col-date"><?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); ?></td>
         <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
-        <td class="col-devise"><?php echo htmlspecialchars($t['currency']); ?></td>
-        <td class="col-desc"><?php echo htmlspecialchars($t['description']); ?></td>
+        <td class="col-devise"><?php echo htmlspecialchars((string)($t['currency'] ?? '')); ?></td>
+        <td class="col-desc"><?php echo htmlspecialchars((string)($t['description'] ?? '')); ?></td>
       </tr>
     <?php endforeach; ?>
     </tbody>

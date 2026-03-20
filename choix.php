@@ -66,16 +66,16 @@ $country = $config['enable_country'] ?? 'FR';
   <link href="https://tilisy.enablebanking.com/lib/widgets.css" rel="stylesheet">
 </head>
 <body>
+<div class="site-header">
+  <div class="site-title">bkTool</div>
+  <nav class="tabs">
+    <a href="index.php">Dashboard</a>
+    <a href="accounts.php">Comptes</a>
+    <a href="transactions.php">Transactions</a>
+    <a href="choix.php" class="active">Connecter banque</a>
+  </nav>
+</div>
 <main>
-  <div class="site-header">
-    <div class="site-title">bkTool</div>
-    <nav class="tabs">
-      <a href="index.php">Dashboard</a>
-      <a href="accounts.php">Comptes</a>
-      <a href="transactions.php">Transactions</a>
-      <a href="choix.php" class="active">Connecter banque</a>
-    </nav>
-  </div>
   <h1>Choisir une banque</h1>
 
   <?php if (!empty($error)): ?>

@@ -14,7 +14,7 @@ th{background:#f2f2f2}
 .tx-table th.col-desc{text-align:left}
 
 /* Header / tabs — classeur pastel */
-.site-header{background:linear-gradient(135deg,#e8eaf6 0%,#fce4ec 100%);padding:16px 24px 0;margin:-20px;margin-bottom:24px;border-bottom:2px solid #d1c4e9;width:calc(100% + 40px)}
+.site-header{background:linear-gradient(135deg,#e8eaf6 0%,#fce4ec 100%);padding:16px 24px 0;border-bottom:2px solid #d1c4e9;width:100%;box-sizing:border-box}
 .site-title{font-weight:800;font-size:1.35rem;color:#5c6bc0;margin-bottom:10px;letter-spacing:.5px}
 .tabs{display:flex;gap:0;margin:0;padding:0}
 .tabs a{

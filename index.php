@@ -113,18 +113,18 @@ try {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+<div class="site-header">
+  <div class="site-title">bkTool</div>
+  <nav class="tabs">
+    <a href="index.php" class="active">Dashboard</a>
+    <a href="accounts.php">Comptes</a>
+    <a href="transactions.php">Transactions</a>
+    <a href="choix.php">Connecter banque</a>
+  </nav>
+</div>
 <main>
-  <div class="site-header">
-    <div class="site-title">bkTool</div>
-    <nav class="tabs">
-      <a href="index.php" class="active">Dashboard</a>
-      <a href="accounts.php">Comptes</a>
-      <a href="transactions.php">Transactions</a>
-      <a href="choix.php">Connecter banque</a>
-    </nav>
-  </div>
   <section>
-    <h2>Solde total : <?php echo htmlspecialchars($total); ?> </h2>
+    <h2>Solde total : <?php echo htmlspecialchars((string)$total); ?> </h2>
   </section>
 
   <section>
