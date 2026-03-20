@@ -11,13 +11,20 @@ th{background:#f2f2f2}
 .tx-table .col-montant{white-space:nowrap;width:8%;text-align:right}
 .tx-table .col-compte{white-space:nowrap;width:5%}
 .tx-table .col-date{white-space:nowrap;width:5%}
-.tx-table .col-montant{white-space:nowrap;width:10%;text-align:right}
+.tx-table .col-montant{white-space:nowrap;width:7%;text-align:right} /* reduced -30% from 10% -> ~7% */
 .tx-table .col-solde{white-space:nowrap;width:10%;text-align:right}
-.tx-table .col-devise{width:5%;text-align:center}
-.tx-table .col-desc{width:auto;text-align:left} /* width to calculate: remaining space */
+.tx-table .col-devise{width:4%;text-align:center} /* reduced -15% from 5% -> ~4% */
+.tx-table .col-desc{width:auto;text-align:left} /* description column expands to fill remaining space */
 .tx-table th.col-desc{text-align:left}
 .tx-table .col-cat{width:10%}
 .tx-table .col-cat select{width:100%;font-size:.82rem;padding:2px}
+
+/* Hide category columns on small screens to preserve readability */
+@media (max-width:900px) {
+  .tx-table .col-cat,
+  .tx-table th.col-cat,
+  .tx-table td.col-cat { display: none; }
+}
 .tx-table .col-status{white-space:nowrap;width:8%;text-align:center}
 .tx-table .col-cat select{width:100%;font-size:.82rem;padding:2px}
 
