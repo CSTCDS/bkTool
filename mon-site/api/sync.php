@@ -1,6 +1,6 @@
 <?php
 // mon-site/api/sync.php
-// Reusable sync logic: fetch accounts and transactions from Enable Banking and store in DB
+// Reusable sync logic: fetch balances and transactions from Enable Banking session
 
 require_once __DIR__ . '/EnableBankingClient.php';
 
@@ -8,7 +8,7 @@ function upsertAccount($pdo, $acc)
 {
     $stmt = $pdo->prepare('REPLACE INTO accounts (id, name, balance, currency, raw, updated_at) VALUES (:id, :name, :balance, :currency, :raw, NOW())');
     $stmt->execute([
-        ':id' => $acc['id'] ?? $acc['accountId'] ?? null,
+        ':id' => $acc['id'] ?? $acc['uid'] ?? null,
         ':name' => $acc['name'] ?? $acc['accountName'] ?? null,
         ':balance' => $acc['balance'] ?? 0,
         ':currency' => $acc['currency'] ?? 'EUR',
@@ -20,51 +20,90 @@ function insertTransaction($pdo, $tx)
 {
     $stmt = $pdo->prepare('INSERT IGNORE INTO transactions (id, account_id, amount, currency, description, booking_date, raw, created_at) VALUES (:id, :account_id, :amount, :currency, :description, :booking_date, :raw, NOW())');
     $stmt->execute([
-        ':id' => $tx['id'] ?? null,
-        ':account_id' => $tx['accountId'] ?? $tx['account_id'] ?? null,
-        ':amount' => $tx['amount'] ?? 0,
-        ':currency' => $tx['currency'] ?? 'EUR',
-        ':description' => $tx['description'] ?? $tx['remittanceInformation'] ?? null,
-        ':booking_date' => $tx['bookingDate'] ?? null,
+        ':id' => $tx['entry_reference'] ?? $tx['transaction_id'] ?? bin2hex(random_bytes(8)),
+        ':account_id' => $tx['_account_id'] ?? null,
+        ':amount' => $tx['transaction_amount']['amount'] ?? 0,
+        ':currency' => $tx['transaction_amount']['currency'] ?? 'EUR',
+        ':description' => is_array($tx['remittance_information'] ?? null) ? implode(' ', $tx['remittance_information']) : ($tx['remittance_information'] ?? null),
+        ':booking_date' => $tx['booking_date'] ?? null,
         ':raw' => json_encode($tx)
     ]);
 }
 
 function run_sync($pdo, $config)
 {
-    $client = new EnableBankingClient($config);
     $result = ['accounts' => 0, 'transactions' => 0, 'errors' => []];
 
-    // Fetch accounts
-    $res = $client->getAccounts();
-    if (isset($res['error'])) {
-        $result['errors'][] = $res['error'];
-        return $result;
-    }
-    if (!isset($res['status']) || $res['status'] === 0) {
-        $result['errors'][] = 'Unknown error fetching accounts';
-        return $result;
-    }
-    if ($res['status'] >= 200 && $res['status'] < 300 && is_array($res['body'])) {
-        $accounts = $res['body']['data'] ?? $res['body'] ?? [];
-        foreach ($accounts as $acc) {
-            upsertAccount($pdo, $acc);
-            $result['accounts']++;
+    // Get stored session_id
+    $stmt = $pdo->prepare('SELECT `value` FROM settings WHERE `key` = :k');
+    $stmt->execute([':k' => 'eb_session_id']);
+    $sessionId = $stmt->fetchColumn();
 
-            $aid = $acc['id'] ?? $acc['accountId'] ?? null;
-            if ($aid) {
-                $tres = $client->getAccountTransactions($aid);
-                if (isset($tres['error'])) {
-                    $result['errors'][] = $tres['error'];
-                    continue;
+    if (!$sessionId) {
+        $result['errors'][] = 'Aucune session Enable Banking trouvée. Connectez d\'abord une banque via choix.php.';
+        return $result;
+    }
+
+    try {
+        $client = new EnableBankingClient($config);
+    } catch (Throwable $e) {
+        $result['errors'][] = 'Erreur client: ' . $e->getMessage();
+        return $result;
+    }
+
+    // Get session info to retrieve account UIDs
+    $sessionRes = $client->getSession($sessionId);
+    if (isset($sessionRes['error'])) {
+        $result['errors'][] = $sessionRes['error'];
+        return $result;
+    }
+    if ($sessionRes['status'] < 200 || $sessionRes['status'] >= 300) {
+        $result['errors'][] = 'Session error (' . $sessionRes['status'] . '): ' . json_encode($sessionRes['body'] ?? '');
+        return $result;
+    }
+
+    $accounts = $sessionRes['body']['accounts'] ?? [];
+    $accountsData = $sessionRes['body']['accounts_data'] ?? [];
+
+    // Process each account
+    foreach ($accountsData as $accData) {
+        $uid = $accData['uid'] ?? null;
+        if (!$uid) continue;
+
+        // Fetch balances
+        $balRes = $client->getAccountBalances($uid);
+        $balance = 0;
+        if ($balRes['status'] >= 200 && $balRes['status'] < 300 && !empty($balRes['body']['balances'])) {
+            foreach ($balRes['body']['balances'] as $bal) {
+                if (in_array($bal['balance_type'] ?? '', ['CLAV', 'ITAV', 'CLBD', 'ITBD'])) {
+                    $balance = $bal['balance_amount']['amount'] ?? 0;
+                    break;
                 }
-                if ($tres['status'] >= 200 && $tres['status'] < 300 && is_array($tres['body'])) {
-                    $txs = $tres['body']['data'] ?? $tres['body'] ?? [];
-                    foreach ($txs as $tx) {
-                        insertTransaction($pdo, array_merge($tx, ['accountId' => $aid]));
-                        $result['transactions']++;
-                    }
-                }
+            }
+            if ($balance == 0 && !empty($balRes['body']['balances'][0]['balance_amount']['amount'])) {
+                $balance = $balRes['body']['balances'][0]['balance_amount']['amount'];
+            }
+        }
+
+        upsertAccount($pdo, [
+            'id' => $uid,
+            'name' => $accData['identification_hash'] ?? $uid,
+            'balance' => $balance,
+            'currency' => 'EUR',
+        ]);
+        $result['accounts']++;
+
+        // Fetch transactions
+        $txRes = $client->getAccountTransactions($uid);
+        if (isset($txRes['error'])) {
+            $result['errors'][] = $txRes['error'];
+            continue;
+        }
+        if ($txRes['status'] >= 200 && $txRes['status'] < 300 && !empty($txRes['body']['transactions'])) {
+            foreach ($txRes['body']['transactions'] as $tx) {
+                $tx['_account_id'] = $uid;
+                insertTransaction($pdo, $tx);
+                $result['transactions']++;
             }
         }
     }

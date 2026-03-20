@@ -47,6 +47,7 @@ try {
   </section>
 
   <p><a href="transactions.php">Voir transactions</a></p>
+  <p><a href="choix.php">Connecter une banque (Enable Banking)</a></p>
   <p>
     <button id="syncBtn">Synchroniser maintenant</button>
     <span id="syncStatus"></span>

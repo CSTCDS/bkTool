@@ -30,9 +30,10 @@ if (!is_array($secrets)) {
         'db_name' => 'bktool',
         'db_user' => 'root',
         'db_pass' => '',
-        'enable_client_id' => 'YOUR_CLIENT_ID',
-        'enable_client_secret' => 'YOUR_CLIENT_SECRET',
-        'enable_api_base' => 'https://api.enablebanking.com'
+        'enable_app_id' => 'YOUR_APP_ID',
+        'enable_private_key_path' => __DIR__ . '/../../secrets/private.key',
+        'enable_api_base' => 'https://api.enablebanking.com',
+        'enable_country' => 'FR'
     ];
 }
 
