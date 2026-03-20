@@ -58,11 +58,40 @@ foreach ($allCats as $c) {
 $catLabels = [];
 foreach ($allCats as $c) { $catLabels[$c['id']] = $c['label']; }
 
+// Map parent_id => [child ids] for level-1 filter expansion
+$catChildrenIds = [];
+foreach ($allCats as $c) {
+  if ($c['parent_id'] !== null) {
+    $catChildrenIds[(int)$c['parent_id']][] = (int)$c['id'];
+  }
+}
+
 $where = [];
 $params = [];
 if (!empty($_GET['account'])) { $where[] = 't.account_id = :account'; $params[':account'] = $_GET['account']; }
 if (!empty($_GET['from']))    { $where[] = 't.booking_date >= :from';  $params[':from'] = $_GET['from']; }
 if (!empty($_GET['to']))      { $where[] = 't.booking_date <= :to';    $params[':to'] = $_GET['to']; }
+
+// Filtres par critères (cat1..cat4)
+for ($fi = 1; $fi <= 4; $fi++) {
+  $filterKey = "fcat{$fi}";
+  $filterVal = $_GET[$filterKey] ?? '';
+  if ($filterVal !== '') {
+    $catId = (int)$filterVal;
+    // Check if it's a level-1 category (has children) => include parent + all children
+    $ids = [$catId];
+    if (!empty($catChildrenIds[$catId])) {
+      $ids = array_merge($ids, $catChildrenIds[$catId]);
+    }
+    $placeholders = [];
+    foreach ($ids as $idx => $id) {
+      $ph = ":fcat{$fi}_{$idx}";
+      $placeholders[] = $ph;
+      $params[$ph] = $id;
+    }
+    $where[] = "t.cat{$fi}_id IN (" . implode(',', $placeholders) . ")";
+  }
+}
 
 $sql = 'SELECT t.*, a.name AS account_name FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id';
 if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
@@ -119,6 +148,24 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
     </label>
     <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ''); ?>"></label>
     <label>Au : <input type="date" name="to" value="<?php echo htmlspecialchars($_GET['to'] ?? ''); ?>"></label>
+    <?php for ($fi = 1; $fi <= 4; $fi++):
+      $filterKey = "fcat{$fi}";
+      $filterVal = $_GET[$filterKey] ?? '';
+    ?>
+    <label><?php echo htmlspecialchars($criterionNames[$fi]); ?> :
+      <select name="<?php echo $filterKey; ?>" onchange="this.form.submit()">
+        <option value="">— Tous —</option>
+        <?php if (!empty($catTree[$fi])): foreach ($catTree[$fi] as $pid => $node): if (!$node['info']) continue; ?>
+          <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
+            <option value="<?php echo $node['info']['id']; ?>" <?php echo ($filterVal !== '' && (int)$filterVal === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?> (tout)</option>
+            <?php foreach ($node['children'] as $child): ?>
+              <option value="<?php echo $child['id']; ?>" <?php echo ($filterVal !== '' && (int)$filterVal === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
+            <?php endforeach; ?>
+          </optgroup>
+        <?php endforeach; endif; ?>
+      </select>
+    </label>
+    <?php endfor; ?>
     <button type="submit">Filtrer</button>
     <button type="submit" name="export" value="csv">Exporter CSV</button>
   </form>

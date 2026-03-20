@@ -130,7 +130,24 @@ foreach ($allCats as $c) {
     <p><strong><?php echo htmlspecialchars($notice); ?></strong></p>
   <?php endif; ?>
 
-  <?php for ($crit = 1; $crit <= 4; $crit++): ?>
+  <!-- Sélection du critère à afficher -->
+  <?php $selectedCrit = isset($_GET['crit']) ? (int)$_GET['crit'] : 0; ?>
+  <form method="get" style="margin-bottom:16px;display:flex;gap:12px;align-items:center">
+    <label><strong>Critère :</strong>
+      <select name="crit" onchange="this.form.submit()">
+        <option value="0">— Tous —</option>
+        <?php for ($i = 1; $i <= 4; $i++): ?>
+          <option value="<?php echo $i; ?>" <?php echo ($selectedCrit === $i) ? 'selected' : ''; ?>>
+            <?php echo htmlspecialchars($criterionNames[$i]); ?>
+          </option>
+        <?php endfor; ?>
+      </select>
+    </label>
+  </form>
+
+  <?php for ($crit = 1; $crit <= 4; $crit++):
+    if ($selectedCrit > 0 && $selectedCrit !== $crit) continue;
+  ?>
   <section class="cat-section">
     <h2>
       <?php echo htmlspecialchars($criterionNames[$crit]); ?>
