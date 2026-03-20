@@ -60,8 +60,8 @@ $proxyUrl = '/widget_proxy.php?' . $params;
 
 <script>
 document.getElementById('openWidget').addEventListener('click', function(){
-  // open in a popup; provider will redirect to choix_callback.php with code & state
-  window.open('<?php echo addslashes($widgetUrl); ?>', 'eb_widget', 'width=600,height=800');
+  // open the server-side proxy so Authorization header is added server-side
+  window.open('<?php echo addslashes($proxyUrl); ?>', 'eb_widget', 'width=600,height=800');
 });
 </script>
 </body>
