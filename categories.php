@@ -187,7 +187,6 @@ foreach ($allCats as $c) {
   <div class="site-title">bkTool</div>
   <nav class="tabs">
     <a href="index.php">Dashboard</a>
-    <a href="accounts.php">Comptes</a>
     <a href="transactions.php">Transactions</a>
     <a href="categories.php" class="active">Paramètres</a>
     <a href="choix.php">Connecter banque</a>

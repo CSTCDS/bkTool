@@ -12,7 +12,7 @@ try {
 }
 
 // Liste des comptes pour le dropdown (inclut le solde courant)
-$accs = $pdo->query('SELECT id, name, balance FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+$accs = $pdo->query('SELECT id, name, balance, color FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
 $accMap = [];
 $accBalances = [];
 foreach ($accs as $a) { $accMap[$a['id']] = $a['name']; $accBalances[$a['id']] = (float)($a['balance'] ?? 0); }
@@ -29,7 +29,30 @@ $palette = [
 $accColorMap = [];
 $ci = 0;
 foreach ($accs as $a) {
-  $accColorMap[$a['id']] = $palette[$ci % count($palette)];
+  $c = trim((string)($a['color'] ?? ''));
+  $bg = null;
+  if ($c !== '') {
+    // hex #rrggbb
+    if (preg_match('/^#([0-9a-fA-F]{6})$/', $c, $m)) {
+      $hex = $m[1];
+      $r = hexdec(substr($hex,0,2));
+      $g = hexdec(substr($hex,2,2));
+      $b = hexdec(substr($hex,4,2));
+      $bg = "rgba($r,$g,$b,0.18)";
+    } elseif (strpos($c, 'rgba(') === 0) {
+      $bg = preg_replace('/,\s*([0-9\.]+)\)$/', ',0.18)', $c);
+    } elseif (strpos($c, 'rgb(') === 0) {
+      $rgb = preg_replace('/rgb\(([^)]+)\)/','rgba($1,0.18)',$c);
+      $bg = $rgb;
+    } else {
+      // fallback: use raw value as background
+      $bg = $c;
+    }
+  }
+  if ($bg === null) {
+    $bg = $palette[$ci % count($palette)];
+  }
+  $accColorMap[$a['id']] = $bg;
   $ci++;
 }
 
@@ -172,7 +195,6 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
   <div class="site-title">bkTool</div>
   <nav class="tabs">
     <a href="index.php">Dashboard</a>
-    <a href="accounts.php">Comptes</a>
     <a href="transactions.php" class="active">Transactions</a>
     <a href="categories.php">Paramètres</a>
     <a href="choix.php">Connecter banque</a>

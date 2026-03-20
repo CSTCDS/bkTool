@@ -43,7 +43,7 @@ $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <div class="site-title">bkTool</div>
   <nav class="tabs">
     <a href="index.php">Dashboard</a>
-    <a href="accounts.php" class="active">Comptes</a>
+    
     <a href="transactions.php">Transactions</a>
     <a href="categories.php">Paramètres</a>
     <a href="choix.php">Connecter banque</a>

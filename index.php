@@ -146,7 +146,6 @@ try {
   <div class="site-title">bkTool</div>
   <nav class="tabs">
     <a href="index.php" class="active">Dashboard</a>
-    <a href="accounts.php">Comptes</a>
     <a href="transactions.php">Transactions</a>
     <a href="categories.php">Paramètres</a>
     <a href="choix.php">Connecter banque</a>
