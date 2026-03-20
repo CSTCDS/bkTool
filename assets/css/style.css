@@ -1,5 +1,17 @@
 body{font-family:Arial,Helvetica,sans-serif;margin:20px;background:#f7f9fc;color:#222}
-main{max-width:900px;margin:0 auto}
+main{max-width:1000px;margin:0 auto}
 table{width:100%;border-collapse:collapse}
 th,td{border:1px solid #ddd;padding:8px}
 th{background:#f2f2f2}
+
+/* Header / tabs */
+.site-header{background:#fff;border:1px solid #e6e9ee;padding:12px 20px;margin-bottom:18px;box-shadow:0 1px 0 rgba(0,0,0,0.02);display:flex;align-items:center;justify-content:space-between}
+.site-title{font-weight:700;color:#1f2937}
+.tabs{display:flex;gap:8px}
+.tabs a{display:inline-block;padding:8px 12px;border-radius:6px;color:#334155;text-decoration:none;border:1px solid transparent}
+.tabs a.active, .tabs a:hover{background:#f1f5f9;border-color:#e2e8f0}
+
+@media (max-width:640px){
+	.tabs{flex-wrap:wrap}
+	main{padding:0 8px}
+}

@@ -57,12 +57,23 @@ try {
       if (isset($daily[$d])) $daily[$d] = (float)$r['amt'];
     }
 
-    // cumulative series (activity) — starting at 0 (represents cumulative net activity)
+    // cumulative series (activity) — build cumulative transactions then shift so final value equals current balance
     $cum = 0.0;
     $data = [];
     foreach ($dates as $d) {
       $cum += $daily[$d];
       $data[] = $cum;
+    }
+    // adjust so last point equals stored account balance (if available)
+    $lastIndex = count($data) - 1;
+    if ($lastIndex >= 0) {
+      $last = $data[$lastIndex];
+      $target = (float)($acc['balance'] ?? 0.0);
+      $offset = $target - $last;
+      if ($offset != 0.0) {
+        foreach ($data as &$v) { $v = $v + $offset; }
+        unset($v);
+      }
     }
 
     $color = $palette[$ci % count($palette)];
@@ -104,6 +115,15 @@ try {
 <body>
 <main>
   <h1>bkTool — Dashboard</h1>
+  <div class="site-header">
+    <div class="site-title">bkTool</div>
+    <div class="tabs">
+      <a href="index.php" class="active">Dashboard</a>
+      <a href="accounts.php">Comptes</a>
+      <a href="transactions.php">Transactions</a>
+      <a href="choix.php">Connecter banque</a>
+    </div>
+  </div>
   <section>
     <h2>Solde total : <?php echo htmlspecialchars($total); ?> </h2>
   </section>
