@@ -1,5 +1,5 @@
 bkTool - Documentation
-
+Modif manuelle
 1) Objectif
 - bkTool est une application PHP destinée à centraliser et afficher les comptes et opérations bancaires d'un utilisateur en récupérant les données via l'API Enable Banking.
 - Le compte charles@sterchi.fr est ouvert chez enablebanking.com via l'application bkTool.
