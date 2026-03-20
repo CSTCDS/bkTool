@@ -246,7 +246,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         <th class="col-montant">Montant</th>
         <th class="col-devise">Devise</th>
         <th class="col-desc">Commentaire</th>
-        <th class="col-categories">Catégories</th>
+        <th class="col-categories" style="width:20%">Catégories</th>
         <?php if ($noDateFilter): ?><th class="col-solde">Solde</th><?php endif; ?>
       </tr>
     </thead>
@@ -279,7 +279,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
                 $curVal = $t[$field] ?? null;
               ?>
                 <div style="flex:1">
-                  <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>" style="width:100%;max-width:15%">
+                  <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>" style="width:100%">
                     <option value="">—</option>
                     <?php if (!empty($catTree[$ci2])): foreach ($catTree[$ci2] as $pid => $node): if (!$node['info']) continue; ?>
                       <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
@@ -301,7 +301,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
                 $curVal = $t[$field] ?? null;
               ?>
                 <div style="flex:1">
-                  <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>" style="width:100%;max-width:15%">
+                  <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>" style="width:100%">
                     <option value="">—</option>
                     <?php if (!empty($catTree[$ci2])): foreach ($catTree[$ci2] as $pid => $node): if (!$node['info']) continue; ?>
                       <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
