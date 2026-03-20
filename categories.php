@@ -22,7 +22,7 @@ for ($i = 1; $i <= 4; $i++) {
 $notice = null;
 
 // Liste des comptes (pour l'association de regroupements)
-$accounts = $pdo->query('SELECT id, name FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+$accounts = $pdo->query('SELECT id, name, currency, balance, color, updated_at FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
 $accMap = [];
 foreach ($accounts as $ac) $accMap[$ac['id']] = $ac['name'];
 // --- Actions POST ---
@@ -137,6 +137,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notice = 'Paramètre compte mis à jour.';
         // refresh accounts list/map
         $accounts = $pdo->query('SELECT id, name FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+        $accMap = [];
+        foreach ($accounts as $ac) $accMap[$ac['id']] = $ac['name'];
+      }
+    }
+    
+    // Edit full account fields (name, currency, color) from Paramètres -> Comptes
+    if ($action === 'edit_account') {
+      $accountId = trim((string)($_POST['account_id'] ?? ''));
+      $name = trim((string)($_POST['name'] ?? ''));
+      $currency = trim((string)($_POST['currency'] ?? ''));
+      $color = trim((string)($_POST['color'] ?? '')) ?: null;
+      if ($accountId !== '' && $name !== '') {
+        $stmt = $pdo->prepare('UPDATE accounts SET name = :name, currency = :currency, color = :color, updated_at = NOW() WHERE id = :id');
+        $stmt->execute([':name' => $name, ':currency' => $currency, ':color' => $color, ':id' => $accountId]);
+        $notice = 'Compte mis à jour.';
+        // refresh accounts list/map with full columns
+        $accounts = $pdo->query('SELECT id, name, currency, balance, color, updated_at FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
         $accMap = [];
         foreach ($accounts as $ac) $accMap[$ac['id']] = $ac['name'];
       }
@@ -291,29 +308,37 @@ foreach ($allCats as $c) {
 ?>
   <section class="cat-section">
     <h2>Paramètres de comptes</h2>
-    <p>Modifier les paramètres par compte (couleur affichée sur le graphique et transactions).</p>
+    <p>Modifier les paramètres par compte (libellé, devise, couleur).</p>
     <?php if (!empty($accounts)): ?>
-      <table style="width:100%"><thead><tr><th>Compte</th><th>Couleur</th><th></th></tr></thead><tbody>
+      <table>
+        <thead>
+          <tr><th>Libellé</th><th>Devise</th><th>Couleur</th><th>Solde</th><th>Dernière MAJ</th><th></th></tr>
+        </thead>
+        <tbody>
         <?php foreach ($accounts as $ac): ?>
           <tr>
-            <td><?php echo htmlspecialchars($ac['name'] ?: $ac['id']); ?></td>
-            <td>
-              <?php
-                $c = $pdo->prepare('SELECT color FROM accounts WHERE id = :id');
-                $c->execute([':id' => $ac['id']]);
-                $cur = $c->fetchColumn() ?: '#000000';
-              ?>
-              <form method="post" style="display:inline-flex;gap:6px;align-items:center">
-                <input type="hidden" name="action" value="edit_account_param">
+            <form method="post">
+              <td>
+                <input type="text" name="name" value="<?php echo htmlspecialchars($ac['name'] ?? ''); ?>" required style="width:220px">
+              </td>
+              <td>
+                <input type="text" name="currency" value="<?php echo htmlspecialchars($ac['currency'] ?? ''); ?>" style="width:60px">
+              </td>
+              <td>
+                <input type="color" name="color" value="<?php echo htmlspecialchars($ac['color'] ?? '#000000'); ?>" title="Couleur du compte">
+              </td>
+              <td><?php echo htmlspecialchars((string)($ac['balance'] ?? '0')); ?></td>
+              <td><?php echo htmlspecialchars((string)($ac['updated_at'] ?? '')); ?></td>
+              <td>
+                <input type="hidden" name="action" value="edit_account">
                 <input type="hidden" name="account_id" value="<?php echo htmlspecialchars($ac['id']); ?>">
-                <input type="color" name="color" value="<?php echo htmlspecialchars($cur); ?>">
                 <button type="submit">Enregistrer</button>
-              </form>
-            </td>
-            <td></td>
+              </td>
+            </form>
           </tr>
         <?php endforeach; ?>
-      </tbody></table>
+        </tbody>
+      </table>
     <?php else: ?>
       <p>Aucun compte trouvé.</p>
     <?php endif; ?>
