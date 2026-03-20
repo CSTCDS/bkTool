@@ -1,30 +1,15 @@
-const CACHE_NAME = 'bktool-v1';
-const ASSETS = [
-  '/',
-  '/index.php',
-  '/assets/css/style.css',
-  '/assets/icons/icon-192.svg'
-];
-
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
+// Service worker inertified for development: remove caches and always use network
+self.addEventListener('install', event => {
+  // Activate immediately
+  self.skipWaiting();
 });
 
-self.addEventListener('fetch', e => {
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
-});
-const CACHE_NAME = 'bktool-v1';
-const ASSETS = [
-  '/',
-  '/index.php',
-  '/assets/css/style.css',
-  '/assets/icons/icon-192.svg'
-];
-
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
+self.addEventListener('activate', event => {
+  // Remove any existing caches to avoid serving stale assets
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
-self.addEventListener('fetch', e => {
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+// Always fall back to network (no caching)
+self.addEventListener('fetch', event => {
+  event.respondWith(fetch(event.request));
 });

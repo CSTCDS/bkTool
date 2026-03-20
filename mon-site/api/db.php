@@ -50,5 +50,14 @@ try {
 require_once __DIR__ . '/migrate.php';
 bkt_migrate($pdo);
 
+// Disable browser caching for PHP responses to avoid needing Ctrl+F5 during development
+// These headers are intentionally broad; change for production if needed.
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Cache-Control: post-check=0, pre-check=0', false);
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
+
 return $pdo;
 
