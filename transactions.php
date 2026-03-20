@@ -11,10 +11,11 @@ try {
   exit;
 }
 
-// Liste des comptes pour le dropdown
-$accs = $pdo->query('SELECT id, name FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+// Liste des comptes pour le dropdown (inclut le solde courant)
+$accs = $pdo->query('SELECT id, name, balance FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
 $accMap = [];
-foreach ($accs as $a) { $accMap[$a['id']] = $a['name']; }
+$accBalances = [];
+foreach ($accs as $a) { $accMap[$a['id']] = $a['name']; $accBalances[$a['id']] = (float)($a['balance'] ?? 0); }
 
 // Palette de couleurs identique au graphe du Dashboard
 $palette = [
@@ -97,9 +98,12 @@ $sql = 'SELECT t.*, a.name AS account_name FROM transactions t LEFT JOIN account
 if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
 $sql .= ' ORDER BY FIELD(t.status, \'pending\', \'booked\'), t.booking_date DESC, a.name ASC LIMIT 1000';
 
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$txs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+ $stmt = $pdo->prepare($sql);
+ $stmt->execute($params);
+ $txs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Detecter absence de filtres de dates — si vrai, on affichera la colonne "Solde"
+$noDateFilter = empty($_GET['from']) && empty($_GET['to']);
 
 // Export CSV
 if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
@@ -172,16 +176,33 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
 
   <table class="tx-table">
     <thead>
-      <tr><th class="col-compte">Compte</th><th class="col-date">Date</th><th class="col-montant">Montant</th><th class="col-devise">Devise</th><th class="col-desc">Commentaire</th><?php for($i=1;$i<=4;$i++): ?><th class="col-cat"><?php echo htmlspecialchars($criterionNames[$i]); ?></th><?php endfor; ?></tr>
+      <tr>
+        <th class="col-compte">Compte</th>
+        <th class="col-date">Date</th>
+        <th class="col-montant">Montant</th>
+        <?php if ($noDateFilter): ?><th class="col-solde">Solde</th><?php endif; ?>
+        <th class="col-devise">Devise</th>
+        <th class="col-desc">Commentaire</th>
+        <?php for($i=1;$i<=4;$i++): ?><th class="col-cat"><?php echo htmlspecialchars($criterionNames[$i]); ?></th><?php endfor; ?>
+      </tr>
     </thead>
     <tbody>
-    <?php foreach ($txs as $t):
+    <?php
+    // Pour calculer le solde courant par compte, on itère dans l'ordre affiché
+    $runningAcc = [];
+    foreach ($txs as $t):
       $isPending = (($t['status'] ?? 'booked') === 'pending');
+      $acctId = $t['account_id'];
+      if (!isset($runningAcc[$acctId])) $runningAcc[$acctId] = 0.0; // cumul des montants déjà vus (newest->oldest)
+      $startBal = $accBalances[$acctId] ?? 0.0;
+      // solde affiché = solde courant du compte - cumul des montants précédents
+      $displayBalance = $startBal - $runningAcc[$acctId];
     ?>
       <tr<?php if ($isPending) echo ' class="row-pending"'; ?>>
-        <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>"><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
+        <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; "><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
         <td class="col-date"><?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); if ($isPending) echo ' <span class="badge-pending">en attente</span>'; ?></td>
         <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
+        <?php if ($noDateFilter): ?><td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td><?php endif; ?>
         <td class="col-devise"><?php echo htmlspecialchars((string)($t['currency'] ?? '')); ?></td>
         <td class="col-desc"><?php echo htmlspecialchars((string)($t['description'] ?? '')); ?></td>
         <?php for ($ci2 = 1; $ci2 <= 4; $ci2++):
@@ -203,7 +224,11 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         </td>
         <?php endfor; ?>
       </tr>
-    <?php endforeach; ?>
+    <?php
+      // mettre à jour cumul pour ce compte (après affichage)
+      $runningAcc[$acctId] += (float)$t['amount'];
+    endforeach;
+    ?>
     </tbody>
   </table>
 </main>
