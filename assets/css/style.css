@@ -1,8 +1,16 @@
 body{font-family:Arial,Helvetica,sans-serif;margin:20px;background:#f7f9fc;color:#222}
 main{max-width:1000px;margin:0 auto}
-table{width:100%;border-collapse:collapse}
-th,td{border:1px solid #ddd;padding:8px}
+main.full-width{max-width:100%}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
+th,td{border:1px solid #ddd;padding:8px;overflow:hidden;text-overflow:ellipsis}
 th{background:#f2f2f2}
+
+/* Transactions table column widths */
+.tx-table .col-compte{white-space:nowrap;width:18%}
+.tx-table .col-date{white-space:nowrap;width:10%}
+.tx-table .col-montant{white-space:nowrap;width:12%;text-align:right}
+.tx-table .col-devise{width:6%;text-align:center}
+.tx-table .col-desc{width:auto}
 
 /* Header / tabs — classeur pastel */
 .site-header{background:linear-gradient(135deg,#e8eaf6 0%,#fce4ec 100%);padding:16px 24px 0;margin:-20px -20px 24px;border-bottom:2px solid #d1c4e9}

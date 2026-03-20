@@ -16,6 +16,22 @@ $accs = $pdo->query('SELECT id, name FROM accounts ORDER BY name')->fetchAll(PDO
 $accMap = [];
 foreach ($accs as $a) { $accMap[$a['id']] = $a['name']; }
 
+// Palette de couleurs identique au graphe du Dashboard
+$palette = [
+  'rgba(54,162,235,0.18)',
+  'rgba(255,99,132,0.18)',
+  'rgba(75,192,192,0.18)',
+  'rgba(255,159,64,0.18)',
+  'rgba(153,102,255,0.18)',
+  'rgba(255,205,86,0.18)'
+];
+$accColorMap = [];
+$ci = 0;
+foreach ($accs as $a) {
+  $accColorMap[$a['id']] = $palette[$ci % count($palette)];
+  $ci++;
+}
+
 $where = [];
 $params = [];
 if (!empty($_GET['account'])) { $where[] = 't.account_id = :account'; $params[':account'] = $_GET['account']; }
@@ -50,7 +66,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-<main>
+<main class="full-width">
   <div class="site-header">
     <div class="site-title">bkTool</div>
     <nav class="tabs">
@@ -80,18 +96,18 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
     <button type="submit" name="export" value="csv">Exporter CSV</button>
   </form>
 
-  <table>
+  <table class="tx-table">
     <thead>
-      <tr><th>Compte</th><th>Date</th><th>Montant</th><th>Devise</th><th>Description</th></tr>
+      <tr><th class="col-compte">Compte</th><th class="col-date">Date</th><th class="col-montant">Montant</th><th class="col-devise">Devise</th><th class="col-desc">Description</th></tr>
     </thead>
     <tbody>
     <?php foreach ($txs as $t): ?>
       <tr>
-        <td><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
-        <td><?php echo htmlspecialchars($t['booking_date']); ?></td>
-        <td style="text-align:right;<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
-        <td><?php echo htmlspecialchars($t['currency']); ?></td>
-        <td><?php echo htmlspecialchars($t['description']); ?></td>
+        <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>"><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
+        <td class="col-date"><?php echo htmlspecialchars($t['booking_date']); ?></td>
+        <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
+        <td class="col-devise"><?php echo htmlspecialchars($t['currency']); ?></td>
+        <td class="col-desc"><?php echo htmlspecialchars($t['description']); ?></td>
       </tr>
     <?php endforeach; ?>
     </tbody>
