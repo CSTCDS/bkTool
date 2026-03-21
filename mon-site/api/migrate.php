@@ -106,6 +106,13 @@ function bkt_migrate(PDO $pdo): void
                 $pdo->exec("ALTER TABLE accounts ADD COLUMN color VARCHAR(64) DEFAULT NULL AFTER balance");
             }
         },
+        // Version 6 : add NumImport to transactions (import batch identifier)
+        6 => function (PDO $pdo) {
+            $cols = $pdo->query('SHOW COLUMNS FROM transactions LIKE \'NumImport\'')->fetchAll();
+            if (empty($cols)) {
+                $pdo->exec("ALTER TABLE transactions ADD COLUMN NumImport INT DEFAULT 0 AFTER currency");
+            }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées
