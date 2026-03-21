@@ -154,47 +154,11 @@ try {
   </section>
 
   <!-- Links removed: Voir transactions & Connecter une banque (now in Banque) -->
-  <p>
-    <button id="syncBtn">Synchroniser maintenant</button>
-    <span id="syncStatus"></span>
-  </p>
 </main>
 
   <script src="assets/js/app.js"></script>
 <script>
-document.getElementById('syncBtn').addEventListener('click', function(){
-  const status = document.getElementById('syncStatus');
-  status.textContent = '… synchronisation en cours';
-  // Ask for token (simple protection). Leave empty if no token configured on server.
-  const token = prompt('Token de synchronisation (laisser vide si non configuré)');
-  const headers = {};
-  if (token && token.trim() !== '') headers['X-Sync-Token'] = token.trim();
-
-  fetch('sync.php', { method: 'GET', headers })
-    .then(r => r.text())
-    .then(text => {
-      // Try to parse JSON, otherwise show server response for debugging
-      let j = null;
-      try {
-        j = JSON.parse(text);
-      } catch (e) {
-        console.error('Réponse non-JSON de /sync.php:', text);
-        status.textContent = 'Erreur: réponse invalide du serveur. Voir console pour détails.';
-        return;
-      }
-      console.log('sync result', j);
-      if (j.status === 'ok') {
-        let msg = `OK comptes=${j.result.accounts} tx=${j.result.transactions}`;
-        if (j.result && Array.isArray(j.result.errors) && j.result.errors.length) {
-          msg += ' — erreurs: ' + j.result.errors.join(' | ');
-        }
-        status.textContent = msg;
-      } else {
-        // show detailed server message when available
-        status.textContent = 'Erreur: ' + (j.message || JSON.stringify(j));
-      }
-    }).catch(e => { status.textContent = 'Erreur: '+e; });
-});
+// Sync button removed from dashboard — sync is available via the 'Banque' screen
 
 // Données réelles par compte pour Chart.js
 const labels = <?php echo json_encode($labels); ?>;
