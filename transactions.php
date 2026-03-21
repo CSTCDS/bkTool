@@ -269,7 +269,12 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
     ?>
       <?php $trClass = $isPending ? 'row-pending' : ''; ?>
       <tr<?php echo $trClass ? ' class="' . $trClass . '"' : ''; ?> data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-status="<?php echo htmlspecialchars($t['status'] ?? ''); ?>" data-numimport="<?php echo htmlspecialchars($t['NumImport'] ?? 0); ?>">
-        <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; "><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
+        <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; ">
+          <?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?>
+          <?php if (!empty($t['NumImport']) && (int)$t['NumImport'] > 0): ?>
+            <span class="badge-numimport">#<?php echo htmlspecialchars((string)$t['NumImport']); ?></span>
+          <?php endif; ?>
+        </td>
         <td class="col-date">
           <?php if ($isPending) echo '<span class="badge-pending">en attente</span><br>'; ?>
           <?php if (isset($t['status']) && strtoupper((string)$t['status']) === 'TODEL') echo '<span class="badge-todel">à supprimer ?</span><br>'; ?>

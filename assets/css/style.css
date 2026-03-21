@@ -49,6 +49,9 @@ th{background:#f2f2f2}
 /* Badge for transactions marked to be deleted */
 .badge-todel{display:inline-block;font-size:.72rem;background:#c62828;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px;font-style:normal;vertical-align:middle}
 
+/* Badge showing import number */
+.badge-numimport{display:inline-block;font-size:.72rem;background:#607d8b;color:#fff;padding:1px 6px;border-radius:6px;margin-left:8px;font-style:normal;vertical-align:middle}
+
 /* Popup for transaction TODEL actions */
 #todelPopup{
   position:fixed;z-index:2000;background:#fff;border:1px solid #ddd;padding:10px;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,0.12);min-width:220px}
