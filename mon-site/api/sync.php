@@ -12,19 +12,38 @@ function upsertAccount($pdo, $acc)
     $currency = $acc['currency'] ?? 'EUR';
     $raw = json_encode($acc);
 
-    // Insert si nouveau, sinon mettre à jour balance/currency/raw sans écraser le nom
-    $stmt = $pdo->prepare(
-        'INSERT INTO accounts (id, name, balance, currency, raw, updated_at) '
-      . 'VALUES (:id, :name, :balance, :currency, :raw, NOW()) '
-      . 'ON DUPLICATE KEY UPDATE balance = VALUES(balance), currency = VALUES(currency), raw = VALUES(raw), updated_at = NOW()'
-    );
-    $stmt->execute([
-        ':id' => $id,
-        ':name' => $name,
-        ':balance' => $balance,
-        ':currency' => $currency,
-        ':raw' => $raw
-    ]);
+    // Check existence to count insert vs update
+    $exists = false;
+    if ($id !== null) {
+        $q = $pdo->prepare('SELECT 1 FROM accounts WHERE id = :id LIMIT 1');
+        $q->execute([':id' => $id]);
+        $exists = (bool)$q->fetchColumn();
+    }
+
+    if (!$exists) {
+        $stmt = $pdo->prepare(
+            'INSERT INTO accounts (id, name, balance, currency, raw, updated_at) VALUES (:id, :name, :balance, :currency, :raw, NOW())'
+        );
+        $stmt->execute([
+            ':id' => $id,
+            ':name' => $name,
+            ':balance' => $balance,
+            ':currency' => $currency,
+            ':raw' => $raw
+        ]);
+        return ['action' => 'insert'];
+    } else {
+        $stmt = $pdo->prepare(
+            'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, updated_at = NOW() WHERE id = :id'
+        );
+        $stmt->execute([
+            ':id' => $id,
+            ':balance' => $balance,
+            ':currency' => $currency,
+            ':raw' => $raw
+        ]);
+        return ['action' => 'update'];
+    }
 }
 
 function insertTransaction($pdo, $tx)
@@ -51,27 +70,55 @@ function insertTransaction($pdo, $tx)
     $description = is_array($tx['remittance_information'] ?? null) ? implode(' ', $tx['remittance_information']) : ($tx['remittance_information'] ?? null);
     $raw = json_encode($tx);
 
-    // Use ON DUPLICATE KEY UPDATE so pending transactions get updated on next sync
-    $stmt = $pdo->prepare(
-        'INSERT INTO transactions (id, account_id, amount, currency, description, booking_date, status, raw, created_at) '
-      . 'VALUES (:id, :account_id, :amount, :currency, :description, :booking_date, :status, :raw, NOW()) '
-      . 'ON DUPLICATE KEY UPDATE amount = VALUES(amount), booking_date = VALUES(booking_date), status = VALUES(status), description = VALUES(description), raw = VALUES(raw)'
-    );
-    $stmt->execute([
-        ':id' => $id,
-        ':account_id' => $accountId,
-        ':amount' => $amount,
-        ':currency' => $currency,
-        ':description' => $description,
-        ':booking_date' => $bookingDate,
-        ':status' => $status,
-        ':raw' => $raw
-    ]);
+    // Check existence to differentiate insert vs update
+    $q = $pdo->prepare('SELECT 1 FROM transactions WHERE id = :id LIMIT 1');
+    $q->execute([':id' => $id]);
+    $exists = (bool)$q->fetchColumn();
+    if (!$exists) {
+        $stmt = $pdo->prepare(
+            'INSERT INTO transactions (id, account_id, amount, currency, description, booking_date, status, raw, created_at) '
+          . 'VALUES (:id, :account_id, :amount, :currency, :description, :booking_date, :status, :raw, NOW())'
+        );
+        $stmt->execute([
+            ':id' => $id,
+            ':account_id' => $accountId,
+            ':amount' => $amount,
+            ':currency' => $currency,
+            ':description' => $description,
+            ':booking_date' => $bookingDate,
+            ':status' => $status,
+            ':raw' => $raw
+        ]);
+        return ['action' => 'insert'];
+    } else {
+        $stmt = $pdo->prepare(
+            'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, description = :description, booking_date = :booking_date, status = :status, raw = :raw WHERE id = :id'
+        );
+        $stmt->execute([
+            ':id' => $id,
+            ':account_id' => $accountId,
+            ':amount' => $amount,
+            ':currency' => $currency,
+            ':description' => $description,
+            ':booking_date' => $bookingDate,
+            ':status' => $status,
+            ':raw' => $raw
+        ]);
+        return ['action' => 'update'];
+    }
 }
 
 function run_sync($pdo, $config)
 {
-    $result = ['accounts' => 0, 'transactions' => 0, 'errors' => []];
+    $result = [
+        'accounts' => 0,
+        'accounts_insert' => 0,
+        'accounts_update' => 0,
+        'transactions' => 0,
+        'transactions_insert' => 0,
+        'transactions_update' => 0,
+        'errors' => []
+    ];
 
     // Get stored session_id
     $stmt = $pdo->prepare('SELECT `value` FROM settings WHERE `key` = :k');
@@ -105,7 +152,7 @@ function run_sync($pdo, $config)
     $accountsData = $sessionRes['body']['accounts_data'] ?? [];
 
     // Process each account
-    foreach ($accountsData as $accData) {
+        foreach ($accountsData as $accData) {
         $uid = $accData['uid'] ?? null;
         if (!$uid) continue;
 
@@ -124,13 +171,15 @@ function run_sync($pdo, $config)
             }
         }
 
-        upsertAccount($pdo, [
+        $r = upsertAccount($pdo, [
             'id' => $uid,
             'name' => $accData['identification_hash'] ?? $uid,
             'balance' => $balance,
             'currency' => 'EUR',
         ]);
         $result['accounts']++;
+        if (!empty($r['action']) && $r['action'] === 'insert') $result['accounts_insert']++;
+        if (!empty($r['action']) && $r['action'] === 'update') $result['accounts_update']++;
 
         // Fetch transactions
         $txRes = $client->getAccountTransactions($uid);
@@ -141,8 +190,10 @@ function run_sync($pdo, $config)
         if ($txRes['status'] >= 200 && $txRes['status'] < 300 && !empty($txRes['body']['transactions'])) {
             foreach ($txRes['body']['transactions'] as $tx) {
                 $tx['_account_id'] = $uid;
-                insertTransaction($pdo, $tx);
+                $r2 = insertTransaction($pdo, $tx);
                 $result['transactions']++;
+                if (!empty($r2['action']) && $r2['action'] === 'insert') $result['transactions_insert']++;
+                if (!empty($r2['action']) && $r2['action'] === 'update') $result['transactions_update']++;
             }
         }
     }

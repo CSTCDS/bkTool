@@ -148,7 +148,7 @@ try {
     <a href="index.php" class="active">Dashboard</a>
     <a href="transactions.php">Transactions</a>
     <a href="categories.php">Paramètres</a>
-    <a href="choix.php">Connecter banque</a>
+    <a href="choix.php">Banque</a>
   </nav>
 </div>
 <main>
@@ -161,8 +161,7 @@ try {
     <canvas id="chart"></canvas>
   </section>
 
-  <p><a href="transactions.php">Voir transactions</a></p>
-  <p><a href="choix.php">Connecter une banque (Enable Banking)</a></p>
+  <!-- Links removed: Voir transactions & Connecter une banque (now in Banque) -->
   <p>
     <button id="syncBtn">Synchroniser maintenant</button>
     <span id="syncStatus"></span>
