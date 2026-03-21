@@ -150,6 +150,27 @@ try {
 
   <section>
     <h3>Historique (exemple)</h3>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
+      <label>Type de graphique:
+        <select id="chartType">
+          <option value="balance">Solde compte</option>
+          <option value="category_month">Graphique mensuel sur une catégorie</option>
+        </select>
+      </label>
+      <label id="cat1Wrap" style="display:none">Catégorie:
+        <select id="cat1Select"><option value="all">— Tous —</option></select>
+      </label>
+      <label id="cat2Wrap" style="display:none">Niveau 1 sélectionné -> Niveau 2:
+        <select id="cat2Select"><option value="all">— Tous —</option></select>
+      </label>
+      <label style="margin-left:12px">Type:
+        <select id="chartStyle"><option value="line">Graph lignes</option><option value="bar">Graph à barres mensuelles</option></select>
+      </label>
+      <label style="margin-left:8px;display:none" id="barModeWrap">Mode barres:
+        <select id="barMode"><option value="cumulative">Cumuler</option><option value="split">Séparer débit/crédit</option></select>
+      </label>
+      <button id="chartRefresh">Rafraîchir</button>
+    </div>
     <canvas id="chart"></canvas>
   </section>
 
@@ -201,6 +222,51 @@ const chart = new Chart(ctx, {
     }
   }
 });
+
+// --- Dashboard chart controls ---
+function populateCat1(){
+  fetch('mon-site/api/agg.php?type=list_cats')
+    .then(r=>r.json()).then(function(j){
+      if (!Array.isArray(j)) return;
+      var sel = document.getElementById('cat1Select'); sel.innerHTML = '<option value="all">— Tous —</option>';
+      j.forEach(function(c){ var opt = document.createElement('option'); opt.value = c.id; opt.textContent = c.label; sel.appendChild(opt); });
+    }).catch(()=>{});
+}
+
+// load cat2 for selected cat1
+function populateCat2(cat1){
+  var sel = document.getElementById('cat2Select'); sel.innerHTML = '<option value="all">— Tous —</option>';
+  if (!cat1 || cat1==='all') return;
+  fetch('mon-site/api/agg.php?type=list_cats2&cat1='+encodeURIComponent(cat1)).then(r=>r.json()).then(function(j){ if (!Array.isArray(j)) return; j.forEach(function(c){ var opt=document.createElement('option'); opt.value=c.id; opt.textContent=c.label; sel.appendChild(opt); }); }).catch(()=>{});
+}
+
+document.getElementById('chartType').addEventListener('change', function(){
+  var t = this.value;
+  var cat1Wrap = document.getElementById('cat1Wrap');
+  var cat2Wrap = document.getElementById('cat2Wrap');
+  var barModeWrap = document.getElementById('barModeWrap');
+  if (t === 'category_month') { cat1Wrap.style.display='inline-block'; cat2Wrap.style.display='inline-block'; barModeWrap.style.display='inline-block'; } else { cat1Wrap.style.display='none'; cat2Wrap.style.display='none'; barModeWrap.style.display='none'; }
+});
+
+document.getElementById('cat1Select').addEventListener('change', function(){ populateCat2(this.value); });
+
+document.getElementById('chartStyle').addEventListener('change', function(){ var wrap=document.getElementById('barModeWrap'); wrap.style.display = (this.value==='bar') ? 'inline-block' : 'none'; });
+
+function refreshDashboardChart(){
+  var type = document.getElementById('chartType').value;
+  if (type === 'balance') {
+    chart.data.labels = labels; chart.data.datasets = datasets.map(ds=>Object.assign({}, ds, {fill:false})); chart.options.type='line'; chart.update(); return;
+  }
+  // category_month
+  var cat1 = document.getElementById('cat1Select').value || 'all';
+  var cat2 = document.getElementById('cat2Select').value || 'all';
+  fetch('mon-site/api/agg.php?type=category_month&cat1='+encodeURIComponent(cat1)+'&cat2='+encodeURIComponent(cat2)+'&months=12')
+    .then(r=>r.json()).then(function(j){ if (j.error) { console.error(j); return; } chart.data.labels = j.labels; chart.data.datasets = j.datasets.map(function(ds,i){ return { label: ds.label, data: ds.data, fill: false }; }); chart.update(); }).catch(console.error);
+}
+
+document.getElementById('chartRefresh').addEventListener('click', refreshDashboardChart);
+// initialize categories list on load
+populateCat1();
 </script>
 </body>
 </html>
