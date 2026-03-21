@@ -66,7 +66,7 @@ $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <td>
               <input type="color" name="color" value="<?php echo htmlspecialchars($acc['color'] ?? '#000000'); ?>" title="Couleur du compte">
             </td>
-            <td><?php echo htmlspecialchars((string)($acc['balance'] ?? '0')); ?></td>
+            <td style="text-align:right"><?php echo htmlspecialchars((string)($acc['balance'] ?? '0')); ?></td>
             <td><?php echo htmlspecialchars((string)($acc['updated_at'] ?? '')); ?></td>
             <td>
               <input type="hidden" name="account_id" value="<?php echo htmlspecialchars($acc['id']); ?>">
