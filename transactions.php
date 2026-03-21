@@ -97,9 +97,11 @@ $params = [];
 // group selection helper
 $groupSelected = false;
 $groupAccountIds = [];
+
+// remember account selection from cookie if GET not provided
+$acctSel = $_GET['account'] ?? ($_COOKIE['selected_account'] ?? '');
 // Account selection: supports single account id or group selection with prefix 'g:'
-if (!empty($_GET['account'])) {
-  $acctSel = $_GET['account'];
+if (!empty($acctSel)) {
   if (is_string($acctSel) && strpos($acctSel, 'g:') === 0) {
     $gid = (int)substr($acctSel, 2);
     $acctIds = $groupChildren[$gid] ?? [];
@@ -213,15 +215,15 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
 
   <form method="get" style="margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:end">
     <label>Compte :
-      <select name="account" onchange="this.form.submit()">
+      <select name="account" onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; this.form.submit()">
         <option value="">— Tous —</option>
         <?php foreach ($accs as $a): ?>
-          <option value="<?php echo htmlspecialchars($a['id']); ?>" <?php echo (($_GET['account'] ?? '') === $a['id']) ? 'selected' : ''; ?>>
+          <option value="<?php echo htmlspecialchars($a['id']); ?>" <?php echo ($acctSel !== '' && (string)$acctSel === (string)$a['id']) ? 'selected' : ''; ?>>
             <?php echo htmlspecialchars($a['name'] ?: $a['id']); ?>
           </option>
         <?php endforeach; ?>
         <?php if (!empty($catTree[0])): foreach ($catTree[0] as $pid => $node): if (!$node['info']) continue; ?>
-          <option value="g:<?php echo (int)$node['info']['id']; ?>" <?php echo (($_GET['account'] ?? '') === ('g:' . (int)$node['info']['id'])) ? 'selected' : ''; ?> style="background:#e0e0e0">
+          <option value="g:<?php echo (int)$node['info']['id']; ?>" <?php echo ($acctSel !== '' && (string)$acctSel === ('g:' . (int)$node['info']['id'])) ? 'selected' : ''; ?> style="background:#e0e0e0">
             <?php echo 'G: ' . htmlspecialchars($node['info']['label']); ?>
           </option>
         <?php endforeach; endif; ?>
@@ -260,6 +262,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         <th class="col-devise" style="width:5%">Devise</th>
         <th class="col-desc" style="width:35%">Commentaire</th>
         <th class="col-categories" style="width:28%">Catégories</th>
+        <?php if ($groupSelected): ?><th class="col-solde-virtuel" style="width:8%">Solde virtuel</th><?php endif; ?>
         <?php if ($noDateFilter): ?><th class="col-solde" style="width:8%">Solde</th><?php endif; ?>
       <?php
       $runningAcc = [];
