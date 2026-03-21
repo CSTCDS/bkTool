@@ -94,13 +94,18 @@ foreach ($allCats as $c) {
 
 $where = [];
 $params = [];
+// group selection helper
+$groupSelected = false;
+$groupAccountIds = [];
 // Account selection: supports single account id or group selection with prefix 'g:'
 if (!empty($_GET['account'])) {
   $acctSel = $_GET['account'];
   if (is_string($acctSel) && strpos($acctSel, 'g:') === 0) {
     $gid = (int)substr($acctSel, 2);
     $acctIds = $groupChildren[$gid] ?? [];
+    $groupAccountIds = $acctIds;
     if (!empty($acctIds)) {
+      $groupSelected = true;
       $placeholders = [];
       foreach ($acctIds as $idx => $aid) {
         $ph = ':g_' . $gid . '_' . $idx;
@@ -164,6 +169,14 @@ if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
 
 // Detecter absence de filtres de dates — si vrai, on affichera la colonne "Solde"
 $noDateFilter = empty($_GET['from']) && empty($_GET['to']);
+
+// If a group is selected, compute the group's starting total balance
+$groupStartBalance = 0.0;
+if ($groupSelected && !empty($groupAccountIds)) {
+  foreach ($groupAccountIds as $aid) {
+    $groupStartBalance += (float)($accBalances[$aid] ?? 0.0);
+  }
+}
 
 // Export CSV
 if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
@@ -248,11 +261,11 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         <th class="col-desc" style="width:35%">Commentaire</th>
         <th class="col-categories" style="width:28%">Catégories</th>
         <?php if ($noDateFilter): ?><th class="col-solde" style="width:8%">Solde</th><?php endif; ?>
-      </tr>
-    </thead>
-    <tbody>
-    <?php
-    // Pour calculer le solde courant par compte, on itère dans l'ordre affiché
+      <tr<?php if ($isPending) echo ' class="row-pending"'; ?>>
+        <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; "><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
+        <td class="col-date"><?php if ($isPending) echo '<span class="badge-pending">en attente</span><br>'; ?><?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); ?></td>
+        <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
+        <td class="col-devise"><?php echo htmlspecialchars((string)($t['currency'] ?? '')); ?></td>
     $runningAcc = [];
     foreach ($txs as $t):
       // Consider BOOK as booked/current; any other status treated as pending
@@ -316,11 +329,20 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
             </div>
           </div>
         </td>
+        <?php if ($groupSelected): ?>
+          <?php // compute virtual group balance before applying this row's amount ?>
+          <td class="col-solde-virtuel"><?php echo htmlspecialchars(number_format($groupStartBalance - ($groupRunning ?? 0.0), 2, ',', ' ')); ?></td>
+        <?php endif; ?>
         <?php if ($noDateFilter): ?><td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td><?php endif; ?>
       </tr>
     <?php
-      // mettre à jour cumul pour ce compte (après affichage)
-      $runningAcc[$acctId] += (float)$t['amount'];
+        // mettre à jour cumul pour ce compte (après affichage)
+        $runningAcc[$acctId] += (float)$t['amount'];
+        // mettre à jour cumul pour le groupe sélectionné si applicable
+        if ($groupSelected) {
+          if (!isset($groupRunning)) $groupRunning = 0.0;
+          $groupRunning += (float)$t['amount'];
+        }
     endforeach;
     ?>
     </tbody>
