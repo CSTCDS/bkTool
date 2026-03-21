@@ -189,7 +189,7 @@ foreach ($allCats as $c) {
     <a href="index.php">Dashboard</a>
     <a href="transactions.php">Transactions</a>
     <a href="categories.php" class="active">Paramètres</a>
-    <a href="choix.php">Connecter banque</a>
+    <a href="choix.php">Banque</a>
   </nav>
 </div>
 <main>

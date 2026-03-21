@@ -46,7 +46,7 @@ $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     <a href="transactions.php">Transactions</a>
     <a href="categories.php">Paramètres</a>
-    <a href="choix.php">Connecter banque</a>
+    <a href="choix.php">Banque</a>
   </nav>
 </div>
 <main>

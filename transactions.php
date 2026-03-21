@@ -206,7 +206,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
     <a href="index.php">Dashboard</a>
     <a href="transactions.php" class="active">Transactions</a>
     <a href="categories.php">Paramètres</a>
-    <a href="choix.php">Connecter banque</a>
+    <a href="choix.php">Banque</a>
   </nav>
 </div>
 <main class="full-width">
