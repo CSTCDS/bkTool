@@ -109,8 +109,9 @@ function insertTransaction($pdo, $tx)
         try {
             // also consider rows dated 31 December of the current year as potential matches
             $yearEnd = date('Y') . '-12-31';
-            $chk = $pdo->prepare('SELECT id FROM transactions WHERE account_id = :aid AND booking_date IN (:bdate, :yend) AND COALESCE(description,"") = :desc AND amount = :amt AND status = :st LIMIT 1');
-            $chk->execute([':aid' => $accountId, ':bdate' => $bookingDate, ':yend' => $yearEnd, ':desc' => $description ?? '', ':amt' => $amount, ':st' => 'OTHR']);
+            // Exclude the newly derived/received id itself when searching for older 'OTHR' rows
+            $chk = $pdo->prepare('SELECT id FROM transactions WHERE account_id = :aid AND booking_date IN (:bdate, :yend) AND COALESCE(description,"") = :desc AND amount = :amt AND status = :st AND id <> :nid LIMIT 1');
+            $chk->execute([':aid' => $accountId, ':bdate' => $bookingDate, ':yend' => $yearEnd, ':desc' => $description ?? '', ':amt' => $amount, ':st' => 'OTHR', ':nid' => $id]);
             $oldId = $chk->fetchColumn();
             if ($oldId) {
                 $upd = $pdo->prepare('UPDATE transactions SET status = :newst WHERE id = :id');
