@@ -204,7 +204,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
 <main class="full-width">
 <?php
 $selectedQuickRange = $_GET['quickRange'] ?? ($_COOKIE['selected_quickRange'] ?? '');
-$dateFieldsVisible = ($selectedQuickRange === 'custom' || !empty($_GET['from']) || !empty($_GET['to'])) ? '' : 'display:none';
+$dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
 ?>
   <form method="get" class="tx-filter-header" style="margin-bottom:16px">
     <div class="tx-header-row" style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
@@ -229,7 +229,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom' || !empty($_GET['from']) 
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
         <!-- Critères 1 & 2 (ligne 1, droite) -->
-        <div style="min-width:180px">
+        <div>
           <select name="fcat1" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[1]); ?></option>
             <?php if (!empty($catTree[1])): foreach ($catTree[1] as $pid => $node): if (!$node['info']) continue; ?>
@@ -241,7 +241,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom' || !empty($_GET['from']) 
             <?php endforeach; endif; ?>
           </select>
         </div>
-        <div style="min-width:180px">
+        <div>
           <select name="fcat2" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[2]); ?></option>
             <?php if (!empty($catTree[2])): foreach ($catTree[2] as $pid => $node): if (!$node['info']) continue; ?>
@@ -282,7 +282,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom' || !empty($_GET['from']) 
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
         <!-- Critères 3 & 4 (ligne 2, droite) -->
-        <div style="min-width:180px">
+        <div>
           <select name="fcat3" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[3]); ?></option>
             <?php if (!empty($catTree[3])): foreach ($catTree[3] as $pid => $node): if (!$node['info']) continue; ?>
@@ -294,7 +294,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom' || !empty($_GET['from']) 
             <?php endforeach; endif; ?>
           </select>
         </div>
-        <div style="min-width:180px">
+        <div>
           <select name="fcat4" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[4]); ?></option>
             <?php if (!empty($catTree[4])): foreach ($catTree[4] as $pid => $node): if (!$node['info']) continue; ?>
@@ -478,9 +478,9 @@ document.getElementById('quickRange').addEventListener('change', function(){
   form.submit();
 });
 
-// Save from/to in cookies when custom dates are used and submit
+// Save from/to in cookies when custom dates are used — only on blur (not every keystroke)
 document.querySelectorAll('input[name=from], input[name=to]').forEach(function(inp){
-  inp.addEventListener('change', function(){
+  inp.addEventListener('blur', function(){
     var form = this.closest('form');
     var from = form.querySelector('input[name=from]').value || '';
     var to = form.querySelector('input[name=to]').value || '';
@@ -502,10 +502,15 @@ document.addEventListener('DOMContentLoaded', function(){
   var form = sel.closest('form');
   var inpFrom = form ? form.querySelector('input[name=from]') : null;
   var inpTo = form ? form.querySelector('input[name=to]') : null;
-  // If from/to already set by server (GET params), ensure date fields visible and do not auto-apply cookie
   var dateFields = document.getElementById('dateRangeFields');
-  if ((inpFrom && inpFrom.value) || (inpTo && inpTo.value)) {
+  // If quickRange is already set to custom, show date fields and stop
+  if (sel.value === 'custom') {
     if (dateFields) dateFields.style.display = '';
+    return;
+  }
+  // If quickRange is set to a preset, hide dates and stop
+  if (sel.value) {
+    if (dateFields) dateFields.style.display = 'none';
     return;
   }
   if (sel.value) return;

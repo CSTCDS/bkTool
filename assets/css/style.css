@@ -103,23 +103,17 @@ th{background:#f2f2f2}
 .tx-table td.col-solde-virtuel { text-align: right; }
 
 /* Header filter layout (2 rows x 3 zones) */
-.tx-filter-header { max-width:1000px; margin:0 auto; padding:0 8px; box-sizing:border-box }
-.tx-filter-header .tx-header-row { box-sizing: border-box }
-.tx-filter-header .tx-col { box-sizing: border-box }
-.tx-filter-header select, .tx-filter-header input[type=date] { padding:6px 8px; border-radius:4px; border:1px solid #ccc }
+.tx-filter-header { max-width:100%; margin:0 auto; padding:0 8px; box-sizing:border-box }
+.tx-filter-header .tx-header-row { box-sizing:border-box; flex-wrap:wrap }
+.tx-filter-header .tx-col { box-sizing:border-box }
+.tx-filter-header .tx-left { text-align:left }
+.tx-filter-header .tx-center { flex:0 0 40%; min-width:40%; text-align:center }
+.tx-filter-header .tx-right { text-align:right }
+.tx-filter-header select, .tx-filter-header input[type=date] { padding:6px 8px; border-radius:4px; border:1px solid #ccc; font-size:.82rem }
+.tx-filter-header select { width:100% }
 .tx-filter-header h1 { font-size:1.25rem; margin:0 }
 @media (max-width:800px) {
-  .tx-filter-header .tx-left { text-align:left }
-  .tx-filter-header .tx-center { flex: 0 0 40%; max-width:40%; min-width:40%; text-align:center }
-  .tx-filter-header .tx-right { text-align:right }
-  .tx-filter-header .tx-header-row { flex-wrap:wrap }
-  .tx-filter-header select, .tx-filter-header input[type=date] { padding:6px 8px; border-radius:4px; border:1px solid #ccc }
-  .tx-filter-header select { width:200px !important; min-width:200px }
-
-  @media (max-width:800px) {
-    .tx-filter-header .tx-header-row { flex-direction:column; align-items:stretch }
-    .tx-filter-header .tx-right, .tx-filter-header .tx-center { text-align:left }
-    .tx-filter-header .tx-right > div, .tx-filter-header .tx-left > div { width:100%; min-width:0 }
-    .tx-filter-header select { width:100% !important; min-width:0 }
-  }
+  .tx-filter-header .tx-header-row { flex-direction:column; align-items:stretch }
+  .tx-filter-header .tx-center { min-width:100%; text-align:left }
+  .tx-filter-header .tx-right > div, .tx-filter-header .tx-left > div { width:100%; min-width:0 }
 }
