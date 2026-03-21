@@ -223,6 +223,15 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
     </label>
     <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ''); ?>"></label>
     <label>Au : <input type="date" name="to" value="<?php echo htmlspecialchars($_GET['to'] ?? ''); ?>"></label>
+    <label>Raccourci :
+      <select id="quickRange" style="min-width:160px">
+        <option value="">— Aucun —</option>
+        <option value="10d">10 derniers jours</option>
+        <option value="20d">20 derniers jours</option>
+        <option value="1m">1 mois</option>
+        <option value="2m">2 mois</option>
+      </select>
+    </label>
     <?php for ($fi = 1; $fi <= 4; $fi++):
       $filterKey = "fcat{$fi}";
       $filterVal = $_GET[$filterKey] ?? '';
@@ -364,6 +373,26 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       })
       .catch(function(e) { console.error(e); });
   });
+});
+</script>
+<script>
+// Quick range selector: set from/to and submit form
+document.getElementById('quickRange').addEventListener('change', function(){
+  var v = this.value; if (!v) return;
+  var now = new Date();
+  var from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (v === '10d') { from.setDate(from.getDate() - 9); }
+  else if (v === '20d') { from.setDate(from.getDate() - 19); }
+  else if (v === '1m') { from.setMonth(from.getMonth() - 1); }
+  else if (v === '2m') { from.setMonth(from.getMonth() - 2); }
+  function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  var form = this.closest('form');
+  if (!form) return;
+  var inpFrom = form.querySelector('input[name=from]');
+  var inpTo = form.querySelector('input[name=to]');
+  if (inpFrom) inpFrom.value = ymd(from);
+  if (inpTo) inpTo.value = ymd(now);
+  form.submit();
 });
 </script>
 <div id="todelPopup" style="display:none">
