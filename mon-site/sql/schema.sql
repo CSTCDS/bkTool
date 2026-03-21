@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   account_id VARCHAR(191),
   amount DECIMAL(20,4),
   currency VARCHAR(8),
+  NumImport INT DEFAULT 0,
   description TEXT,
   booking_date DATE,
   status VARCHAR(20) DEFAULT 'booked',

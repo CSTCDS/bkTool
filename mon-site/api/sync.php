@@ -46,7 +46,7 @@ function upsertAccount($pdo, $acc)
     }
 }
 
-function insertTransaction($pdo, $tx)
+function insertTransaction($pdo, $tx, $importNum)
 {
     // Determine sign: Enable Banking uses credit_debit_indicator (CRDT / DBIT)
     $amount = (float)($tx['transaction_amount']['amount'] ?? 0);
@@ -86,20 +86,21 @@ function insertTransaction($pdo, $tx)
     }
     $raw = json_encode($tx);
 
-    // Check existence to differentiate insert vs update
-    $q = $pdo->prepare('SELECT 1 FROM transactions WHERE id = :id LIMIT 1');
+    // Check existence to differentiate insert vs update; fetch full row if exists
+    $q = $pdo->prepare('SELECT amount, booking_date, status, COALESCE(description,"") AS description FROM transactions WHERE id = :id LIMIT 1');
     $q->execute([':id' => $id]);
-    $exists = (bool)$q->fetchColumn();
-    if (!$exists) {
+    $existing = $q->fetch(PDO::FETCH_ASSOC);
+    if (!$existing) {
         $stmt = $pdo->prepare(
-            'INSERT INTO transactions (id, account_id, amount, currency, description, booking_date, status, raw, created_at) '
-          . 'VALUES (:id, :account_id, :amount, :currency, :description, :booking_date, :status, :raw, NOW())'
+            'INSERT INTO transactions (id, account_id, amount, currency, NumImport, description, booking_date, status, raw, created_at) '
+          . 'VALUES (:id, :account_id, :amount, :currency, :num_import, :description, :booking_date, :status, :raw, NOW())'
         );
         $stmt->execute([
             ':id' => $id,
             ':account_id' => $accountId,
             ':amount' => $amount,
             ':currency' => $currency,
+            ':num_import' => $importNum,
             ':description' => $description,
             ':booking_date' => $bookingDate,
             ':status' => $status,
@@ -122,14 +123,26 @@ function insertTransaction($pdo, $tx)
         }
         return ['action' => 'insert'];
     } else {
+        // Compare fields: booking_date, amount, status, description
+        $existsDesc = (string)($existing['description'] ?? '');
+        $existsAmt = (float)($existing['amount'] ?? 0);
+        $existsDate = (string)($existing['booking_date'] ?? '');
+        $existsStatus = (string)($existing['status'] ?? '');
+
+        $same = ($existsDate === (string)$bookingDate) && ((float)$existsAmt === (float)$amount) && ($existsStatus === (string)$status) && ($existsDesc === (string)($description ?? ''));
+        if ($same) {
+            return ['action' => 'noop'];
+        }
+
         $stmt = $pdo->prepare(
-            'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, description = :description, booking_date = :booking_date, status = :status, raw = :raw WHERE id = :id'
+            'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, NumImport = :num_import, description = :description, booking_date = :booking_date, status = :status, raw = :raw WHERE id = :id'
         );
         $stmt->execute([
             ':id' => $id,
             ':account_id' => $accountId,
             ':amount' => $amount,
             ':currency' => $currency,
+            ':num_import' => $importNum,
             ':description' => $description,
             ':booking_date' => $bookingDate,
             ':status' => $status,
@@ -159,6 +172,15 @@ function run_sync($pdo, $config)
     if (!$sessionId) {
         $result['errors'][] = 'Aucune session Enable Banking trouvée. Connectez d\'abord une banque via choix.php.';
         return $result;
+    }
+
+    // Create a new import number for this sync: max(NumImport)+1
+    try {
+        $r = $pdo->query('SELECT COALESCE(MAX(NumImport), 0) FROM transactions');
+        $maxImp = (int)$r->fetchColumn();
+        $importNum = $maxImp + 1;
+    } catch (Throwable $e) {
+        $importNum = 1;
     }
 
     try {
@@ -221,7 +243,7 @@ function run_sync($pdo, $config)
         if ($txRes['status'] >= 200 && $txRes['status'] < 300 && !empty($txRes['body']['transactions'])) {
             foreach ($txRes['body']['transactions'] as $tx) {
                 $tx['_account_id'] = $uid;
-                $r2 = insertTransaction($pdo, $tx);
+                $r2 = insertTransaction($pdo, $tx, $importNum);
                 $result['transactions']++;
                 if (!empty($r2['action']) && $r2['action'] === 'insert') $result['transactions_insert']++;
                 if (!empty($r2['action']) && $r2['action'] === 'update') $result['transactions_update']++;
