@@ -215,7 +215,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         <div style="display:flex;flex-direction:column;align-items:center">
           <label>Sélection temporelle:</label>
           <select id="quickRange" name="quickRange">
-            <option value=""<?php echo ($selectedQuickRange === '') ? ' selected' : ''; ?>>— Aucun —</option>
+            <option value=""<?php echo ($selectedQuickRange === '') ? ' selected' : ''; ?>>Sélection Temporelle</option>
             <option value="10d"<?php echo ($selectedQuickRange === '10d') ? ' selected' : ''; ?>>10 derniers jours</option>
             <option value="20d"<?php echo ($selectedQuickRange === '20d') ? ' selected' : ''; ?>>20 derniers jours</option>
             <option value="1m"<?php echo ($selectedQuickRange === '1m') ? ' selected' : ''; ?>>1 mois</option>
@@ -259,7 +259,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
     <div class="tx-header-row" style="display:flex;gap:12px;align-items:center">
       <div class="tx-col tx-left" style="flex:1">
         <label>Sélection de compte :
-          <select name="account" onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; this.form.submit()">
+          <select name="account" class="select-account" onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; this.form.submit()">
             <option value="">— Tous —</option>
             <?php foreach ($accs as $a): ?>
               <option value="<?php echo htmlspecialchars($a['id']); ?>" <?php echo ($acctSel !== '' && (string)$acctSel === (string)$a['id']) ? 'selected' : ''; ?> >
