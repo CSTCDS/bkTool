@@ -464,6 +464,11 @@ document.addEventListener('DOMContentLoaded', function(){
   if (!sel) return;
   // If server already set a value (from GET), keep it. Otherwise restore cookie.
   if (sel.value) return;
+  var form = sel.closest('form');
+  var inpFrom = form ? form.querySelector('input[name=from]') : null;
+  var inpTo = form ? form.querySelector('input[name=to]') : null;
+  // If from/to already set by server (GET params), do not auto-apply — prevents reload loops
+  if ((inpFrom && inpFrom.value) || (inpTo && inpTo.value)) return;
   var m = document.cookie.match('(?:^|; )selected_quickRange=([^;]+)');
   if (m && m[1]) {
     try { sel.value = decodeURIComponent(m[1]); sel.dispatchEvent(new Event('change')); } catch(e) { /* ignore */ }
