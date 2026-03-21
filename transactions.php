@@ -267,7 +267,6 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; "><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
         <td class="col-date"><?php if ($isPending) echo '<span class="badge-pending">en attente</span><br>'; ?><?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); ?></td>
         <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
-        <?php if ($noDateFilter): ?><td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td><?php endif; ?>
         <td class="col-devise"><?php echo htmlspecialchars((string)($t['currency'] ?? '')); ?></td>
         <td class="col-desc"><?php echo htmlspecialchars((string)($t['description'] ?? '')); ?></td>
         <td class="col-categories">
@@ -317,6 +316,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
             </div>
           </div>
         </td>
+        <?php if ($noDateFilter): ?><td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td><?php endif; ?>
       </tr>
     <?php
       // mettre à jour cumul pour ce compte (après affichage)
