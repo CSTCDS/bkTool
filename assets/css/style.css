@@ -58,6 +58,9 @@ th{background:#f2f2f2}
 #todelPopup .btn-cancel{background:#eee}
 #todelPopup .popup-title{font-weight:700;margin-bottom:8px}
 
+/* Highlight rows belonging to the same import batch */
+.highlight-import td{background:#fff8c6 !important}
+
 /* Header / tabs — classeur pastel */
 .site-header{background:linear-gradient(135deg,#e8eaf6 0%,#fce4ec 100%);padding:16px 24px 0;border-bottom:2px solid #d1c4e9;width:100%;box-sizing:border-box}
 .site-title{font-weight:800;font-size:1.35rem;color:#5c6bc0;margin-bottom:10px;letter-spacing:.5px}

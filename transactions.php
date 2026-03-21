@@ -268,7 +268,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
       $displayBalance = $startBal - $runningAcc[$acctId];
     ?>
       <?php $trClass = $isPending ? 'row-pending' : ''; ?>
-      <tr<?php echo $trClass ? ' class="' . $trClass . '"' : ''; ?> data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-status="<?php echo htmlspecialchars($t['status'] ?? ''); ?>">
+      <tr<?php echo $trClass ? ' class="' . $trClass . '"' : ''; ?> data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-status="<?php echo htmlspecialchars($t['status'] ?? ''); ?>" data-numimport="<?php echo htmlspecialchars($t['NumImport'] ?? 0); ?>">
         <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; "><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
         <td class="col-date">
           <?php if ($isPending) echo '<span class="badge-pending">en attente</span><br>'; ?>
@@ -362,11 +362,16 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
 });
 </script>
 <div id="todelPopup" style="display:none">
-  <div class="popup-title">Ligne marquée à supprimer</div>
+  <div class="popup-title">Action sur la ligne</div>
   <div style="margin-bottom:8px">Que voulez-vous faire pour cette ligne ?</div>
-  <div>
+  <div style="margin-bottom:8px">
+    <button id="showImportRows" class="btn">Afficher les lignes du même import</button>
+  </div>
+  <div id="todelActions">
     <button id="todelDelete" class="btn btn-danger">Supprimer définitivement</button>
     <button id="todelRestore" class="btn btn-restore">Restaurer</button>
+  </div>
+  <div style="margin-top:8px">
     <button id="todelCancel" class="btn btn-cancel">Annuler</button>
   </div>
 </div>
@@ -389,11 +394,19 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
   document.addEventListener('contextmenu', function(e){
     var tr = e.target.closest('tr');
     if (!tr) return;
+    e.preventDefault();
     var st = (tr.dataset.status || '').toUpperCase();
+    // Show popup for any row; hide TODEL actions if not TODEL
+    showPopup(e.pageX, e.pageY, tr.dataset.txid, tr);
+    var todelActions = document.getElementById('todelActions');
     if (st === 'TODEL') {
-      e.preventDefault();
-      showPopup(e.pageX, e.pageY, tr.dataset.txid, tr);
+      todelActions.style.display = 'block';
+    } else {
+      todelActions.style.display = 'none';
     }
+    // update the showImportRows button label based on current state
+    var importBtn = document.getElementById('showImportRows');
+    if (importBtn) importBtn.textContent = 'Afficher les lignes du même import';
   });
 
   document.getElementById('todelCancel').addEventListener('click', hidePopup);
@@ -421,6 +434,27 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
           hidePopup();
         } else alert('Erreur: ' + (j && j.error ? j.error : 'action échouée'));
       }).catch(function(e){ alert('Erreur réseau: '+e); });
+  });
+
+  // Show/Hide rows of the same import (toggle)
+  document.getElementById('showImportRows').addEventListener('click', function(){
+    if (!currentTr) return;
+    var num = currentTr.dataset.numimport || '0';
+    var rows = Array.from(document.querySelectorAll('tr[data-numimport]'));
+    var matches = rows.filter(function(r){ return (r.dataset.numimport||'0') === num; });
+    if (!matches.length) { alert('Aucune ligne pour ce numéro d\'import: ' + num); return; }
+    var anyHighlighted = matches.some(function(r){ return r.classList.contains('highlight-import'); });
+    if (anyHighlighted) {
+      matches.forEach(function(r){ r.classList.remove('highlight-import'); });
+      this.textContent = 'Afficher les lignes du même import';
+    } else {
+      // remove highlight from others first
+      document.querySelectorAll('tr.highlight-import').forEach(function(r){ r.classList.remove('highlight-import'); });
+      matches.forEach(function(r){ r.classList.add('highlight-import'); });
+      this.textContent = 'Masquer les lignes du même import';
+      // scroll to first match
+      var first = matches[0]; first.scrollIntoView({behavior:'smooth', block:'center'});
+    }
   });
 
   // Hide popup on outside click
