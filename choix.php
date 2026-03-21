@@ -77,14 +77,20 @@ $country = $config['enable_country'] ?? 'FR';
     <?php endif; ?>
   <?php endif; ?>
 
-  <?php $pane = $_GET['pane'] ?? 'connect'; ?>
+  <?php
+  $pane = $_GET['pane'] ?? '';
+  // Normalize and ensure a valid default
+  if (!in_array($pane, ['sync', 'connect'], true)) {
+    $pane = 'connect';
+  }
+  ?>
   <div style="display:flex;gap:18px;align-items:flex-start">
     <div style="min-width:220px">
       <form method="get">
         <label><strong>Choix :</strong>
           <select name="pane" onchange="this.form.submit()">
             <option value="sync" <?php echo ($pane === 'sync') ? 'selected' : ''; ?>>Synchroniser banque</option>
-            <option value="connect" <?php echo ($pane === 'connect') ? 'selected' : ''; ?>>Connecter banque</option>
+            <option value="connect" <?php echo ($pane === 'connect' || $pane === '') ? 'selected' : ''; ?>>Connecter banque</option>
           </select>
         </label>
       </form>
