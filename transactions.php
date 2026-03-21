@@ -211,7 +211,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
       <div class="tx-col tx-center" style="flex:1;text-align:center">
         <div style="display:flex;flex-direction:column;align-items:center">
           <label>Sélection temporelle:</label>
-          <select id="quickRange">
+          <select id="quickRange" name="quickRange">
             <option value="">— Aucun —</option>
             <option value="10d">10 derniers jours</option>
             <option value="20d">20 derniers jours</option>
@@ -440,6 +440,8 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
 // Quick range selector: set from/to and submit form
 document.getElementById('quickRange').addEventListener('change', function(){
   var v = this.value; if (!v) return;
+  // persist selection across visits
+  document.cookie = 'selected_quickRange=' + encodeURIComponent(v) + ';path=/;max-age=31536000';
   var now = new Date();
   var from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (v === '10d') { from.setDate(from.getDate() - 9); }
@@ -454,6 +456,18 @@ document.getElementById('quickRange').addEventListener('change', function(){
   if (inpFrom) inpFrom.value = ymd(from);
   if (inpTo) inpTo.value = ymd(now);
   form.submit();
+});
+
+// On load: restore saved quickRange and apply it if no explicit selection
+document.addEventListener('DOMContentLoaded', function(){
+  var sel = document.getElementById('quickRange');
+  if (!sel) return;
+  // If server already set a value (from GET), keep it. Otherwise restore cookie.
+  if (sel.value) return;
+  var m = document.cookie.match('(?:^|; )selected_quickRange=([^;]+)');
+  if (m && m[1]) {
+    try { sel.value = decodeURIComponent(m[1]); sel.dispatchEvent(new Event('change')); } catch(e) { /* ignore */ }
+  }
 });
 </script>
 <div id="todelPopup" style="display:none">
