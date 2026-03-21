@@ -366,6 +366,7 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
   <div style="margin-bottom:8px">Que voulez-vous faire pour cette ligne ?</div>
   <div style="margin-bottom:8px">
     <button id="showImportRows" class="btn">Afficher les lignes du même import</button>
+    <button id="filterImportRows" class="btn">Afficher seulement les lignes du même import</button>
   </div>
   <div id="todelActions">
     <button id="todelDelete" class="btn btn-danger">Supprimer définitivement</button>
@@ -454,6 +455,25 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       this.textContent = 'Masquer les lignes du même import';
       // scroll to first match
       var first = matches[0]; first.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+  });
+
+  // Filter to show only rows of the same import (toggle)
+  var importFilterActive = false;
+  document.getElementById('filterImportRows').addEventListener('click', function(){
+    if (!currentTr) return;
+    var num = currentTr.dataset.numimport || '0';
+    var rows = Array.from(document.querySelectorAll('tr[data-numimport]'));
+    if (!importFilterActive) {
+      // hide rows not matching
+      rows.forEach(function(r){ if ((r.dataset.numimport||'0') !== num) r.style.display = 'none'; });
+      this.textContent = 'Réinitialiser filtre';
+      importFilterActive = true;
+    } else {
+      // restore all rows
+      rows.forEach(function(r){ r.style.display = ''; });
+      this.textContent = 'Afficher seulement les lignes du même import';
+      importFilterActive = false;
     }
   });
 
