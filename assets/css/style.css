@@ -1,22 +1,20 @@
 body{font-family:Arial,Helvetica,sans-serif;margin:20px;background:#f7f9fc;color:#222}
 main{max-width:1000px;margin:0 auto}
 main.full-width{max-width:100%}
-table{width:100%;border-collapse:collapse;table-layout:auto}
+.table{width:100%;border-collapse:collapse}
+table{width:100%;border-collapse:collapse;table-layout:fixed}
 th,td{border:1px solid #ddd;padding:8px}
 th{background:#f2f2f2}
 
-/* Transactions table column widths */
-.tx-table .col-compte{white-space:nowrap;width:10%}
-.tx-table .col-date{white-space:nowrap;width:12%}
+/* Transactions table column widths (consistent and non-conflicting) */
+.tx-table .col-compte{white-space:nowrap;width:8%}
+.tx-table .col-date{white-space:nowrap;width:8%}
 .tx-table .col-montant{white-space:nowrap;width:8%;text-align:right}
-.tx-table .col-compte{white-space:nowrap;width:5%}
-.tx-table .col-date{white-space:nowrap;width:4%}
-.tx-table .col-montant{white-space:nowrap;width:6%;text-align:right} /* reduced ~20% */
-.tx-table .col-solde{white-space:nowrap;width:8%;text-align:right} /* reduced ~20% */
-.tx-table .col-devise{width:3%;text-align:center} /* reduced ~20% */
-.tx-table .col-desc{white-space:normal;width:1%;text-align:left} /* description column expands to fill remaining space */
-.tx-table th.col-desc{text-align:left}
-.tx-table .col-cat{width:10%}
+.tx-table .col-devise{width:5%;text-align:center}
+.tx-table .col-desc{white-space:normal;width:35%;text-align:left}
+.tx-table .col-categories{width:28%}
+.tx-table .col-solde, .tx-table .col-solde-virtuel{white-space:nowrap;width:8%;text-align:right}
+.tx-table .col-status{white-space:nowrap;width:8%;text-align:center}
 .tx-table .col-cat select{width:100%;font-size:.82rem;padding:2px}
 
 /* Hide category columns on small screens to preserve readability */
@@ -103,3 +101,15 @@ th{background:#f2f2f2}
 
 /* Align only the data cells for Solde virtuel to the right; leave the header aligned normally */
 .tx-table td.col-solde-virtuel { text-align: right; }
+
+/* Header filter layout (2 rows x 3 zones) */
+.tx-filter-header { max-width:1000px; margin:0 auto; padding:0 8px; box-sizing:border-box }
+.tx-filter-header .tx-header-row { box-sizing: border-box }
+.tx-filter-header .tx-col { box-sizing: border-box }
+.tx-filter-header select, .tx-filter-header input[type=date] { padding:6px 8px; border-radius:4px; border:1px solid #ccc }
+.tx-filter-header h1 { font-size:1.25rem; margin:0 }
+@media (max-width:800px) {
+  .tx-filter-header .tx-header-row { flex-direction:column; align-items:stretch }
+  .tx-filter-header .tx-right, .tx-filter-header .tx-center { text-align:left }
+  .tx-filter-header .tx-right > div, .tx-filter-header .tx-left > div { width:100%; min-width:0 }
+}
