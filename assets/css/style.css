@@ -75,3 +75,6 @@ th{background:#f2f2f2}
   .site-header{padding:12px 10px 0}
 	main{padding:0 8px}
 }
+
+/* Align only the data cells for Solde virtuel to the right; leave the header aligned normally */
+.tx-table td.col-solde-virtuel { text-align: right; }
