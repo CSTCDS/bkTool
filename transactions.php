@@ -213,7 +213,6 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       </div>
       <div class="tx-col tx-center" style="flex:1;text-align:center">
         <div style="display:flex;flex-direction:column;align-items:center">
-          <label>Sélection temporelle:</label>
           <select id="quickRange" name="quickRange">
             <option value=""<?php echo ($selectedQuickRange === '') ? ' selected' : ''; ?>>Sélection Temporelle</option>
             <option value="10d"<?php echo ($selectedQuickRange === '10d') ? ' selected' : ''; ?>>10 derniers jours</option>
