@@ -318,7 +318,7 @@ foreach ($allCats as $c) {
               <td>
                 <input type="color" name="color" value="<?php echo htmlspecialchars($ac['color'] ?? '#000000'); ?>" title="Couleur du compte">
               </td>
-              <td><?php echo htmlspecialchars((string)($ac['balance'] ?? '0')); ?></td>
+              <td style="text-align:right"><?php echo htmlspecialchars((string)($ac['balance'] ?? '0')); ?></td>
               <td><?php echo htmlspecialchars((string)($ac['updated_at'] ?? '')); ?></td>
               <td>
                 <input type="hidden" name="action" value="edit_account">
