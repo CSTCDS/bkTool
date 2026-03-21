@@ -183,15 +183,7 @@ foreach ($allCats as $c) {
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-<div class="site-header">
-  <div class="site-title">bkTool</div>
-  <nav class="tabs">
-    <a href="index.php">Dashboard</a>
-    <a href="transactions.php">Transactions</a>
-    <a href="categories.php" class="active">Paramètres</a>
-    <a href="choix.php">Banque</a>
-  </nav>
-</div>
+<?php include __DIR__ . '/header.php'; ?>
 <main>
   <h1>Paramètres</h1>
   <?php if ($notice): ?>

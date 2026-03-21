@@ -200,15 +200,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-<div class="site-header">
-  <div class="site-title">bkTool</div>
-  <nav class="tabs">
-    <a href="index.php">Dashboard</a>
-    <a href="transactions.php" class="active">Transactions</a>
-    <a href="categories.php">Paramètres</a>
-    <a href="choix.php">Banque</a>
-  </nav>
-</div>
+<?php include __DIR__ . '/header.php'; ?>
 <main class="full-width">
 
   <h1>Transactions</h1>

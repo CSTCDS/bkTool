@@ -142,15 +142,7 @@ try {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<div class="site-header">
-  <div class="site-title">bkTool</div>
-  <nav class="tabs">
-    <a href="index.php" class="active">Dashboard</a>
-    <a href="transactions.php">Transactions</a>
-    <a href="categories.php">Paramètres</a>
-    <a href="choix.php">Banque</a>
-  </nav>
-</div>
+<?php include __DIR__ . '/header.php'; ?>
 <main>
   <section>
     <h2>Solde total : <?php echo htmlspecialchars((string)$total); ?> </h2>
