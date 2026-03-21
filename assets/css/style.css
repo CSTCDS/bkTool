@@ -46,6 +46,9 @@ th{background:#f2f2f2}
 .row-pending td{opacity:.85}
 .badge-pending{display:inline-block;font-size:.72rem;background:#ff9800;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px;font-style:normal;vertical-align:middle}
 
+/* Badge for transactions marked to be deleted */
+.badge-todel{display:inline-block;font-size:.72rem;background:#c62828;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px;font-style:normal;vertical-align:middle}
+
 /* Header / tabs — classeur pastel */
 .site-header{background:linear-gradient(135deg,#e8eaf6 0%,#fce4ec 100%);padding:16px 24px 0;border-bottom:2px solid #d1c4e9;width:100%;box-sizing:border-box}
 .site-title{font-weight:800;font-size:1.35rem;color:#5c6bc0;margin-bottom:10px;letter-spacing:.5px}

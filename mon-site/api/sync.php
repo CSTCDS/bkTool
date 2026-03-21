@@ -64,7 +64,14 @@ function insertTransaction($pdo, $tx)
     }
     $status = $apiStatus;
 
-    $id = $tx['entry_reference'] ?? $tx['transaction_id'] ?? bin2hex(random_bytes(8));
+    $id = $tx['entry_reference'] ?? $tx['transaction_id'] ?? null;
+    // If the upstream id is missing, derive one from account identifier + date + amount
+    if ($id === null) {
+        $acctPart = (string)($accountId ?? '');
+        $datePart = (string)($bookingDate ?? '');
+        $amtPart = number_format((float)$amount, 4, '.', '');
+        $id = sha1($acctPart . '|' . $datePart . '|' . $amtPart);
+    }
     $accountId = $tx['_account_id'] ?? null;
     $currency = $tx['transaction_amount']['currency'] ?? 'EUR';
     $description = is_array($tx['remittance_information'] ?? null) ? implode(' ', $tx['remittance_information']) : ($tx['remittance_information'] ?? null);
@@ -89,6 +96,18 @@ function insertTransaction($pdo, $tx)
             ':status' => $status,
             ':raw' => $raw
         ]);
+        // After inserting a new transaction, check for older rows matching same account/date/description/amount with status 'OTHR'
+        try {
+            $chk = $pdo->prepare('SELECT id FROM transactions WHERE account_id = :aid AND booking_date = :bdate AND COALESCE(description,"") = :desc AND amount = :amt AND status = :st LIMIT 1');
+            $chk->execute([':aid' => $accountId, ':bdate' => $bookingDate, ':desc' => $description ?? '', ':amt' => $amount, ':st' => 'OTHR']);
+            $oldId = $chk->fetchColumn();
+            if ($oldId) {
+                $upd = $pdo->prepare('UPDATE transactions SET status = :newst WHERE id = :id');
+                $upd->execute([':newst' => 'TODEL', ':id' => $oldId]);
+            }
+        } catch (Throwable $e) {
+            // ignore, don't break the sync on this optional step
+        }
         return ['action' => 'insert'];
     } else {
         $stmt = $pdo->prepare(
