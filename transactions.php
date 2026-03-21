@@ -267,7 +267,8 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
       // solde affiché = solde courant du compte - cumul des montants précédents
       $displayBalance = $startBal - $runningAcc[$acctId];
     ?>
-      <tr<?php if ($isPending) echo ' class="row-pending"'; ?>>
+      <?php $trClass = $isPending ? 'row-pending' : ''; ?>
+      <tr<?php echo $trClass ? ' class="' . $trClass . '"' : ''; ?> data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-status="<?php echo htmlspecialchars($t['status'] ?? ''); ?>">
         <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; "><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
         <td class="col-date">
           <?php if ($isPending) echo '<span class="badge-pending">en attente</span><br>'; ?>
@@ -359,6 +360,71 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       .catch(function(e) { console.error(e); });
   });
 });
+</script>
+<div id="todelPopup" style="display:none">
+  <div class="popup-title">Ligne marquée à supprimer</div>
+  <div style="margin-bottom:8px">Que voulez-vous faire pour cette ligne ?</div>
+  <div>
+    <button id="todelDelete" class="btn btn-danger">Supprimer définitivement</button>
+    <button id="todelRestore" class="btn btn-restore">Restaurer</button>
+    <button id="todelCancel" class="btn btn-cancel">Annuler</button>
+  </div>
+</div>
+
+<script>
+;(function(){
+  var popup = document.getElementById('todelPopup');
+  var currentTr = null;
+
+  function showPopup(x,y,txid,tr) {
+    currentTr = tr;
+    popup.style.display = 'block';
+    // position with offset to avoid overflow
+    var px = x + 6, py = y + 6;
+    popup.style.left = px + 'px';
+    popup.style.top = py + 'px';
+  }
+  function hidePopup(){ popup.style.display = 'none'; currentTr = null; }
+
+  document.addEventListener('contextmenu', function(e){
+    var tr = e.target.closest('tr');
+    if (!tr) return;
+    var st = (tr.dataset.status || '').toUpperCase();
+    if (st === 'TODEL') {
+      e.preventDefault();
+      showPopup(e.pageX, e.pageY, tr.dataset.txid, tr);
+    }
+  });
+
+  document.getElementById('todelCancel').addEventListener('click', hidePopup);
+
+  document.getElementById('todelDelete').addEventListener('click', function(){
+    if (!currentTr) return;
+    var txid = currentTr.dataset.txid;
+    fetch('mon-site/api/tx_action.php', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=delete&id='+encodeURIComponent(txid) })
+      .then(r=>r.json()).then(function(j){
+        if (j && j.ok) { currentTr.parentNode.removeChild(currentTr); hidePopup(); }
+        else alert('Erreur: ' + (j && j.error ? j.error : 'action échouée'));
+      }).catch(function(e){ alert('Erreur réseau: '+e); });
+  });
+
+  document.getElementById('todelRestore').addEventListener('click', function(){
+    if (!currentTr) return;
+    var txid = currentTr.dataset.txid;
+    fetch('mon-site/api/tx_action.php', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=restore&id='+encodeURIComponent(txid) })
+      .then(r=>r.json()).then(function(j){
+        if (j && j.ok) {
+          // update row status and remove badge
+          currentTr.dataset.status = 'OTHR';
+          var badge = currentTr.querySelector('.badge-todel'); if (badge) badge.parentNode.removeChild(badge);
+          hidePopup();
+        } else alert('Erreur: ' + (j && j.error ? j.error : 'action échouée'));
+      }).catch(function(e){ alert('Erreur réseau: '+e); });
+  });
+
+  // Hide popup on outside click
+  document.addEventListener('click', function(e){ if (popup.style.display === 'block' && !popup.contains(e.target)) hidePopup(); });
+})();
 </script>
 </body>
 </html>

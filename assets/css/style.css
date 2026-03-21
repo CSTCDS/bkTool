@@ -49,6 +49,15 @@ th{background:#f2f2f2}
 /* Badge for transactions marked to be deleted */
 .badge-todel{display:inline-block;font-size:.72rem;background:#c62828;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px;font-style:normal;vertical-align:middle}
 
+/* Popup for transaction TODEL actions */
+#todelPopup{
+  position:fixed;z-index:2000;background:#fff;border:1px solid #ddd;padding:10px;border-radius:6px;box-shadow:0 6px 18px rgba(0,0,0,0.12);min-width:220px}
+#todelPopup .btn{display:inline-block;padding:6px 10px;margin-right:8px;border-radius:4px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer}
+#todelPopup .btn-danger{background:#c62828;color:#fff;border-color:#b71c1c}
+#todelPopup .btn-restore{background:#fff;color:#2e7d32;border-color:#2e7d32}
+#todelPopup .btn-cancel{background:#eee}
+#todelPopup .popup-title{font-weight:700;margin-bottom:8px}
+
 /* Header / tabs — classeur pastel */
 .site-header{background:linear-gradient(135deg,#e8eaf6 0%,#fce4ec 100%);padding:16px 24px 0;border-bottom:2px solid #d1c4e9;width:100%;box-sizing:border-box}
 .site-title{font-weight:800;font-size:1.35rem;color:#5c6bc0;margin-bottom:10px;letter-spacing:.5px}
