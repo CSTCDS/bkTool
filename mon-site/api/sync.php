@@ -46,7 +46,7 @@ function upsertAccount($pdo, $acc)
     }
 }
 
-function insertTransaction($pdo, $tx, $importNum)
+function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
 {
     // Determine sign: Enable Banking uses credit_debit_indicator (CRDT / DBIT)
     $amount = (float)($tx['transaction_amount']['amount'] ?? 0);
@@ -79,8 +79,8 @@ function insertTransaction($pdo, $tx, $importNum)
     $id = $tx['entry_reference'] ?? $tx['transaction_id'] ?? null;
     // If the upstream id is missing, derive one from account identifier + the booking date used in table + amount + normalized description
     if ($id === null) {
-        $acctPart = (string)($accountId ?? '');
-        $datePart = (string)($bookingDate ?? '');
+    $acctPart = (string)($accountId ?? '');
+    $datePart = (string)($bookingDate ?? '');
         $amtPart = number_format((float)$amount, 4, '.', '');
         $id = sha1($acctPart . '|' . $datePart . '|' . $amtPart . '|' . $descForId);
     }
@@ -134,20 +134,36 @@ function insertTransaction($pdo, $tx, $importNum)
             return ['action' => 'noop'];
         }
 
-        $stmt = $pdo->prepare(
-            'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, NumImport = :num_import, description = :description, booking_date = :booking_date, status = :status, raw = :raw WHERE id = :id'
-        );
-        $stmt->execute([
-            ':id' => $id,
-            ':account_id' => $accountId,
-            ':amount' => $amount,
-            ':currency' => $currency,
-            ':num_import' => $importNum,
-            ':description' => $description,
-            ':booking_date' => $bookingDate,
-            ':status' => $status,
-            ':raw' => $raw
-        ]);
+        if ($hasNumImport) {
+            $stmt = $pdo->prepare(
+                'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, NumImport = :num_import, description = :description, booking_date = :booking_date, status = :status, raw = :raw WHERE id = :id'
+            );
+            $stmt->execute([
+                ':id' => $id,
+                ':account_id' => $accountId,
+                ':amount' => $amount,
+                ':currency' => $currency,
+                ':num_import' => $importNum,
+                ':description' => $description,
+                ':booking_date' => $bookingDate,
+                ':status' => $status,
+                ':raw' => $raw
+            ]);
+        } else {
+            $stmt = $pdo->prepare(
+                'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, description = :description, booking_date = :booking_date, status = :status, raw = :raw WHERE id = :id'
+            );
+            $stmt->execute([
+                ':id' => $id,
+                ':account_id' => $accountId,
+                ':amount' => $amount,
+                ':currency' => $currency,
+                ':description' => $description,
+                ':booking_date' => $bookingDate,
+                ':status' => $status,
+                ':raw' => $raw
+            ]);
+        }
         return ['action' => 'update'];
     }
 }
