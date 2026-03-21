@@ -203,52 +203,32 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
 <?php include __DIR__ . '/header.php'; ?>
 <main class="full-width">
 
-  <div class="page-title-row" style="display:flex;justify-content:center;align-items:center;gap:20px;margin-bottom:12px">
-    <h1 style="margin:0">Transactions</h1>
-    <div>
-      <label>Sélection temporelle:
-        <select id="quickRange" style="min-width:180px">
-          <option value="">— Aucun —</option>
-          <option value="10d">10 derniers jours</option>
-          <option value="20d">20 derniers jours</option>
-          <option value="1m">1 mois</option>
-          <option value="2m">2 mois</option>
-          <option value="6m">6 mois</option>
-          <option value="1y">1 an</option>
-          <option value="2y">2 ans</option>
-        </select>
-      </label>
-    </div>
-  </div>
-
-  <form method="get" style="margin-bottom:16px;display:flex;flex-direction:column;gap:8px">
-    <label>Compte :
-      <select name="account" onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; this.form.submit()">
-        <option value="">— Tous —</option>
-        <?php foreach ($accs as $a): ?>
-          <option value="<?php echo htmlspecialchars($a['id']); ?>" <?php echo ($acctSel !== '' && (string)$acctSel === (string)$a['id']) ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($a['name'] ?: $a['id']); ?>
-          </option>
-        <?php endforeach; ?>
-        <?php if (!empty($catTree[0])): foreach ($catTree[0] as $pid => $node): if (!$node['info']) continue; ?>
-          <option value="g:<?php echo (int)$node['info']['id']; ?>" <?php echo ($acctSel !== '' && (string)$acctSel === ('g:' . (int)$node['info']['id'])) ? 'selected' : ''; ?> style="background:#e0e0e0">
-            <?php echo 'G: ' . htmlspecialchars($node['info']['label']); ?>
-          </option>
-        <?php endforeach; endif; ?>
-      </select>
-    </label>
-      <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ''); ?>"></label>
-      <label>Au : <input type="date" name="to" value="<?php echo htmlspecialchars($_GET['to'] ?? ''); ?>"></label>
-    </div>
-    <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
-      <div style="display:flex;gap:8px;flex:1">
-        <!-- Critères 1 & 2 (ligne du haut) -->
-        <div style="flex:1">
+  <form method="get" class="tx-filter-header" style="margin-bottom:16px">
+    <div class="tx-header-row" style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
+      <div class="tx-col tx-left" style="flex:1">
+        <h1 style="margin:0">Transactions</h1>
+      </div>
+      <div class="tx-col tx-center" style="flex:1;text-align:center">
+        <label style="display:inline-block">Sélection temporelle:
+          <select id="quickRange" style="min-width:180px">
+            <option value="">— Aucun —</option>
+            <option value="10d">10 derniers jours</option>
+            <option value="20d">20 derniers jours</option>
+            <option value="1m">1 mois</option>
+            <option value="2m">2 mois</option>
+            <option value="6m">6 mois</option>
+            <option value="1y">1 an</option>
+            <option value="2y">2 ans</option>
+          </select>
+        </label>
+      </div>
+      <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
+        <!-- Critères 1 & 2 (ligne 1, droite) -->
+        <div style="min-width:180px">
           <select name="fcat1" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[1]); ?></option>
             <?php if (!empty($catTree[1])): foreach ($catTree[1] as $pid => $node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
-                <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)($_GET['fcat1'] ?? '') === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
                 <?php foreach ($node['children'] as $child): ?>
                   <option value="<?php echo $child['id']; ?>" <?php echo ((int)($_GET['fcat1'] ?? '') === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
                 <?php endforeach; ?>
@@ -256,12 +236,11 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
             <?php endforeach; endif; ?>
           </select>
         </div>
-        <div style="flex:1">
+        <div style="min-width:180px">
           <select name="fcat2" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[2]); ?></option>
             <?php if (!empty($catTree[2])): foreach ($catTree[2] as $pid => $node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
-                <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)($_GET['fcat2'] ?? '') === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
                 <?php foreach ($node['children'] as $child): ?>
                   <option value="<?php echo $child['id']; ?>" <?php echo ((int)($_GET['fcat2'] ?? '') === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
                 <?php endforeach; ?>
@@ -270,14 +249,37 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
           </select>
         </div>
       </div>
-      <div style="display:flex;gap:8px;flex:1">
-        <!-- Critères 3 & 4 (ligne du bas) -->
-        <div style="flex:1">
+    </div>
+
+    <div class="tx-header-row" style="display:flex;gap:12px;align-items:center">
+      <div class="tx-col tx-left" style="flex:1">
+        <label>Compte :
+          <select name="account" onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; this.form.submit()">
+            <option value="">— Tous —</option>
+            <?php foreach ($accs as $a): ?>
+              <option value="<?php echo htmlspecialchars($a['id']); ?>" <?php echo ($acctSel !== '' && (string)$acctSel === (string)$a['id']) ? 'selected' : ''; ?> >
+                <?php echo htmlspecialchars($a['name'] ?: $a['id']); ?>
+              </option>
+            <?php endforeach; ?>
+            <?php if (!empty($catTree[0])): foreach ($catTree[0] as $pid => $node): if (!$node['info']) continue; ?>
+              <option value="g:<?php echo (int)$node['info']['id']; ?>" <?php echo ($acctSel !== '' && (string)$acctSel === ('g:' . (int)$node['info']['id'])) ? 'selected' : ''; ?> style="background:#e0e0e0">
+                <?php echo 'G: ' . htmlspecialchars($node['info']['label']); ?>
+              </option>
+            <?php endforeach; endif; ?>
+          </select>
+        </label>
+      </div>
+      <div class="tx-col tx-center" style="flex:1;text-align:center">
+        <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ''); ?>"></label>
+        <label>Au : <input type="date" name="to" value="<?php echo htmlspecialchars($_GET['to'] ?? ''); ?>"></label>
+      </div>
+      <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
+        <!-- Critères 3 & 4 (ligne 2, droite) -->
+        <div style="min-width:180px">
           <select name="fcat3" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[3]); ?></option>
             <?php if (!empty($catTree[3])): foreach ($catTree[3] as $pid => $node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
-                <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)($_GET['fcat3'] ?? '') === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
                 <?php foreach ($node['children'] as $child): ?>
                   <option value="<?php echo $child['id']; ?>" <?php echo ((int)($_GET['fcat3'] ?? '') === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
                 <?php endforeach; ?>
@@ -285,12 +287,11 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
             <?php endforeach; endif; ?>
           </select>
         </div>
-        <div style="flex:1">
+        <div style="min-width:180px">
           <select name="fcat4" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[4]); ?></option>
             <?php if (!empty($catTree[4])): foreach ($catTree[4] as $pid => $node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
-                <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)($_GET['fcat4'] ?? '') === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
                 <?php foreach ($node['children'] as $child): ?>
                   <option value="<?php echo $child['id']; ?>" <?php echo ((int)($_GET['fcat4'] ?? '') === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
                 <?php endforeach; ?>
@@ -300,26 +301,6 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         </div>
       </div>
     </div>
-    <?php for ($fi = 1; $fi <= 4; $fi++):
-      $filterKey = "fcat{$fi}";
-      $filterVal = $_GET[$filterKey] ?? '';
-    ?>
-    <label><?php echo htmlspecialchars($criterionNames[$fi]); ?> :
-      <select name="<?php echo $filterKey; ?>" onchange="this.form.submit()">
-        <option value="">— Tous —</option>
-        <?php if (!empty($catTree[$fi])): foreach ($catTree[$fi] as $pid => $node): if (!$node['info']) continue; ?>
-          <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
-            <option value="<?php echo $node['info']['id']; ?>" <?php echo ($filterVal !== '' && (int)$filterVal === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?> (tout)</option>
-            <?php foreach ($node['children'] as $child): ?>
-              <option value="<?php echo $child['id']; ?>" <?php echo ($filterVal !== '' && (int)$filterVal === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
-            <?php endforeach; ?>
-          </optgroup>
-        <?php endforeach; endif; ?>
-      </select>
-    </label>
-    <?php endfor; ?>
-    <button type="submit">Filtrer</button>
-    <button type="submit" name="export" value="csv">Exporter CSV</button>
   </form>
 
   <table class="tx-table">
