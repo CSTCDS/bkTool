@@ -401,6 +401,7 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
   document.getElementById('todelDelete').addEventListener('click', function(){
     if (!currentTr) return;
     var txid = currentTr.dataset.txid;
+    if (!confirm('Confirmer la suppression définitive de cette ligne ? Cette action est irréversible.')) return;
     fetch('mon-site/api/tx_action.php', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=delete&id='+encodeURIComponent(txid) })
       .then(r=>r.json()).then(function(j){
         if (j && j.ok) { currentTr.parentNode.removeChild(currentTr); hidePopup(); }
