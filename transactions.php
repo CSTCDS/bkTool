@@ -241,13 +241,13 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
   <table class="tx-table">
     <thead>
       <tr>
-        <th class="col-compte">Compte</th>
-        <th class="col-date">Date</th>
-        <th class="col-montant">Montant</th>
-        <th class="col-devise">Devise</th>
-        <th class="col-desc">Commentaire</th>
+        <th class="col-compte" style="width:10%">Compte</th>
+        <th class="col-date" style="width:10%">Date</th>
+        <th class="col-montant" style="width:10%">Montant</th>
+        <th class="col-devise" style="width:5%">Devise</th>
+        <th class="col-desc" style="width:30%">Commentaire</th>
         <th class="col-categories" style="width:25%">Catégories</th>
-        <?php if ($noDateFilter): ?><th class="col-solde">Solde</th><?php endif; ?>
+        <?php if ($noDateFilter): ?><th class="col-solde" style="width:10%">Solde</th><?php endif; ?>
       </tr>
     </thead>
     <tbody>
