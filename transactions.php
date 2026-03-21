@@ -370,7 +370,7 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
   <div class="popup-title">Action sur la ligne</div>
   <div style="margin-bottom:8px">Que voulez-vous faire pour cette ligne ?</div>
   <div style="margin-bottom:8px">
-    <button id="showImportRows" class="btn">Afficher les lignes du même import</button>
+    <button id="showImportRows" class="btn">Surligner les lignes du même import</button>
     <button id="filterImportRows" class="btn">Afficher seulement les lignes du même import</button>
   </div>
   <div id="todelActions">
@@ -412,7 +412,7 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
     }
     // update the showImportRows button label based on current state
     var importBtn = document.getElementById('showImportRows');
-    if (importBtn) importBtn.textContent = 'Afficher les lignes du même import';
+    if (importBtn) importBtn.textContent = 'Surligner les lignes du même import';
   });
 
   document.getElementById('todelCancel').addEventListener('click', hidePopup);
