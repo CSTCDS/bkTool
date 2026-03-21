@@ -209,8 +209,9 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         <h1 style="margin:0">Transactions</h1>
       </div>
       <div class="tx-col tx-center" style="flex:1;text-align:center">
-        <label style="display:inline-block">Sélection temporelle:
-          <select id="quickRange" style="min-width:180px">
+        <div style="display:flex;flex-direction:column;align-items:center">
+          <label>Sélection temporelle:</label>
+          <select id="quickRange">
             <option value="">— Aucun —</option>
             <option value="10d">10 derniers jours</option>
             <option value="20d">20 derniers jours</option>
@@ -220,7 +221,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
             <option value="1y">1 an</option>
             <option value="2y">2 ans</option>
           </select>
-        </label>
+        </div>
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
         <!-- Critères 1 & 2 (ligne 1, droite) -->
@@ -253,7 +254,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
 
     <div class="tx-header-row" style="display:flex;gap:12px;align-items:center">
       <div class="tx-col tx-left" style="flex:1">
-        <label>Compte :
+        <label>Sélection de compte :
           <select name="account" onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; this.form.submit()">
             <option value="">— Tous —</option>
             <?php foreach ($accs as $a): ?>
