@@ -202,7 +202,10 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
 <body>
 <?php include __DIR__ . '/header.php'; ?>
 <main class="full-width">
-
+<?php
+$selectedQuickRange = $_GET['quickRange'] ?? ($_COOKIE['selected_quickRange'] ?? '');
+$dateFieldsVisible = ($selectedQuickRange === 'custom' || !empty($_GET['from']) || !empty($_GET['to'])) ? '' : 'display:none';
+?>
   <form method="get" class="tx-filter-header" style="margin-bottom:16px">
     <div class="tx-header-row" style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
       <div class="tx-col tx-left" style="flex:1">
@@ -212,15 +215,15 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         <div style="display:flex;flex-direction:column;align-items:center">
           <label>Sélection temporelle:</label>
           <select id="quickRange" name="quickRange">
-            <option value="">— Aucun —</option>
-            <option value="10d">10 derniers jours</option>
-            <option value="20d">20 derniers jours</option>
-            <option value="1m">1 mois</option>
-            <option value="2m">2 mois</option>
-            <option value="6m">6 mois</option>
-            <option value="1y">1 an</option>
-            <option value="2y">2 ans</option>
-            <option value="custom">Choix de dates</option>
+            <option value=""<?php echo ($selectedQuickRange === '') ? ' selected' : ''; ?>>— Aucun —</option>
+            <option value="10d"<?php echo ($selectedQuickRange === '10d') ? ' selected' : ''; ?>>10 derniers jours</option>
+            <option value="20d"<?php echo ($selectedQuickRange === '20d') ? ' selected' : ''; ?>>20 derniers jours</option>
+            <option value="1m"<?php echo ($selectedQuickRange === '1m') ? ' selected' : ''; ?>>1 mois</option>
+            <option value="2m"<?php echo ($selectedQuickRange === '2m') ? ' selected' : ''; ?>>2 mois</option>
+            <option value="6m"<?php echo ($selectedQuickRange === '6m') ? ' selected' : ''; ?>>6 mois</option>
+            <option value="1y"<?php echo ($selectedQuickRange === '1y') ? ' selected' : ''; ?>>1 an</option>
+            <option value="2y"<?php echo ($selectedQuickRange === '2y') ? ' selected' : ''; ?>>2 ans</option>
+            <option value="custom"<?php echo ($selectedQuickRange === 'custom') ? ' selected' : ''; ?>>Choix de dates</option>
           </select>
         </div>
       </div>
@@ -272,9 +275,9 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         </label>
       </div>
       <div class="tx-col tx-center" style="flex:1;text-align:center">
-        <div id="dateRangeFields" style="display:none">
-          <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ''); ?>"></label>
-          <label>Au : <input type="date" name="to" value="<?php echo htmlspecialchars($_GET['to'] ?? ''); ?>"></label>
+        <div id="dateRangeFields" style="<?php echo $dateFieldsVisible; ?>">
+          <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ($_COOKIE['selected_from'] ?? '')); ?>"></label>
+          <label>Au : <input type="date" name="to" value="<?php echo htmlspecialchars($_GET['to'] ?? ($_COOKIE['selected_to'] ?? '')); ?>"></label>
         </div>
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
@@ -471,7 +474,23 @@ document.getElementById('quickRange').addEventListener('change', function(){
   if (!form) return;
   if (inpFrom) inpFrom.value = ymd(from);
   if (inpTo) inpTo.value = ymd(now);
+  // submit form so server-side will render with selected params
   form.submit();
+});
+
+// Save from/to in cookies when custom dates are used and submit
+document.querySelectorAll('input[name=from], input[name=to]').forEach(function(inp){
+  inp.addEventListener('change', function(){
+    var form = this.closest('form');
+    var from = form.querySelector('input[name=from]').value || '';
+    var to = form.querySelector('input[name=to]').value || '';
+    document.cookie = 'selected_from=' + encodeURIComponent(from) + ';path=/;max-age=31536000';
+    document.cookie = 'selected_to=' + encodeURIComponent(to) + ';path=/;max-age=31536000';
+    // ensure quickRange is set to custom
+    var sel = document.getElementById('quickRange'); if (sel) { sel.value = 'custom'; document.cookie = 'selected_quickRange=custom;path=/;max-age=31536000'; }
+    // submit to apply
+    if (form) form.submit();
+  });
 });
 
 // On load: restore saved quickRange and apply it if no explicit selection
