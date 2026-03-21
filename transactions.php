@@ -457,7 +457,7 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       // remove highlight from others first
       document.querySelectorAll('tr.highlight-import').forEach(function(r){ r.classList.remove('highlight-import'); });
       matches.forEach(function(r){ r.classList.add('highlight-import'); });
-      this.textContent = 'Masquer les lignes du même import';
+      this.textContent = 'dé-surligner les lignes du même import';
       // scroll to first match
       var first = matches[0]; first.scrollIntoView({behavior:'smooth', block:'center'});
     }
