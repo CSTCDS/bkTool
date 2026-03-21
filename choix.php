@@ -79,9 +79,9 @@ $country = $config['enable_country'] ?? 'FR';
 
   <?php
   $pane = $_GET['pane'] ?? '';
-  // Normalize and ensure a valid default
-  if (!in_array($pane, ['sync', 'connect'], true)) {
-    $pane = 'connect';
+  // Allow empty default ('---') and only accept known panes
+  if (!in_array($pane, ['', 'sync', 'connect'], true)) {
+    $pane = '';
   }
   ?>
   <div style="display:flex;gap:18px;align-items:flex-start">
@@ -89,8 +89,9 @@ $country = $config['enable_country'] ?? 'FR';
       <form method="get">
         <label><strong>Choix :</strong>
           <select name="pane" onchange="this.form.submit()">
+            <option value="" <?php echo ($pane === '') ? 'selected' : ''; ?>>---</option>
             <option value="sync" <?php echo ($pane === 'sync') ? 'selected' : ''; ?>>Synchroniser banque</option>
-            <option value="connect" <?php echo ($pane === 'connect' || $pane === '') ? 'selected' : ''; ?>>Connecter banque</option>
+            <option value="connect" <?php echo ($pane === 'connect') ? 'selected' : ''; ?>>Connecter banque</option>
           </select>
         </label>
       </form>
@@ -108,7 +109,7 @@ $country = $config['enable_country'] ?? 'FR';
           <pre id="syncJson" style="white-space:pre-wrap;font-size:.95rem"></pre>
         </div>
 
-      <?php else: ?>
+      <?php elseif ($pane === 'connect'): ?>
         <h2>Connecter une banque</h2>
         <p>Sélectionnez votre banque ci-dessous :</p>
 
@@ -129,6 +130,9 @@ $country = $config['enable_country'] ?? 'FR';
 
         <p id="status"></p>
         <p><a href="index.php">Retour au tableau de bord</a></p>
+
+      <?php else: ?>
+        <!-- Empty placeholder when '---' selected: intentionally show nothing -->
       <?php endif; ?>
     </div>
   </div>
