@@ -452,7 +452,7 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
     var anyHighlighted = matches.some(function(r){ return r.classList.contains('highlight-import'); });
     if (anyHighlighted) {
       matches.forEach(function(r){ r.classList.remove('highlight-import'); });
-      this.textContent = 'Afficher les lignes du même import';
+      this.textContent = 'Surligner les lignes du même import';
     } else {
       // remove highlight from others first
       document.querySelectorAll('tr.highlight-import').forEach(function(r){ r.classList.remove('highlight-import'); });
