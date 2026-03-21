@@ -261,13 +261,9 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         <th class="col-desc" style="width:35%">Commentaire</th>
         <th class="col-categories" style="width:28%">Catégories</th>
         <?php if ($noDateFilter): ?><th class="col-solde" style="width:8%">Solde</th><?php endif; ?>
-      <tr<?php if ($isPending) echo ' class="row-pending"'; ?>>
-        <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; "><?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?></td>
-        <td class="col-date"><?php if ($isPending) echo '<span class="badge-pending">en attente</span><br>'; ?><?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); ?></td>
-        <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
-        <td class="col-devise"><?php echo htmlspecialchars((string)($t['currency'] ?? '')); ?></td>
-    $runningAcc = [];
-    foreach ($txs as $t):
+      <?php
+      $runningAcc = [];
+      foreach ($txs as $t):
       // Consider BOOK as booked/current; any other status treated as pending
       $isPending = (strtoupper((string)($t['status'] ?? '')) !== 'BOOK');
       $acctId = $t['account_id'];
