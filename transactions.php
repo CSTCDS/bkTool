@@ -169,8 +169,14 @@ if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
  $stmt->execute($params);
  $txs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Detecter absence de filtres de dates — si vrai, on affichera la colonne "Solde"
-$noDateFilter = empty($_GET['from']) && empty($_GET['to']);
+// Determine whether to show the "Solde" column.
+// Hide the Solde column only when the 'from' date is provided and is earlier than today.
+$fromParam = $_GET['from'] ?? ($_COOKIE['selected_from'] ?? '');
+$today = date('Y-m-d');
+$showSolde = true;
+if ($fromParam !== '' && $fromParam < $today) {
+  $showSolde = false;
+}
 
 // If a group is selected, compute the group's starting total balance
 $groupStartBalance = 0.0;
@@ -330,7 +336,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           </div>
         </th>
         <?php if ($groupSelected): ?><th class="col-solde-virtuel" style="width:8%">Solde virtuel</th><?php endif; ?>
-        <?php if ($noDateFilter): ?><th class="col-solde" style="width:8%">Solde</th><?php endif; ?>
+        <?php if ($showSolde): ?><th class="col-solde" style="width:8%">Solde</th><?php endif; ?>
       <?php
       $runningAcc = [];
       foreach ($txs as $t):
@@ -409,7 +415,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           <?php // compute virtual group balance before applying this row's amount ?>
           <td class="col-solde-virtuel"><?php echo htmlspecialchars(number_format($groupStartBalance - ($groupRunning ?? 0.0), 2, ',', ' ')); ?></td>
         <?php endif; ?>
-        <?php if ($noDateFilter): ?><td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td><?php endif; ?>
+        <?php if ($showSolde): ?><td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td><?php endif; ?>
       </tr>
     <?php
         // mettre à jour cumul pour ce compte (après affichage)
