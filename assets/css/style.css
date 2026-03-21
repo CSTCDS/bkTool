@@ -71,7 +71,9 @@ th{background:#f2f2f2}
 
 /* Header / tabs — classeur pastel */
 .site-header{background:linear-gradient(135deg,#e8eaf6 0%,#fce4ec 100%);padding:16px 24px 0;border-bottom:2px solid #d1c4e9;width:100%;box-sizing:border-box}
+.site-header-top{display:flex;align-items:center;justify-content:space-between}
 .site-title{font-weight:800;font-size:1.35rem;color:#5c6bc0;margin-bottom:10px;letter-spacing:.5px}
+.hamburger{display:none;background:none;border:none;font-size:1.6rem;cursor:pointer;color:#5c6bc0;padding:4px 8px}
 .tabs{display:flex;gap:0;margin:0;padding:0}
 .tabs a{
   display:inline-block;padding:10px 22px;text-decoration:none;font-weight:600;font-size:.92rem;
@@ -92,11 +94,42 @@ th{background:#f2f2f2}
   border-bottom:2px solid #fff;font-weight:700;z-index:1
 }
 
+/* Mobile card view — hidden on desktop */
+.mobile-card-view{display:none}
+
 @media (max-width:640px){
-  .tabs{flex-wrap:wrap;gap:2px}
-  .tabs a{font-size:.82rem;padding:8px 12px}
+  /* Hamburger menu */
+  .hamburger{display:block}
+  .tabs{display:none;flex-direction:column;gap:2px;width:100%}
+  .tabs.tabs-open{display:flex}
+  .tabs a{font-size:.82rem;padding:8px 12px;border-radius:0;margin:0;border:1px solid #d1c4e9;border-bottom:none}
+  .tabs a:last-child{border-bottom:1px solid #d1c4e9}
   .site-header{padding:12px 10px 0}
-	main{padding:0 8px}
+  main{padding:0 8px}
+
+  /* Hide all header filters except account select */
+  .tx-filter-header .tx-header-row:first-child{display:none !important}
+  .tx-filter-header .tx-header-row .tx-center{display:none !important}
+  .tx-filter-header .tx-header-row .tx-right{display:none !important}
+  .tx-filter-header .tx-header-row .tx-left{display:block !important;width:100%}
+  .tx-filter-header .tx-header-row .tx-left label{font-size:.9rem}
+  .tx-filter-header .select-account{width:100% !important;min-width:0 !important}
+
+  /* Hide desktop table, show mobile card */
+  .tx-table{display:none !important}
+  .mobile-card-view{display:block}
+
+  /* Mobile card styling */
+  .mobile-card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:8px 0;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+  .mobile-card-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0}
+  .mobile-card-row:last-child{border-bottom:none}
+  .mobile-card-label{font-weight:600;color:#666;font-size:.85rem}
+  .mobile-card-row span:last-child{text-align:right;font-size:.9rem}
+  .mc-desc{flex-direction:column}
+  .mc-desc span:last-child{text-align:left;margin-top:4px;font-size:.85rem;color:#444}
+  .mobile-nav{display:flex;justify-content:space-between;align-items:center;padding:12px 0}
+  .mobile-nav .btn{padding:10px 20px;font-size:.9rem;border-radius:6px}
+  #mcCounter{font-size:.85rem;color:#666}
 }
 
 /* Align only the data cells for Solde virtuel to the right; leave the header aligned normally */

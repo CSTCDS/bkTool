@@ -430,7 +430,55 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
     ?>
     </tbody>
   </table>
+
+  <!-- Mobile card view: single transaction with prev/next -->
+  <div id="mobileCardView" class="mobile-card-view">
+    <div class="mobile-card" id="mobileCard">
+      <div class="mobile-card-row"><span class="mobile-card-label">Compte</span><span id="mc-compte"></span></div>
+      <div class="mobile-card-row"><span class="mobile-card-label">Date</span><span id="mc-date"></span></div>
+      <div class="mobile-card-row"><span class="mobile-card-label">Montant</span><span id="mc-montant"></span></div>
+      <div class="mobile-card-row"><span class="mobile-card-label">Devise</span><span id="mc-devise"></span></div>
+      <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Commentaire</span><span id="mc-desc"></span></div>
+      <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span id="mc-solde"></span></div>
+    </div>
+    <div class="mobile-nav">
+      <button id="mcPrev" class="btn">&larr; Précédent</button>
+      <span id="mcCounter"></span>
+      <button id="mcNext" class="btn">Suivant &rarr;</button>
+    </div>
+  </div>
 </main>
+<script>
+// Mobile card navigation — show only BOOK rows one at a time
+;(function(){
+  var rows = Array.from(document.querySelectorAll('.tx-table tbody tr')).filter(function(r){
+    return (r.dataset.status || '').toUpperCase() === 'BOOK';
+  });
+  var idx = 0;
+  var card = document.getElementById('mobileCard');
+  var counter = document.getElementById('mcCounter');
+  function show(i) {
+    if (!rows.length) return;
+    idx = Math.max(0, Math.min(i, rows.length - 1));
+    var r = rows[idx];
+    var cells = r.querySelectorAll('td');
+    document.getElementById('mc-compte').textContent = cells[0] ? cells[0].textContent.trim() : '';
+    document.getElementById('mc-date').textContent = cells[1] ? cells[1].textContent.trim() : '';
+    var montantEl = document.getElementById('mc-montant');
+    montantEl.textContent = cells[2] ? cells[2].textContent.trim() : '';
+    montantEl.style.color = cells[2] ? cells[2].style.color : '';
+    document.getElementById('mc-devise').textContent = cells[3] ? cells[3].textContent.trim() : '';
+    document.getElementById('mc-desc').textContent = cells[4] ? cells[4].textContent.trim() : '';
+    // Solde: last cell if it exists and has col-solde class
+    var soldeCell = r.querySelector('.col-solde');
+    document.getElementById('mc-solde').textContent = soldeCell ? soldeCell.textContent.trim() : '';
+    counter.textContent = (idx + 1) + ' / ' + rows.length;
+  }
+  document.getElementById('mcPrev').addEventListener('click', function(){ show(idx - 1); });
+  document.getElementById('mcNext').addEventListener('click', function(){ show(idx + 1); });
+  show(0);
+})();
+</script>
 <script>
 // Save category selection via AJAX
 document.querySelectorAll('.cat-select').forEach(function(sel) {
