@@ -55,8 +55,8 @@ function insertTransaction($pdo, $tx)
         $amount = -$amount;
     }
 
-    // Date: prefer booking_date, fallback to value_date, then transaction_date, then today
-    $bookingDate = $tx['booking_date'] ?? $tx['value_date'] ?? $tx['transaction_date'] ?? $tx['date'] ?? date('Y-m-d');
+    // Date: use transaction_date; if empty, set to 31 December of current year
+    $bookingDate = isset($tx['transaction_date']) && $tx['transaction_date'] !== null && $tx['transaction_date'] !== '' ? $tx['transaction_date'] : (date('Y') . '-12-31');
     // Status: prefer API-provided status (store it). If absent, consider BOOK when booking_date exists, else PENDING.
     $apiStatus = strtoupper(trim((string)($tx['status'] ?? '')));
     if ($apiStatus === '') {
@@ -98,8 +98,10 @@ function insertTransaction($pdo, $tx)
         ]);
         // After inserting a new transaction, check for older rows matching same account/date/description/amount with status 'OTHR'
         try {
-            $chk = $pdo->prepare('SELECT id FROM transactions WHERE account_id = :aid AND booking_date = :bdate AND COALESCE(description,"") = :desc AND amount = :amt AND status = :st LIMIT 1');
-            $chk->execute([':aid' => $accountId, ':bdate' => $bookingDate, ':desc' => $description ?? '', ':amt' => $amount, ':st' => 'OTHR']);
+            // also consider rows dated 31 December of the current year as potential matches
+            $yearEnd = date('Y') . '-12-31';
+            $chk = $pdo->prepare('SELECT id FROM transactions WHERE account_id = :aid AND booking_date IN (:bdate, :yend) AND COALESCE(description,"") = :desc AND amount = :amt AND status = :st LIMIT 1');
+            $chk->execute([':aid' => $accountId, ':bdate' => $bookingDate, ':yend' => $yearEnd, ':desc' => $description ?? '', ':amt' => $amount, ':st' => 'OTHR']);
             $oldId = $chk->fetchColumn();
             if ($oldId) {
                 $upd = $pdo->prepare('UPDATE transactions SET status = :newst WHERE id = :id');
