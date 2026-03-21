@@ -171,10 +171,11 @@ if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
 
 // Determine whether to show the "Solde" column.
 // Hide the Solde column only when the 'from' date is provided and is earlier than today.
-$fromParam = $_GET['from'] ?? ($_COOKIE['selected_from'] ?? '');
+$toParam = $_GET['to'] ?? ($_COOKIE['selected_to'] ?? '');
 $today = date('Y-m-d');
 $showSolde = true;
-if ($fromParam !== '' && $fromParam < $today) {
+// Hide Solde only when the 'to' date is provided and is strictly before today
+if ($toParam !== '' && $toParam < $today) {
   $showSolde = false;
 }
 
@@ -478,7 +479,11 @@ document.getElementById('quickRange').addEventListener('change', function(){
   function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   if (!form) return;
   if (inpFrom) inpFrom.value = ymd(from);
-  if (inpTo) inpTo.value = ymd(now);
+  if (inpTo) {
+    // set 'to' to December 31st of the current year for presets
+    var dec31 = new Date(now.getFullYear(), 11, 31);
+    inpTo.value = ymd(dec31);
+  }
   // submit form so server-side will render with selected params
   form.submit();
 });
