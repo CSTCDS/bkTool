@@ -338,6 +338,9 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         </th>
         <?php if ($groupSelected): ?><th class="col-solde-virtuel" style="width:8%">Solde virtuel</th><?php endif; ?>
         <?php if ($showSolde): ?><th class="col-solde" style="width:8%">Solde</th><?php endif; ?>
+      </tr>
+    </thead>
+    <tbody>
       <?php
       $runningAcc = [];
       foreach ($txs as $t):
