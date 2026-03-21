@@ -66,17 +66,24 @@ function insertTransaction($pdo, $tx)
 
     // Account id available from upstream
     $accountId = $tx['_account_id'] ?? null;
+    $currency = $tx['transaction_amount']['currency'] ?? 'EUR';
+    $description = is_array($tx['remittance_information'] ?? null) ? implode(' ', $tx['remittance_information']) : ($tx['remittance_information'] ?? null);
+    // Normalize description for ID derivation: trim, lowercase, collapse spaces
+    $descForId = '';
+    if ($description !== null && $description !== '') {
+        $tmp = trim((string)$description);
+        $tmp = preg_replace('/\s+/', ' ', $tmp);
+        $descForId = strtolower($tmp);
+    }
 
     $id = $tx['entry_reference'] ?? $tx['transaction_id'] ?? null;
-    // If the upstream id is missing, derive one from account identifier + the booking date used in table + amount
+    // If the upstream id is missing, derive one from account identifier + the booking date used in table + amount + normalized description
     if ($id === null) {
         $acctPart = (string)($accountId ?? '');
         $datePart = (string)($bookingDate ?? '');
         $amtPart = number_format((float)$amount, 4, '.', '');
-        $id = sha1($acctPart . '|' . $datePart . '|' . $amtPart);
+        $id = sha1($acctPart . '|' . $datePart . '|' . $amtPart . '|' . $descForId);
     }
-    $currency = $tx['transaction_amount']['currency'] ?? 'EUR';
-    $description = is_array($tx['remittance_information'] ?? null) ? implode(' ', $tx['remittance_information']) : ($tx['remittance_information'] ?? null);
     $raw = json_encode($tx);
 
     // Check existence to differentiate insert vs update
