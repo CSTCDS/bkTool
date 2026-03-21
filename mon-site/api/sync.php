@@ -64,15 +64,17 @@ function insertTransaction($pdo, $tx)
     }
     $status = $apiStatus;
 
+    // Account id available from upstream
+    $accountId = $tx['_account_id'] ?? null;
+
     $id = $tx['entry_reference'] ?? $tx['transaction_id'] ?? null;
-    // If the upstream id is missing, derive one from account identifier + date + amount
+    // If the upstream id is missing, derive one from account identifier + the booking date used in table + amount
     if ($id === null) {
         $acctPart = (string)($accountId ?? '');
         $datePart = (string)($bookingDate ?? '');
         $amtPart = number_format((float)$amount, 4, '.', '');
         $id = sha1($acctPart . '|' . $datePart . '|' . $amtPart);
     }
-    $accountId = $tx['_account_id'] ?? null;
     $currency = $tx['transaction_amount']['currency'] ?? 'EUR';
     $description = is_array($tx['remittance_information'] ?? null) ? implode(' ', $tx['remittance_information']) : ($tx['remittance_information'] ?? null);
     $raw = json_encode($tx);
