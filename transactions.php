@@ -220,6 +220,7 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
             <option value="6m">6 mois</option>
             <option value="1y">1 an</option>
             <option value="2y">2 ans</option>
+            <option value="custom">Choix de dates</option>
           </select>
         </div>
       </div>
@@ -271,8 +272,10 @@ if (!empty($_GET['export']) && $_GET['export'] === 'csv') {
         </label>
       </div>
       <div class="tx-col tx-center" style="flex:1;text-align:center">
-        <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ''); ?>"></label>
-        <label>Au : <input type="date" name="to" value="<?php echo htmlspecialchars($_GET['to'] ?? ''); ?>"></label>
+        <div id="dateRangeFields" style="display:none">
+          <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ''); ?>"></label>
+          <label>Au : <input type="date" name="to" value="<?php echo htmlspecialchars($_GET['to'] ?? ''); ?>"></label>
+        </div>
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
         <!-- Critères 3 & 4 (ligne 2, droite) -->
@@ -439,20 +442,33 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
 <script>
 // Quick range selector: set from/to and submit form
 document.getElementById('quickRange').addEventListener('change', function(){
-  var v = this.value; if (!v) return;
+  var v = this.value;
   // persist selection across visits
   document.cookie = 'selected_quickRange=' + encodeURIComponent(v) + ';path=/;max-age=31536000';
+  var dateFields = document.getElementById('dateRangeFields');
+  var form = this.closest('form');
+  var inpFrom = form ? form.querySelector('input[name=from]') : null;
+  var inpTo = form ? form.querySelector('input[name=to]') : null;
+  if (v === 'custom') {
+    // show date inputs and do not auto-submit
+    if (dateFields) dateFields.style.display = '';
+    // If server or cookie provided explicit from/to keep them; otherwise leave empty
+    return;
+  }
+  // hide date inputs for preset ranges
+  if (dateFields) dateFields.style.display = 'none';
+  if (!v) return;
   var now = new Date();
   var from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (v === '10d') { from.setDate(from.getDate() - 9); }
   else if (v === '20d') { from.setDate(from.getDate() - 19); }
   else if (v === '1m') { from.setMonth(from.getMonth() - 1); }
   else if (v === '2m') { from.setMonth(from.getMonth() - 2); }
+  else if (v === '6m') { from.setMonth(from.getMonth() - 6); }
+  else if (v === '1y') { from.setFullYear(from.getFullYear() - 1); }
+  else if (v === '2y') { from.setFullYear(from.getFullYear() - 2); }
   function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-  var form = this.closest('form');
   if (!form) return;
-  var inpFrom = form.querySelector('input[name=from]');
-  var inpTo = form.querySelector('input[name=to]');
   if (inpFrom) inpFrom.value = ymd(from);
   if (inpTo) inpTo.value = ymd(now);
   form.submit();
@@ -463,15 +479,28 @@ document.addEventListener('DOMContentLoaded', function(){
   var sel = document.getElementById('quickRange');
   if (!sel) return;
   // If server already set a value (from GET), keep it. Otherwise restore cookie.
-  if (sel.value) return;
+  // If server already set a value (from GET), keep it. Otherwise restore cookie.
   var form = sel.closest('form');
   var inpFrom = form ? form.querySelector('input[name=from]') : null;
   var inpTo = form ? form.querySelector('input[name=to]') : null;
-  // If from/to already set by server (GET params), do not auto-apply — prevents reload loops
-  if ((inpFrom && inpFrom.value) || (inpTo && inpTo.value)) return;
+  // If from/to already set by server (GET params), ensure date fields visible and do not auto-apply cookie
+  var dateFields = document.getElementById('dateRangeFields');
+  if ((inpFrom && inpFrom.value) || (inpTo && inpTo.value)) {
+    if (dateFields) dateFields.style.display = '';
+    return;
+  }
+  if (sel.value) return;
   var m = document.cookie.match('(?:^|; )selected_quickRange=([^;]+)');
   if (m && m[1]) {
-    try { sel.value = decodeURIComponent(m[1]); sel.dispatchEvent(new Event('change')); } catch(e) { /* ignore */ }
+    try {
+      var val = decodeURIComponent(m[1]);
+      sel.value = val;
+      if (val === 'custom') {
+        if (dateFields) dateFields.style.display = '';
+        return;
+      }
+      sel.dispatchEvent(new Event('change'));
+    } catch(e) { /* ignore */ }
   }
 });
 </script>
