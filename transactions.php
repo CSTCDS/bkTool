@@ -445,10 +445,10 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span id="mc-solde"></span></div>
     </div>
     <div class="mobile-cats" id="mobileCats">
-      <div class="mobile-card-row"><span class="mobile-card-label"><?php echo htmlspecialchars($criterionNames[1]); ?></span><span id="mc-cat1"></span></div>
-      <div class="mobile-card-row"><span class="mobile-card-label"><?php echo htmlspecialchars($criterionNames[2]); ?></span><span id="mc-cat2"></span></div>
-      <div class="mobile-card-row"><span class="mobile-card-label"><?php echo htmlspecialchars($criterionNames[3]); ?></span><span id="mc-cat3"></span></div>
-      <div class="mobile-card-row"><span class="mobile-card-label"><?php echo htmlspecialchars($criterionNames[4]); ?></span><span id="mc-cat4"></span></div>
+      <div class="mobile-card-row" style="display:block"><span id="mc-cat1" style="width:100%"></span></div>
+      <div class="mobile-card-row" style="display:block"><span id="mc-cat2" style="width:100%"></span></div>
+      <div class="mobile-card-row" style="display:block"><span id="mc-cat3" style="width:100%"></span></div>
+      <div class="mobile-card-row" style="display:block"><span id="mc-cat4" style="width:100%"></span></div>
     </div>
     <div class="mobile-nav">
       <button id="mcPrev" class="btn">&larr; Précédent</button>
@@ -491,6 +491,11 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         var clone = catSelects[ci].cloneNode(true);
         clone.style.width = '100%';
         clone.classList.add('mc-cat-select');
+        // Replace first option ("—") with criterion name from title attribute
+        var critName = catSelects[ci].getAttribute('title') || '';
+        if (clone.options.length > 0 && critName) {
+          clone.options[0].textContent = critName;
+        }
         // sync changes back to the original select and trigger AJAX save
         (function(orig, cloned){
           cloned.addEventListener('change', function(){
