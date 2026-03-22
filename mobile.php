@@ -183,10 +183,7 @@ if ($tx && $groupSelected) {
   </style>
 </head>
 <body>
-  <div class="m-header">
-    <span class="site-title" style="font-weight:800;color:#5c6bc0">bkTool</span>
-    <a href="transactions.php" style="font-size:.85rem;color:#5c6bc0">Version bureau</a>
-  </div>
+<?php include __DIR__ . '/header.php'; ?>
 
   <div class="m-account">
     <select onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; location.href='mobile.php?account='+encodeURIComponent(this.value)">
