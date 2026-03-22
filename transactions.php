@@ -21,9 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['tx_id']) && !empty($
     $stmt = $pdo->prepare("UPDATE transactions SET `$field` = :val WHERE id = :id");
     $stmt->execute([':val' => ($value !== '' ? $value : null), ':id' => $txId]);
   }
-  // Redirect back to same page with GET params preserved
+  // Redirect back to same page with GET params preserved + mobile card index
   $qs = $_SERVER['QUERY_STRING'] ?? '';
-  header('Location: transactions.php' . ($qs ? '?' . $qs : ''));
+  $mcIdx = isset($_POST['mcIdx']) ? (int)$_POST['mcIdx'] : 0;
+  $sep = $qs ? '&' : '';
+  header('Location: transactions.php?' . $qs . $sep . 'mcIdx=' . $mcIdx);
   exit;
 }
 
@@ -527,6 +529,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
             addHidden('tx_id', orig.dataset.txid);
             addHidden('field', orig.dataset.field);
             addHidden('value', cloned.value);
+            addHidden('mcIdx', String(idx));
             document.body.appendChild(f);
             f.submit();
           });
@@ -538,7 +541,11 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
   }
   document.getElementById('mcPrev').addEventListener('click', function(){ show(idx - 1); });
   document.getElementById('mcNext').addEventListener('click', function(){ show(idx + 1); });
-  show(0);
+  // Restore card index from URL if provided
+  var startIdx = 0;
+  var mcParam = new URLSearchParams(window.location.search).get('mcIdx');
+  if (mcParam !== null) startIdx = parseInt(mcParam, 10) || 0;
+  show(startIdx);
 })();
 </script>
 <script>
