@@ -52,6 +52,8 @@ th{background:#f2f2f2}
   table tbody td { display:flex; justify-content:space-between; padding:6px 8px; border:none }
   table tbody td input, table tbody td select { width:60%; }
   .acc-name, .acc-currency, .acc-alert { width:100%; box-sizing:border-box }
+  /* Hide alert threshold input on small screens (smartphone) */
+  .acc-alert { display: none !important }
 }
 
 /* Dashboard/transactions title row */
