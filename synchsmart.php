@@ -1,0 +1,107 @@
+<?php
+// synchsmart.php — run sync and show balances + last 3 BOOK entries for accounts with alert_threshold
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+try {
+  $pdo = require __DIR__ . '/mon-site/api/db.php';
+  $config = require __DIR__ . '/mon-site/config/database.php';
+} catch (Throwable $e) {
+  echo '<h1>Erreur BDD</h1><pre>' . htmlspecialchars((string)$e) . '</pre>';
+  exit;
+}
+require __DIR__ . '/mon-site/api/sync.php';
+
+// Run sync (may be slow)
+$syncResult = [];
+try {
+  $syncResult = run_sync($pdo, $config);
+} catch (Throwable $e) {
+  $syncResult = ['errors' => [(string)$e]];
+}
+
+// Fetch accounts with non-null alert_threshold
+$stmt = $pdo->prepare('SELECT id, name, balance, alert_threshold FROM accounts WHERE alert_threshold IS NOT NULL');
+$stmt->execute();
+$accs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// For each account, fetch last 3 BOOK transactions
+foreach ($accs as &$a) {
+  $tstmt = $pdo->prepare('SELECT booking_date, amount, description FROM transactions WHERE account_id = :aid AND UPPER(status) = "BOOK" ORDER BY booking_date DESC LIMIT 3');
+  $tstmt->execute([':aid' => $a['id']]);
+  $a['txs'] = $tstmt->fetchAll(PDO::FETCH_ASSOC);
+}
+unset($a);
+
+?><!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Synchro mobile — bkTool</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <style>body{font-family:Arial,Helvetica,sans-serif;padding:12px}</style>
+</head>
+<body>
+  <h1>Synchro mobile</h1>
+  <?php if (!empty($syncResult['errors'])): ?>
+    <div style="color:#c62828"><strong>Erreurs:</strong>
+      <ul><?php foreach ($syncResult['errors'] as $err) { echo '<li>' . htmlspecialchars((string)$err) . '</li>'; } ?></ul>
+    </div>
+  <?php endif; ?>
+
+  <?php if (empty($accs)): ?>
+    <p>Aucun compte avec seuil d'alerte configuré.</p>
+  <?php else: ?>
+    <div id="alerts">
+    <?php foreach ($accs as $a):
+      $balance = (float)$a['balance'];
+      $th = (float)$a['alert_threshold'];
+      $below = ($balance < $th);
+    ?>
+      <div class="mobile-card" style="margin-bottom:12px">
+        <div class="mobile-card-row"><strong><?php echo htmlspecialchars($a['name']); ?></strong><span><?php echo htmlspecialchars(number_format($balance,2,',',' ')); ?> €</span></div>
+        <div class="mobile-card-row"><span>Seuil</span><span><?php echo htmlspecialchars(number_format($th,2,',',' ')); ?> €</span></div>
+        <div style="padding:8px 0"><strong>Dernières écritures</strong>
+          <?php if (empty($a['txs'])): ?><div style="color:#666">Aucune écriture BOOK</div><?php else: ?>
+            <ul><?php foreach ($a['txs'] as $t) { echo '<li>' . htmlspecialchars($t['booking_date']) . ' — ' . htmlspecialchars(number_format((float)$t['amount'],2,',',' ')) . ' € — ' . htmlspecialchars(substr($t['description'],0,80)) . '</li>'; } ?></ul>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
+  <script>
+    // Request notification permission and create notifications for low balances
+    (function(){
+      if (!('Notification' in window)) return;
+      function notify(title, body){
+        if (Notification.permission === 'granted') {
+          new Notification(title, { body: body });
+        } else if (Notification.permission !== 'denied') {
+          Notification.requestPermission().then(function(p){ if (p === 'granted') new Notification(title, { body: body }); });
+        }
+      }
+      // build alerts
+      var cards = document.querySelectorAll('.mobile-card');
+      cards.forEach(function(card){
+        var name = card.querySelector('strong').innerText || 'Compte';
+        var vals = card.querySelectorAll('.mobile-card-row span:last-child');
+        // first row is balance, second is threshold
+        if (vals.length >= 2) {
+          var balance = parseFloat(vals[0].innerText.replace(/[ €\s]/g,''.replace(',', '.')));
+          var threshold = parseFloat(vals[1].innerText.replace(/[ €\s]/g,''.replace(',', '.')));
+          // fallback parsing using dataset not reliable; instead detect visually: if balance < threshold, notify
+          var bText = vals[0].innerText.replace(/\./g,'').replace(',','.').replace(/[^0-9.\-]/g,'');
+          var tText = vals[1].innerText.replace(/\./g,'').replace(',','.').replace(/[^0-9.\-]/g,'');
+          var b = parseFloat(bText);
+          var t = parseFloat(tText);
+          if (!isNaN(b) && !isNaN(t) && b < t) {
+            notify('Alerte solde: ' + name, 'Solde ' + b.toFixed(2) + ' € < seuil ' + t.toFixed(2) + ' €');
+          }
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

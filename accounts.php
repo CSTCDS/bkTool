@@ -18,16 +18,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['account_id'])) {
   $name = trim((string)($_POST['name'] ?? ''));
   $currency = trim((string)($_POST['currency'] ?? ''));
   $color = trim((string)($_POST['color'] ?? '')) ?: null;
+  $alert = isset($_POST['alert_threshold']) && $_POST['alert_threshold'] !== '' ? (float)$_POST['alert_threshold'] : null;
   if ($id && $name !== '') {
-    $stmt = $pdo->prepare('UPDATE accounts SET name = :name, currency = :currency, color = :color, updated_at = NOW() WHERE id = :id');
-    $stmt->execute([':name' => $name, ':currency' => $currency, ':color' => $color, ':id' => $id]);
+    $stmt = $pdo->prepare('UPDATE accounts SET name = :name, currency = :currency, color = :color, alert_threshold = :alert, updated_at = NOW() WHERE id = :id');
+    $stmt->execute([':name' => $name, ':currency' => $currency, ':color' => $color, ':alert' => $alert, ':id' => $id]);
     $notice = 'Compte mis à jour.';
   } else {
     $notice = 'Données invalides.';
   }
 }
 
-$stmt = $pdo->query('SELECT id, name, currency, balance, color, updated_at FROM accounts ORDER BY name');
+$stmt = $pdo->query('SELECT id, name, currency, balance, color, alert_threshold, updated_at FROM accounts ORDER BY name');
 $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!doctype html>
@@ -51,20 +52,23 @@ $accounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <?php else: ?>
     <table>
       <thead>
-        <tr><th>Libellé</th><th>Devise</th><th>Couleur</th><th>Solde</th><th>Dernière MAJ</th><th></th></tr>
+        <tr><th>Libellé</th><th>Devise</th><th>Couleur</th><th>Seuil alerte</th><th>Solde</th><th>Dernière MAJ</th><th></th></tr>
       </thead>
       <tbody>
       <?php foreach ($accounts as $acc): ?>
         <tr>
           <form method="post">
             <td>
-              <input type="text" name="name" value="<?php echo htmlspecialchars($acc['name'] ?? ''); ?>" required style="width:220px">
+              <input type="text" name="name" value="<?php echo htmlspecialchars($acc['name'] ?? ''); ?>" required class="acc-name">
             </td>
             <td>
-              <input type="text" name="currency" value="<?php echo htmlspecialchars($acc['currency'] ?? ''); ?>" style="width:60px">
+              <input type="text" name="currency" value="<?php echo htmlspecialchars($acc['currency'] ?? ''); ?>" class="acc-currency">
             </td>
             <td>
               <input type="color" name="color" value="<?php echo htmlspecialchars($acc['color'] ?? '#000000'); ?>" title="Couleur du compte">
+            </td>
+            <td>
+              <input type="number" step="0.01" min="0" name="alert_threshold" value="<?php echo htmlspecialchars((string)($acc['alert_threshold'] ?? '')); ?>" class="acc-alert" placeholder="ex: 50.00">
             </td>
             <td style="text-align:right"><?php echo htmlspecialchars((string)($acc['balance'] ?? '0')); ?></td>
             <td><?php echo htmlspecialchars((string)($acc['updated_at'] ?? '')); ?></td>

@@ -113,6 +113,13 @@ function bkt_migrate(PDO $pdo): void
                 $pdo->exec("ALTER TABLE transactions ADD COLUMN NumImport INT DEFAULT 0 AFTER currency");
             }
         },
+        // Version 7 : add alert_threshold to accounts for low-balance alerts
+        7 => function (PDO $pdo) {
+            $cols = $pdo->query('SHOW COLUMNS FROM accounts LIKE \'alert_threshold\'')->fetchAll();
+            if (empty($cols)) {
+                $pdo->exec("ALTER TABLE accounts ADD COLUMN alert_threshold DECIMAL(20,2) DEFAULT NULL AFTER balance");
+            }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées

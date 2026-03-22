@@ -39,6 +39,21 @@ th{background:#f2f2f2}
 .tx-table .col-status{white-space:nowrap;width:8%;text-align:center}
 .tx-table .col-cat select{width:100%;font-size:.82rem;padding:2px}
 
+/* Accounts page responsive fixes */
+.acc-name{width:220px;max-width:100%;}
+.acc-currency{width:60px;max-width:100%}
+.acc-alert{width:100px;max-width:100%}
+
+@media (max-width:640px){
+  table{display:block;overflow-x:auto}
+  table thead, table tbody, table tr, table th, table td { display:block; }
+  table thead { display:none }
+  table tbody tr { margin-bottom:12px; border:1px solid #e6e6e6; padding:8px; border-radius:6px; background:#fff }
+  table tbody td { display:flex; justify-content:space-between; padding:6px 8px; border:none }
+  table tbody td input, table tbody td select { width:60%; }
+  .acc-name, .acc-currency, .acc-alert { width:100%; box-sizing:border-box }
+}
+
 /* Dashboard/transactions title row */
 .page-title-row { text-align: center; margin-bottom: 8px }
 
