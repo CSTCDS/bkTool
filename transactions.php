@@ -481,14 +481,25 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
     // Solde: last cell if it exists and has col-solde class
     var soldeCell = r.querySelector('.col-solde');
     document.getElementById('mc-solde').textContent = soldeCell ? soldeCell.textContent.trim() : '';
-    // Categories: read selected text from cat-select dropdowns in the row
+    // Categories: clone select dropdowns from the row into mobile card
     var catSelects = r.querySelectorAll('.cat-select');
     for (var ci = 0; ci < 4; ci++) {
-      var el = document.getElementById('mc-cat' + (ci + 1));
-      if (el && catSelects[ci]) {
-        var opt = catSelects[ci].options[catSelects[ci].selectedIndex];
-        el.textContent = (opt && opt.value) ? opt.textContent.trim() : '—';
-      } else if (el) { el.textContent = '—'; }
+      var container = document.getElementById('mc-cat' + (ci + 1));
+      if (!container) continue;
+      container.innerHTML = '';
+      if (catSelects[ci]) {
+        var clone = catSelects[ci].cloneNode(true);
+        clone.style.width = '100%';
+        clone.classList.add('mc-cat-select');
+        // sync changes back to the original select and trigger AJAX save
+        (function(orig, cloned){
+          cloned.addEventListener('change', function(){
+            orig.value = this.value;
+            orig.dispatchEvent(new Event('change'));
+          });
+        })(catSelects[ci], clone);
+        container.appendChild(clone);
+      }
     }
     counter.textContent = (idx + 1) + ' / ' + rows.length;
   }
