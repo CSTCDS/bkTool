@@ -60,14 +60,22 @@ foreach ($allCats as $c) {
   }
 }
 
+// Account balances map
+$accBalances = [];
+foreach ($accs as $a) $accBalances[$a['id']] = (float)($a['balance'] ?? 0);
+
 // Build WHERE for account filter
 $where = ["UPPER(t.status) = 'BOOK'"];
 $params = [];
+$groupSelected = false;
+$groupAccountIds = [];
 if ($acctSel !== '') {
   if (is_string($acctSel) && strpos($acctSel, 'g:') === 0) {
     $gid = (int)substr($acctSel, 2);
     $acctIds = $groupChildren[$gid] ?? [];
+    $groupAccountIds = $acctIds;
     if (!empty($acctIds)) {
+      $groupSelected = true;
       $placeholders = [];
       foreach ($acctIds as $i => $aid) {
         $ph = ':g_' . $gid . '_' . $i;
@@ -102,6 +110,50 @@ foreach ($params as $k => $v) $stmt->bindValue($k, $v);
 $stmt->bindValue(':off', $idx, PDO::PARAM_INT);
 $stmt->execute();
 $tx = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Compute Solde (per-account balance at this position)
+$displayBalance = null;
+if ($tx) {
+  $accountBalance = (float)($tx['account_balance'] ?? 0.0);
+  $displayBalance = $accountBalance;
+  if ($idx > 0) {
+    $sumSql = 'SELECT COALESCE(SUM(sub.amount), 0) FROM (
+      SELECT t.amount, t.account_id FROM transactions t
+      WHERE ' . implode(' AND ', $where) . '
+      ORDER BY t.booking_date DESC, t.amount DESC
+      LIMIT :lim
+    ) sub WHERE sub.account_id = :cur_acct';
+    $sumStmt = $pdo->prepare($sumSql);
+    foreach ($params as $k => $v) $sumStmt->bindValue($k, $v);
+    $sumStmt->bindValue(':lim', $idx, PDO::PARAM_INT);
+    $sumStmt->bindValue(':cur_acct', $tx['account_id']);
+    $sumStmt->execute();
+    $displayBalance = $accountBalance - (float)$sumStmt->fetchColumn();
+  }
+}
+
+// Compute Solde virtuel (group total balance at this position)
+$groupVirtualBalance = null;
+if ($tx && $groupSelected) {
+  $groupStartBalance = 0.0;
+  foreach ($groupAccountIds as $aid) {
+    $groupStartBalance += (float)($accBalances[$aid] ?? 0.0);
+  }
+  $groupVirtualBalance = $groupStartBalance;
+  if ($idx > 0) {
+    $gSumSql = 'SELECT COALESCE(SUM(sub.amount), 0) FROM (
+      SELECT t.amount FROM transactions t
+      WHERE ' . implode(' AND ', $where) . '
+      ORDER BY t.booking_date DESC, t.amount DESC
+      LIMIT :lim
+    ) sub';
+    $gSumStmt = $pdo->prepare($gSumSql);
+    foreach ($params as $k => $v) $gSumStmt->bindValue($k, $v);
+    $gSumStmt->bindValue(':lim', $idx, PDO::PARAM_INT);
+    $gSumStmt->execute();
+    $groupVirtualBalance = $groupStartBalance - (float)$gSumStmt->fetchColumn();
+  }
+}
 ?><!doctype html>
 <html>
 <head>
@@ -161,6 +213,12 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC);
     <div class="m-row"><span class="m-label">Montant</span><span class="m-value" style="color:<?php echo ($tx['amount'] < 0) ? '#c62828' : '#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$tx['amount'], 2, ',', ' ')); ?></span></div>
     <div class="m-row"><span class="m-label">Devise</span><span class="m-value"><?php echo htmlspecialchars($tx['currency'] ?? ''); ?></span></div>
     <div class="m-row m-desc"><span class="m-label">Commentaire</span><span class="m-value"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>
+    <?php if ($displayBalance !== null): ?>
+    <div class="m-row"><span class="m-label">Solde</span><span class="m-value" style="font-weight:700"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></span></div>
+    <?php endif; ?>
+    <?php if ($groupVirtualBalance !== null): ?>
+    <div class="m-row"><span class="m-label">Solde virtuel</span><span class="m-value" style="font-weight:700;color:#5c6bc0"><?php echo htmlspecialchars(number_format($groupVirtualBalance, 2, ',', ' ')); ?></span></div>
+    <?php endif; ?>
   </div>
 
   <div class="m-cats">
