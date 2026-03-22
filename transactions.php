@@ -490,6 +490,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       if (catSelects[ci]) {
         var clone = catSelects[ci].cloneNode(true);
         clone.style.width = '100%';
+        clone.classList.remove('cat-select'); // prevent double AJAX handler
         clone.classList.add('mc-cat-select');
         // Replace first option ("—") with criterion name from title attribute
         var critName = catSelects[ci].getAttribute('title') || '';
@@ -498,7 +499,9 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         }
         // sync changes back to the original select and trigger AJAX save
         (function(orig, cloned){
-          cloned.addEventListener('change', function(){
+          cloned.addEventListener('change', function(e){
+            e.preventDefault();
+            e.stopPropagation();
             orig.value = this.value;
             orig.dispatchEvent(new Event('change'));
           });
