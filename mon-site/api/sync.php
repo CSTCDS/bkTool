@@ -48,6 +48,11 @@ function upsertAccount($pdo, $acc)
 
 function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
 {
+    // Skip transactions with no transaction_date
+    if (!isset($tx['transaction_date']) || $tx['transaction_date'] === null || $tx['transaction_date'] === '') {
+        return null;
+    }
+
     // Determine sign: Enable Banking uses credit_debit_indicator (CRDT / DBIT)
     $amount = (float)($tx['transaction_amount']['amount'] ?? 0);
     $indicator = strtoupper($tx['credit_debit_indicator'] ?? '');
@@ -55,8 +60,8 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
         $amount = -$amount;
     }
 
-    // Date: use transaction_date; if empty, set to 31 December of current year
-    $bookingDate = isset($tx['transaction_date']) && $tx['transaction_date'] !== null && $tx['transaction_date'] !== '' ? $tx['transaction_date'] : (date('Y') . '-12-31');
+    // Date: transaction_date is guaranteed non-empty (checked at entry)
+    $bookingDate = $tx['transaction_date'];
     // Status: prefer API-provided status (store it). If absent, consider BOOK when booking_date exists, else PENDING.
     $apiStatus = strtoupper(trim((string)($tx['status'] ?? '')));
     if ($apiStatus === '') {
@@ -260,6 +265,7 @@ function run_sync($pdo, $config)
             foreach ($txRes['body']['transactions'] as $tx) {
                 $tx['_account_id'] = $uid;
                 $r2 = insertTransaction($pdo, $tx, $importNum);
+                if ($r2 === null) continue; // skipped (no transaction_date)
                 $result['transactions']++;
                 if (!empty($r2['action']) && $r2['action'] === 'insert') $result['transactions_insert']++;
                 if (!empty($r2['action']) && $r2['action'] === 'update') $result['transactions_update']++;

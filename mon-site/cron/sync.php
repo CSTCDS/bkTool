@@ -32,6 +32,10 @@ function upsertAccount($pdo, $acc)
 
 function insertTransaction($pdo, $tx)
 {
+    // Skip transactions with no booking date
+    $bdate = $tx['bookingDate'] ?? null;
+    if ($bdate === null || $bdate === '') return;
+
     $stmt = $pdo->prepare('INSERT IGNORE INTO transactions (id, account_id, amount, currency, description, booking_date, raw, created_at) VALUES (:id, :account_id, :amount, :currency, :description, :booking_date, :raw, NOW())');
     $stmt->execute([
         ':id' => $tx['id'] ?? null,
