@@ -52,12 +52,34 @@ foreach ($allCats as $c) {
   }
 }
 
+// Build group children map (criterion=0): parent_id => [account_id, ...]
+$groupChildren = [];
+foreach ($allCats as $c) {
+  if ((int)$c['criterion'] === 0 && $c['parent_id'] !== null) {
+    $groupChildren[(int)$c['parent_id']][] = $c['label'];
+  }
+}
+
 // Build WHERE for account filter
 $where = ["UPPER(t.status) = 'BOOK'"];
 $params = [];
 if ($acctSel !== '') {
-  $where[] = 't.account_id = :account';
-  $params[':account'] = $acctSel;
+  if (is_string($acctSel) && strpos($acctSel, 'g:') === 0) {
+    $gid = (int)substr($acctSel, 2);
+    $acctIds = $groupChildren[$gid] ?? [];
+    if (!empty($acctIds)) {
+      $placeholders = [];
+      foreach ($acctIds as $i => $aid) {
+        $ph = ':g_' . $gid . '_' . $i;
+        $placeholders[] = $ph;
+        $params[$ph] = $aid;
+      }
+      $where[] = 't.account_id IN (' . implode(',', $placeholders) . ')';
+    }
+  } else {
+    $where[] = 't.account_id = :account';
+    $params[':account'] = $acctSel;
+  }
 }
 
 // Count total BOOK rows
@@ -122,6 +144,11 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC);
           <?php echo htmlspecialchars($a['name'] ?: $a['id']); ?>
         </option>
       <?php endforeach; ?>
+      <?php if (!empty($catTree[0])): foreach ($catTree[0] as $pid => $node): if (!$node['info']) continue; ?>
+        <option value="g:<?php echo (int)$node['info']['id']; ?>"<?php echo ($acctSel !== '' && (string)$acctSel === ('g:' . (int)$node['info']['id'])) ? ' selected' : ''; ?> style="background:#e0e0e0">
+          <?php echo 'G: ' . htmlspecialchars($node['info']['label']); ?>
+        </option>
+      <?php endforeach; endif; ?>
     </select>
   </div>
 
