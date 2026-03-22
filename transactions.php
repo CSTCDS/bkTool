@@ -11,6 +11,22 @@ try {
   exit;
 }
 
+// Handle POST: save category and redirect back (PRG pattern)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['tx_id']) && !empty($_POST['field'])) {
+  $txId = $_POST['tx_id'];
+  $field = $_POST['field'];
+  $value = $_POST['value'] ?? null;
+  $allowed = ['cat1_id','cat2_id','cat3_id','cat4_id'];
+  if (in_array($field, $allowed, true)) {
+    $stmt = $pdo->prepare("UPDATE transactions SET `$field` = :val WHERE id = :id");
+    $stmt->execute([':val' => ($value !== '' ? $value : null), ':id' => $txId]);
+  }
+  // Redirect back to same page with GET params preserved
+  $qs = $_SERVER['QUERY_STRING'] ?? '';
+  header('Location: transactions.php' . ($qs ? '?' . $qs : ''));
+  exit;
+}
+
 // Liste des comptes pour le dropdown (inclut le solde courant)
 $accs = $pdo->query('SELECT id, name, balance, color FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
 $accMap = [];
@@ -497,22 +513,22 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         if (clone.options.length > 0 && critName) {
           clone.options[0].textContent = critName;
         }
-        // Save directly via AJAX without touching the original (avoids page reload)
+        // On change: submit a hidden form POST to save and reload the page
         (function(orig, cloned){
-          cloned.addEventListener('change', function(e){
-            e.preventDefault();
-            e.stopPropagation();
-            // Update original silently
-            orig.value = this.value;
-            // AJAX save
-            var data = new FormData();
-            data.append('tx_id', orig.dataset.txid);
-            data.append('field', orig.dataset.field);
-            data.append('value', this.value);
-            fetch('save_tx_category.php', { method: 'POST', body: data })
-              .then(function(r){ return r.json(); })
-              .then(function(j){ if (!j.ok) console.error('Erreur save category', j); })
-              .catch(function(err){ console.error(err); });
+          cloned.addEventListener('change', function(){
+            var f = document.createElement('form');
+            f.method = 'POST';
+            f.style.display = 'none';
+            var addHidden = function(name, val){
+              var inp = document.createElement('input');
+              inp.type = 'hidden'; inp.name = name; inp.value = val;
+              f.appendChild(inp);
+            };
+            addHidden('tx_id', orig.dataset.txid);
+            addHidden('field', orig.dataset.field);
+            addHidden('value', cloned.value);
+            document.body.appendChild(f);
+            f.submit();
           });
         })(catSelects[ci], clone);
         container.appendChild(clone);
