@@ -4,6 +4,15 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
+// Auto-redirect smartphones to dedicated mobile page
+if (!isset($_GET['desktop']) && isset($_SERVER['HTTP_USER_AGENT'])) {
+  $ua = $_SERVER['HTTP_USER_AGENT'];
+  if (preg_match('/Mobile|Android|iPhone|iPod|webOS|BlackBerry|Opera Mini|IEMobile/i', $ua)) {
+    header('Location: mobile.php');
+    exit;
+  }
+}
+
 try {
   $pdo = require __DIR__ . '/mon-site/api/db.php';
 } catch (Throwable $e) {
@@ -451,103 +460,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
     ?>
     </tbody>
   </table>
-
-  <!-- Mobile card view: single transaction with prev/next -->
-  <div id="mobileCardView" class="mobile-card-view">
-    <div class="mobile-card" id="mobileCard">
-      <div class="mobile-card-row"><span class="mobile-card-label">Compte</span><span id="mc-compte"></span></div>
-      <div class="mobile-card-row"><span class="mobile-card-label">Date</span><span id="mc-date"></span></div>
-      <div class="mobile-card-row"><span class="mobile-card-label">Montant</span><span id="mc-montant"></span></div>
-      <div class="mobile-card-row"><span class="mobile-card-label">Devise</span><span id="mc-devise"></span></div>
-      <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Commentaire</span><span id="mc-desc"></span></div>
-      <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span id="mc-solde"></span></div>
-    </div>
-    <div class="mobile-cats" id="mobileCats">
-      <div class="mobile-card-row" style="display:block"><span id="mc-cat1" style="width:100%"></span></div>
-      <div class="mobile-card-row" style="display:block"><span id="mc-cat2" style="width:100%"></span></div>
-      <div class="mobile-card-row" style="display:block"><span id="mc-cat3" style="width:100%"></span></div>
-      <div class="mobile-card-row" style="display:block"><span id="mc-cat4" style="width:100%"></span></div>
-    </div>
-    <div class="mobile-nav">
-      <button id="mcPrev" class="btn">&larr; Précédent</button>
-      <span id="mcCounter"></span>
-      <button id="mcNext" class="btn">Suivant &rarr;</button>
-    </div>
-  </div>
 </main>
-<script>
-// Mobile card navigation — show only BOOK rows one at a time
-;(function(){
-  var rows = Array.from(document.querySelectorAll('.tx-table tbody tr')).filter(function(r){
-    return (r.dataset.status || '').toUpperCase() === 'BOOK';
-  });
-  var idx = 0;
-  var card = document.getElementById('mobileCard');
-  var counter = document.getElementById('mcCounter');
-  function show(i) {
-    if (!rows.length) return;
-    idx = Math.max(0, Math.min(i, rows.length - 1));
-    var r = rows[idx];
-    var cells = r.querySelectorAll('td');
-    document.getElementById('mc-compte').textContent = cells[0] ? cells[0].textContent.trim() : '';
-    document.getElementById('mc-date').textContent = cells[1] ? cells[1].textContent.trim() : '';
-    var montantEl = document.getElementById('mc-montant');
-    montantEl.textContent = cells[2] ? cells[2].textContent.trim() : '';
-    montantEl.style.color = cells[2] ? cells[2].style.color : '';
-    document.getElementById('mc-devise').textContent = cells[3] ? cells[3].textContent.trim() : '';
-    document.getElementById('mc-desc').textContent = cells[4] ? cells[4].textContent.trim() : '';
-    // Solde: last cell if it exists and has col-solde class
-    var soldeCell = r.querySelector('.col-solde');
-    document.getElementById('mc-solde').textContent = soldeCell ? soldeCell.textContent.trim() : '';
-    // Categories: clone select dropdowns from the row into mobile card
-    var catSelects = r.querySelectorAll('.cat-select');
-    for (var ci = 0; ci < 4; ci++) {
-      var container = document.getElementById('mc-cat' + (ci + 1));
-      if (!container) continue;
-      container.innerHTML = '';
-      if (catSelects[ci]) {
-        var clone = catSelects[ci].cloneNode(true);
-        clone.style.width = '100%';
-        clone.classList.remove('cat-select'); // prevent double AJAX handler
-        clone.classList.add('mc-cat-select');
-        // Replace first option ("—") with criterion name from title attribute
-        var critName = catSelects[ci].getAttribute('title') || '';
-        if (clone.options.length > 0 && critName) {
-          clone.options[0].textContent = critName;
-        }
-        // On change: submit a hidden form POST to save and reload the page
-        (function(orig, cloned){
-          cloned.addEventListener('change', function(){
-            var f = document.createElement('form');
-            f.method = 'POST';
-            f.style.display = 'none';
-            var addHidden = function(name, val){
-              var inp = document.createElement('input');
-              inp.type = 'hidden'; inp.name = name; inp.value = val;
-              f.appendChild(inp);
-            };
-            addHidden('tx_id', orig.dataset.txid);
-            addHidden('field', orig.dataset.field);
-            addHidden('value', cloned.value);
-            addHidden('mcIdx', String(idx));
-            document.body.appendChild(f);
-            f.submit();
-          });
-        })(catSelects[ci], clone);
-        container.appendChild(clone);
-      }
-    }
-    counter.textContent = (idx + 1) + ' / ' + rows.length;
-  }
-  document.getElementById('mcPrev').addEventListener('click', function(){ show(idx - 1); });
-  document.getElementById('mcNext').addEventListener('click', function(){ show(idx + 1); });
-  // Restore card index from URL if provided
-  var startIdx = 0;
-  var mcParam = new URLSearchParams(window.location.search).get('mcIdx');
-  if (mcParam !== null) startIdx = parseInt(mcParam, 10) || 0;
-  show(startIdx);
-})();
-</script>
 <script>
 // Save category selection via AJAX
 document.querySelectorAll('.cat-select').forEach(function(sel) {
