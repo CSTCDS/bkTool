@@ -497,13 +497,22 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         if (clone.options.length > 0 && critName) {
           clone.options[0].textContent = critName;
         }
-        // sync changes back to the original select and trigger AJAX save
+        // Save directly via AJAX without touching the original (avoids page reload)
         (function(orig, cloned){
           cloned.addEventListener('change', function(e){
             e.preventDefault();
             e.stopPropagation();
+            // Update original silently
             orig.value = this.value;
-            orig.dispatchEvent(new Event('change'));
+            // AJAX save
+            var data = new FormData();
+            data.append('tx_id', orig.dataset.txid);
+            data.append('field', orig.dataset.field);
+            data.append('value', this.value);
+            fetch('save_tx_category.php', { method: 'POST', body: data })
+              .then(function(r){ return r.json(); })
+              .then(function(j){ if (!j.ok) console.error('Erreur save category', j); })
+              .catch(function(err){ console.error(err); });
           });
         })(catSelects[ci], clone);
         container.appendChild(clone);
