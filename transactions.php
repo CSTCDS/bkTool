@@ -444,6 +444,12 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Commentaire</span><span id="mc-desc"></span></div>
       <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span id="mc-solde"></span></div>
     </div>
+    <div class="mobile-cats" id="mobileCats">
+      <div class="mobile-card-row"><span class="mobile-card-label"><?php echo htmlspecialchars($criterionNames[1]); ?></span><span id="mc-cat1"></span></div>
+      <div class="mobile-card-row"><span class="mobile-card-label"><?php echo htmlspecialchars($criterionNames[2]); ?></span><span id="mc-cat2"></span></div>
+      <div class="mobile-card-row"><span class="mobile-card-label"><?php echo htmlspecialchars($criterionNames[3]); ?></span><span id="mc-cat3"></span></div>
+      <div class="mobile-card-row"><span class="mobile-card-label"><?php echo htmlspecialchars($criterionNames[4]); ?></span><span id="mc-cat4"></span></div>
+    </div>
     <div class="mobile-nav">
       <button id="mcPrev" class="btn">&larr; Précédent</button>
       <span id="mcCounter"></span>
@@ -475,6 +481,15 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
     // Solde: last cell if it exists and has col-solde class
     var soldeCell = r.querySelector('.col-solde');
     document.getElementById('mc-solde').textContent = soldeCell ? soldeCell.textContent.trim() : '';
+    // Categories: read selected text from cat-select dropdowns in the row
+    var catSelects = r.querySelectorAll('.cat-select');
+    for (var ci = 0; ci < 4; ci++) {
+      var el = document.getElementById('mc-cat' + (ci + 1));
+      if (el && catSelects[ci]) {
+        var opt = catSelects[ci].options[catSelects[ci].selectedIndex];
+        el.textContent = (opt && opt.value) ? opt.textContent.trim() : '—';
+      } else if (el) { el.textContent = '—'; }
+    }
     counter.textContent = (idx + 1) + ' / ' + rows.length;
   }
   document.getElementById('mcPrev').addEventListener('click', function(){ show(idx - 1); });
