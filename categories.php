@@ -311,16 +311,16 @@ foreach ($allCats as $c) {
           <tr>
             <form method="post">
               <td>
-                <input type="text" name="name" value="<?php echo htmlspecialchars($ac['name'] ?? ''); ?>" required style="width:220px">
+                <input type="text" name="name" value="<?php echo htmlspecialchars($ac['name'] ?? ''); ?>" required class="acc-name">
               </td>
               <td>
-                <input type="text" name="currency" value="<?php echo htmlspecialchars($ac['currency'] ?? ''); ?>" style="width:60px">
+                <input type="text" name="currency" value="<?php echo htmlspecialchars($ac['currency'] ?? ''); ?>" class="acc-currency">
               </td>
               <td>
                 <input type="color" name="color" value="<?php echo htmlspecialchars($ac['color'] ?? '#000000'); ?>" title="Couleur du compte">
               </td>
               <td>
-                <input type="number" step="0.01" min="0" name="alert_threshold" value="<?php echo htmlspecialchars((string)($ac['alert_threshold'] ?? '')); ?>" style="width:100px">
+                <input type="number" step="0.01" name="alert_threshold" value="<?php echo htmlspecialchars((string)($ac['alert_threshold'] ?? '')); ?>" class="acc-alert" placeholder="ex: -50.00">
               </td>
               <td style="text-align:right"><?php echo htmlspecialchars((string)($ac['balance'] ?? '0')); ?></td>
               <td><?php echo htmlspecialchars((string)($ac['updated_at'] ?? '')); ?></td>
