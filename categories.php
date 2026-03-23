@@ -22,7 +22,7 @@ for ($i = 1; $i <= 4; $i++) {
 $notice = null;
 
 // Liste des comptes (pour l'association de regroupements)
-$accounts = $pdo->query('SELECT id, name, currency, balance, color, updated_at FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+$accounts = $pdo->query('SELECT id, name, currency, balance, color, alert_threshold, updated_at FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
 $accMap = [];
 foreach ($accounts as $ac) $accMap[$ac['id']] = $ac['name'];
 // --- Actions POST ---
@@ -148,12 +148,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $name = trim((string)($_POST['name'] ?? ''));
       $currency = trim((string)($_POST['currency'] ?? ''));
       $color = trim((string)($_POST['color'] ?? '')) ?: null;
+      $alert = isset($_POST['alert_threshold']) && $_POST['alert_threshold'] !== '' ? (float)$_POST['alert_threshold'] : null;
       if ($accountId !== '' && $name !== '') {
-        $stmt = $pdo->prepare('UPDATE accounts SET name = :name, currency = :currency, color = :color, updated_at = NOW() WHERE id = :id');
-        $stmt->execute([':name' => $name, ':currency' => $currency, ':color' => $color, ':id' => $accountId]);
+        $stmt = $pdo->prepare('UPDATE accounts SET name = :name, currency = :currency, color = :color, alert_threshold = :alert, updated_at = NOW() WHERE id = :id');
+        $stmt->execute([':name' => $name, ':currency' => $currency, ':color' => $color, ':alert' => $alert, ':id' => $accountId]);
         $notice = 'Compte mis à jour.';
         // refresh accounts list/map with full columns
-        $accounts = $pdo->query('SELECT id, name, currency, balance, color, updated_at FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+        $accounts = $pdo->query('SELECT id, name, currency, balance, color, alert_threshold, updated_at FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
         $accMap = [];
         foreach ($accounts as $ac) $accMap[$ac['id']] = $ac['name'];
       }
@@ -303,7 +304,7 @@ foreach ($allCats as $c) {
     <?php if (!empty($accounts)): ?>
       <table>
         <thead>
-          <tr><th>Libellé</th><th>Devise</th><th>Couleur</th><th>Solde</th><th>Dernière MAJ</th><th></th></tr>
+          <tr><th>Libellé</th><th>Devise</th><th>Couleur</th><th>Seuil alerte</th><th>Solde</th><th>Dernière MAJ</th><th></th></tr>
         </thead>
         <tbody>
         <?php foreach ($accounts as $ac): ?>
@@ -317,6 +318,9 @@ foreach ($allCats as $c) {
               </td>
               <td>
                 <input type="color" name="color" value="<?php echo htmlspecialchars($ac['color'] ?? '#000000'); ?>" title="Couleur du compte">
+              </td>
+              <td>
+                <input type="number" step="0.01" min="0" name="alert_threshold" value="<?php echo htmlspecialchars((string)($ac['alert_threshold'] ?? '')); ?>" style="width:100px">
               </td>
               <td style="text-align:right"><?php echo htmlspecialchars((string)($ac['balance'] ?? '0')); ?></td>
               <td><?php echo htmlspecialchars((string)($ac['updated_at'] ?? '')); ?></td>
