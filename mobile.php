@@ -283,8 +283,30 @@ if ($tx && $groupSelected) {
               fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>);
               fd.append('priority', '100');
               fetch('./mon-site/api/create_rule.php', { method: 'POST', body: fd }).then(r=>r.json()).then(resp=>{
-                if (resp && resp.ok) { alert('Règle créée'); box.style.display='none'; }
-                else alert('Erreur création règle');
+                if (resp && resp.ok && resp.rule_id) {
+                  // apply the created rule to this tx via AJAX
+                  const afd = new FormData(); afd.append('rule_id', resp.rule_id); afd.append('tx_id', txId);
+                  fetch('./mon-site/api/apply_rule.php', { method: 'POST', body: afd }).then(r2=>r2.json()).then(ar=>{
+                    if (ar && ar.ok) {
+                      // update the corresponding select in the UI without reload
+                      const targetField = ar.field; // e.g. cat1_id
+                      // find the form select whose hidden field 'field' has this value
+                      const forms = document.querySelectorAll('.m-cats form');
+                      for (const f of forms) {
+                        const hf = f.querySelector('input[name=field]');
+                        const sel = f.querySelector('select[name=value]');
+                        if (hf && hf.value === targetField && sel) {
+                          sel.value = String(ar.new);
+                          sel.style.background = 'orange';
+                        }
+                      }
+                      alert('Règle créée et appliquée');
+                      box.style.display='none';
+                    } else {
+                      alert('Règle créée mais erreur application');
+                    }
+                  }).catch(()=>alert('Erreur réseau')); 
+                } else alert('Erreur création règle');
               }).catch(()=>alert('Erreur réseau'));
             };
           }
@@ -299,8 +321,24 @@ if ($tx && $groupSelected) {
             fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>);
             fd.append('priority', '100');
             fetch('./mon-site/api/create_rule.php', { method: 'POST', body: fd }).then(r=>r.json()).then(resp=>{
-              if (resp && resp.ok) { alert('Règle créée'); box.style.display='none'; }
-              else alert('Erreur création règle');
+              if (resp && resp.ok && resp.rule_id) {
+                const afd = new FormData(); afd.append('rule_id', resp.rule_id); afd.append('tx_id', txId);
+                fetch('./mon-site/api/apply_rule.php', { method: 'POST', body: afd }).then(r2=>r2.json()).then(ar=>{
+                  if (ar && ar.ok) {
+                    const targetField = ar.field;
+                    const forms = document.querySelectorAll('.m-cats form');
+                    for (const f of forms) {
+                      const hf = f.querySelector('input[name=field]');
+                      const sel = f.querySelector('select[name=value]');
+                      if (hf && hf.value === targetField && sel) {
+                        sel.value = String(ar.new);
+                        sel.style.background = 'orange';
+                      }
+                    }
+                    alert('Règle créée et appliquée'); box.style.display='none';
+                  } else alert('Règle créée mais erreur application');
+                }).catch(()=>alert('Erreur réseau'));
+              } else alert('Erreur création règle');
             }).catch(()=>alert('Erreur réseau'));
           };
 
