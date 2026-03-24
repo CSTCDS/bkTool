@@ -120,12 +120,15 @@ foreach ($allCats as $c) {
 $catMap = [];
 foreach ($allCats as $c) $catMap[$c['id']] = $c['label'];
 
-// Build WHERE
+// Build WHERE (account filter: 'global' => scope_account_id IS NULL, 'any' => no account filter)
 $where = [];
 $params = [];
 if ($accountFilter === 'global') {
   $where[] = 'scope_account_id IS NULL';
-} elseif ($accountFilter !== '' && $accountFilter !== 'any') {
+} elseif ($accountFilter === 'any') {
+  // no account filtering: include both global and account-specific rules
+} elseif ($accountFilter !== '') {
+  // specific account selected
   $where[] = 'scope_account_id = :acct';
   $params[':acct'] = (int)$accountFilter;
 }
