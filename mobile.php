@@ -194,6 +194,8 @@ if ($tx && $groupSelected) {
     .m-nav{display:flex;justify-content:space-between;align-items:center;padding:12px 0}
     .m-nav button{padding:12px 24px;font-size:1rem;border-radius:8px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer}
     .m-nav button:disabled{opacity:.4;cursor:default}
+    .m-nav .arrow-btn{padding:6px 10px;font-size:1rem;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer;margin-right:6px}
+    .m-nav .arrow-btn:disabled{opacity:.4;cursor:default}
     .m-counter{font-size:.9rem;color:#666}
     .m-empty{text-align:center;padding:40px 0;color:#999}
     /* Toast */
@@ -225,9 +227,10 @@ if ($tx && $groupSelected) {
 
   <div class="m-nav" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
     <div>
-      <button class="btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo max(0,$idx-1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : '') . '&show_pending=' . ($showPending ? '1' : '0'); ?>'">&larr; Préc.</button>
+      <button class="arrow-btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=0<?php echo ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : '0'; ?>)">&lt;&lt;</button>
+      <button class="arrow-btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo max(0,$idx-1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : 0; ?>)">&lt;</button>
       <span class="m-counter" style="margin:0 8px"><?php echo ($idx + 1) . ' / ' . $total; ?></span>
-      <button class="btn" <?php echo ($idx >= $total - 1) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo min($total - 1,$idx+1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : '') . '&show_pending=' . ($showPending ? '1' : '0'); ?>'">Suiv. &rarr;</button>
+      <button class="arrow-btn" <?php echo ($idx >= $total - 1) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo min($total - 1,$idx+1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : 0; ?>)">&gt;</button>
     </div>
     <label style="font-size:.95rem"><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?>> Afficher les opérations en attente</label>
   </div>
