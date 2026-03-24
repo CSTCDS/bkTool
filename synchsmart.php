@@ -53,6 +53,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
 <body>
   <?php include __DIR__ . '/header.php'; ?>
   <div style="margin-top:8px"><button id="restartSyncBtn" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer">Relancer la synchro</button></div>
+  <div style="margin-top:8px">
+    <button id="notifyDebugBtn" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#eef6ff;cursor:pointer;margin-left:8px">Debug Notifications</button>
+  </div>
   <div id="syncArea">
     <div id="loader" style="margin-top:12px">🔄 <strong>Synchronisation en cours...</strong></div>
     <div id="alerts" style="margin-top:12px"></div>
@@ -173,6 +176,33 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
     // Restart button handler (uses shared header hamburger for navigation)
     var restartBtn = document.getElementById('restartSyncBtn');
     if (restartBtn) restartBtn.addEventListener('click', function(e){ e.preventDefault(); runSync(); });
+
+    // Debug notifications button: request permission and display status for troubleshooting
+    var notifyBtn = document.getElementById('notifyDebugBtn');
+    if (notifyBtn) {
+      notifyBtn.addEventListener('click', function(e){
+        e.preventDefault();
+        if (!('Notification' in window)) {
+          console.log('Notifications API not supported');
+          alert('Notifications non supportées par ce navigateur');
+          return;
+        }
+        Notification.requestPermission().then(function(p){
+          console.log('Notification.permission =', p);
+          var alerts = document.getElementById('alerts');
+          if (alerts) {
+            var dbg = document.createElement('div');
+            dbg.style.padding = '6px'; dbg.style.background = '#fff3cd'; dbg.style.border = '1px solid #ffeeba'; dbg.style.marginBottom = '8px'; dbg.textContent = 'Notification.permission: ' + p;
+            alerts.insertBefore(dbg, alerts.firstChild);
+          } else {
+            alert('Notification.permission: ' + p);
+          }
+        }).catch(function(err){
+          console.error('requestPermission error', err);
+          alert('Erreur requestPermission: ' + err);
+        });
+      });
+    }
 
     // no transactions button here
   })();
