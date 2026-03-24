@@ -53,8 +53,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
 <body>
   <h1>Synchro mobile</h1>
   <div id="syncArea">
-    <p><button id="startSync">Lancer synchronisation</button> <span id="syncMsg" style="margin-left:12px"></span></p>
-    <div id="loader" style="display:none;margin-top:12px">🔄 <strong>Synchronisation en cours...</strong></div>
+    <div id="loader" style="margin-top:12px">🔄 <strong>Synchronisation en cours...</strong></div>
     <div id="alerts" style="margin-top:12px"></div>
   </div>
 
@@ -143,17 +142,16 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
       accounts.forEach(function(a){ alerts.appendChild(buildCard(a)); });
     }
 
-    document.getElementById('startSync').addEventListener('click', function(){
-      var msg = document.getElementById('syncMsg'); var loader = document.getElementById('loader'); var alerts = document.getElementById('alerts');
-      alerts.innerHTML = ''; msg.textContent = ''; loader.style.display = 'block';
-      var token = prompt('Token de synchronisation (laisser vide si non configuré)');
-      var headers = {};
-      if (token && token.trim() !== '') headers['X-Sync-Token'] = token.trim();
-      fetch('sync.php', { method: 'GET', headers: headers })
+    // Auto-start sync on page load (no button, no token prompt)
+    (function(){
+      var loader = document.getElementById('loader'); var alerts = document.getElementById('alerts');
+      alerts.innerHTML = '';
+      // loader shown by default
+      fetch('sync.php', { method: 'GET' })
         .then(function(r){ return r.json().catch(function(){ return { status: 'error', message: 'Invalid JSON response' }; }); })
         .then(function(j){
           loader.style.display = 'none';
-          if (!j) { msg.textContent = 'Erreur: réponse vide'; return; }
+          if (!j) { alerts.innerHTML = '<div style="color:#c62828">Erreur: réponse vide</div>'; return; }
           if (j.status === 'ok') {
             var imp = (j.result && typeof j.result.import_num !== 'undefined') ? j.result.import_num : null;
             if (imp === null) {
@@ -161,12 +159,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
             } else {
               fetch('synchsmart.php?ajax=1&import_num=' + encodeURIComponent(imp)).then(function(r){ return r.json(); }).then(function(data){ renderAccounts(data.accounts); notifyIfNeeded(); });
             }
-            msg.textContent = 'OK — synchronisation terminée';
           } else {
-            msg.textContent = 'Erreur: ' + (j.message || JSON.stringify(j));
+            alerts.innerHTML = '<div style="color:#c62828">Erreur: ' + (j.message || JSON.stringify(j)) + '</div>';
           }
-        }).catch(function(e){ loader.style.display = 'none'; msg.textContent = 'Erreur: '+e; });
-    });
+        }).catch(function(e){ loader.style.display = 'none'; alerts.innerHTML = '<div style="color:#c62828">Erreur: '+e+'</div>'; });
+    })();
   })();
   </script>
 </body>
