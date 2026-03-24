@@ -343,7 +343,29 @@ if ($tx && $groupSelected) {
           console.debug('suggest: response', data);
           logDebug('fetch response', data);
           hideAll();
-          if (!data || !data.suggestion) return;
+          if (!data || !data.suggestion) {
+            // no suggestion — fetch debug dump (rules + match info) to help diagnose
+            fetch('./mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId) + '&debug=1')
+              .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+              .then(dd => {
+                console.debug('suggest: debug dump', dd);
+                logDebug('no suggestion — debug dump', dd);
+                // display full rules count and description
+                var p = document.getElementById('suggestionDebugPanel');
+                if (p) {
+                  p.textContent = '[DEBUG] rules_count=' + (dd.rules_count||0) + ' description="' + (dd.description||'') + '" account=' + (dd.accountId||'') + '\n' + (p.textContent||'');
+                }
+                // also populate per-criterion debug areas for visibility
+                if (dd.rules && Array.isArray(dd.rules)) {
+                  dd.rules.forEach(function(r){
+                    var crit = (<?php echo json_encode($catCriteria); ?>[r.category_id] || 0);
+                    var el = document.getElementById('suggestDebug_' + (crit || 1));
+                    if (el) el.textContent = JSON.stringify(r, null, 2);
+                  });
+                }
+              }).catch(e=>{ console.debug('suggest debug fetch error', e); logDebug('suggest debug fetch error', String(e)); });
+            return;
+          }
           const s = data.suggestion;
           const catLabel = catLabels[s.category_id] || ('#' + s.category_id);
           const crit = parseInt(catCriteria[s.category_id] || 0, 10);
