@@ -258,8 +258,8 @@ if ($tx && $groupSelected) {
     (function(){
       const txId = <?php echo json_encode($tx['id'] ?? ''); ?>;
       if (!txId) return;
-      fetch('/mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId))
-        .then(r => r.json())
+      fetch('./mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId))
+        .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(data => {
           const box = document.getElementById('suggestionBox');
           // show box even when no suggestion so user sees debug info
@@ -294,7 +294,9 @@ if ($tx && $groupSelected) {
           if (!dbg) { dbg = document.createElement('pre'); dbg.id = 'suggestDebug'; dbg.style.padding='8px'; dbg.style.background='#f7f7f7'; dbg.style.border='1px solid #eee'; dbg.style.marginTop='8px'; document.getElementById('suggestionBox').appendChild(dbg); }
           dbg.textContent = JSON.stringify(data, null, 2);
         }).catch((err)=>{
-          const box = document.getElementById('suggestionBox'); box.style.display='block'; document.getElementById('suggestLabel').textContent = 'Erreur réseau';
+          const box = document.getElementById('suggestionBox'); box.style.display='block';
+          document.getElementById('suggestLabel').textContent = 'Erreur réseau: ' + (err && err.message ? err.message : '');
+          console.error('suggest fetch error', err);
         });
     })();
     </script>
