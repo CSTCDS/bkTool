@@ -145,10 +145,6 @@ try {
 <body>
 <?php include __DIR__ . '/header.php'; ?>
 <main>
-  <section>
-    <h2>Solde total : <?php echo htmlspecialchars((string)$total); ?> </h2>
-  </section>
-
   </main>
 
   <!-- Dashboard block moved out of main -->
