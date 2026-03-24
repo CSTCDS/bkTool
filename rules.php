@@ -10,6 +10,14 @@ try {
   exit;
 }
 
+// criterion names (label for Catégorie 1..4)
+$criterionNames = [];
+for ($i = 1; $i <= 4; $i++) {
+  $s = $pdo->prepare('SELECT `value` FROM settings WHERE `key` = :k');
+  $s->execute([':k' => "criterion_{$i}_name"]);
+  $criterionNames[$i] = $s->fetchColumn() ?: "Catégorie $i";
+}
+
 // Handle POST actions: update or delete
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = $_POST['action'] ?? '';
@@ -47,11 +55,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $accountFilter = $_GET['account'] ?? 'global'; // 'global' = rules with scope_account_id IS NULL
 $categoryFilter = isset($_GET['category']) ? (int)$_GET['category'] : 0;
 
-// Load accounts and categories
-$accounts = $pdo->query('SELECT id, name FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
-$cats = $pdo->query('SELECT id, label FROM categories ORDER BY label')->fetchAll(PDO::FETCH_ASSOC);
+// Load accounts (ordered by numero_affichage then name) and categories
+$accounts = $pdo->query('SELECT id, name FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage ASC, name ASC')->fetchAll(PDO::FETCH_ASSOC);
+
+$allCats = $pdo->query('SELECT * FROM categories ORDER BY criterion, sort_order, label')->fetchAll(PDO::FETCH_ASSOC);
+$catTree = [];
+foreach ($allCats as $c) {
+  $cr = $c['criterion'];
+  if (!isset($catTree[$cr])) $catTree[$cr] = [];
+  if ($c['parent_id'] === null) {
+    if (!isset($catTree[$cr][$c['id']])) $catTree[$cr][$c['id']] = ['info' => $c, 'children' => []];
+    else $catTree[$cr][$c['id']]['info'] = $c;
+  } else {
+    if (!isset($catTree[$cr][$c['parent_id']])) $catTree[$cr][$c['parent_id']] = ['info' => null, 'children' => []];
+    $catTree[$cr][$c['parent_id']]['children'][] = $c;
+  }
+}
+
 $catMap = [];
-foreach ($cats as $c) $catMap[$c['id']] = $c['label'];
+foreach ($allCats as $c) $catMap[$c['id']] = $c['label'];
 
 // Build WHERE
 $where = [];
@@ -92,20 +114,28 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <form method="get" class="controls">
   <label>Compte:
-    <select name="account">
-      <option value="global"<?php echo ($accountFilter==='global')?' selected':''; ?>>Tous les comptes (règles globales)</option>
-      <option value="any"<?php echo ($accountFilter==='any')?' selected':''; ?>>Toutes (global + comptes)</option>
+    <select name="account" onchange="this.form.submit()">
       <?php foreach ($accounts as $a): ?>
         <option value="<?php echo $a['id']; ?>"<?php echo ((string)$accountFilter === (string)$a['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($a['name']); ?></option>
       <?php endforeach; ?>
+      <option value="">— Tous les comptes —</option>
+      <option value="any"<?php echo ($accountFilter==='any')?' selected':''; ?>>Toutes (globales+comptes)</option>
     </select>
   </label>
   <label>Catégorie:
-    <select name="category">
+    <select name="category" onchange="this.form.submit()">
       <option value="0">Toutes les catégories</option>
-      <?php foreach ($cats as $c): ?>
-        <option value="<?php echo $c['id']; ?>"<?php echo ($categoryFilter === (int)$c['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($c['label']); ?></option>
-      <?php endforeach; ?>
+      <?php for ($ci=1;$ci<=4;$ci++): ?>
+        <?php if (empty($catTree[$ci])) continue; ?>
+        <optgroup label="<?php echo htmlspecialchars($criterionNames[$ci]); ?>">
+          <?php foreach ($catTree[$ci] as $pid => $node): if (!$node['info']) continue; ?>
+            <option value="<?php echo $node['info']['id']; ?>"<?php echo ($categoryFilter === (int)$node['info']['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
+            <?php foreach ($node['children'] as $child): ?>
+              <option value="<?php echo $child['id']; ?>"<?php echo ($categoryFilter === (int)$child['id']) ? ' selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
+            <?php endforeach; ?>
+          <?php endforeach; ?>
+        </optgroup>
+      <?php endfor; ?>
     </select>
   </label>
   <button class="btn" type="submit">Filtrer</button>
@@ -118,9 +148,17 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <input name="pattern" placeholder="Motif / libellé" style="flex:1;padding:8px">
     <select name="category_id">
       <option value="0">Choisir catégorie</option>
-      <?php foreach ($cats as $c): ?>
-        <option value="<?php echo $c['id']; ?>"><?php echo htmlspecialchars($c['label']); ?></option>
-      <?php endforeach; ?>
+      <?php for ($ci=1;$ci<=4;$ci++): ?>
+        <?php if (empty($catTree[$ci])) continue; ?>
+        <optgroup label="<?php echo htmlspecialchars($criterionNames[$ci]); ?>">
+          <?php foreach ($catTree[$ci] as $pid => $node): if (!$node['info']) continue; ?>
+            <option value="<?php echo $node['info']['id']; ?>"><?php echo htmlspecialchars($node['info']['label']); ?></option>
+            <?php foreach ($node['children'] as $child): ?>
+              <option value="<?php echo $child['id']; ?>">&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
+            <?php endforeach; ?>
+          <?php endforeach; ?>
+        </optgroup>
+      <?php endfor; ?>
     </select>
     <select name="scope_account_id">
       <option value="NULL">Global (tous les comptes)</option>
@@ -147,14 +185,22 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
           <input name="pattern" value="<?php echo htmlspecialchars($r['pattern']); ?>" style="flex:1;padding:6px">
       </td>
       <td>
-          <select name="category_id">
-            <?php foreach ($cats as $c): ?>
-              <option value="<?php echo $c['id']; ?>"<?php echo ((int)$r['category_id'] === (int)$c['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($c['label']); ?></option>
-            <?php endforeach; ?>
+          <select name="category_id" onchange="this.form.submit()">
+            <?php for ($ci=1;$ci<=4;$ci++): ?>
+              <?php if (empty($catTree[$ci])) continue; ?>
+              <optgroup label="<?php echo htmlspecialchars($criterionNames[$ci]); ?>">
+                <?php foreach ($catTree[$ci] as $pid => $node): if (!$node['info']) continue; ?>
+                  <option value="<?php echo $node['info']['id']; ?>"<?php echo ((int)$r['category_id'] === (int)$node['info']['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
+                  <?php foreach ($node['children'] as $child): ?>
+                    <option value="<?php echo $child['id']; ?>"<?php echo ((int)$r['category_id'] === (int)$child['id']) ? ' selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
+                  <?php endforeach; ?>
+                <?php endforeach; ?>
+              </optgroup>
+            <?php endfor; ?>
           </select>
       </td>
       <td>
-          <select name="scope_account_id">
+          <select name="scope_account_id" onchange="this.form.submit()">
             <option value="NULL"<?php echo ($r['scope_account_id'] === null ? ' selected' : ''); ?>>Global</option>
             <?php foreach ($accounts as $a): ?>
               <option value="<?php echo $a['id']; ?>"<?php echo ((string)$r['scope_account_id'] === (string)$a['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($a['name']); ?></option>
@@ -162,7 +208,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
           </select>
       </td>
       <td><input name="priority" value="<?php echo (int)$r['priority']; ?>" style="width:70px;padding:6px"></td>
-      <td><input type="checkbox" name="active" value="1" <?php echo ((int)$r['active']===1)?'checked':''; ?>></td>
+      <td><input type="checkbox" name="active" value="1" <?php echo ((int)$r['active']===1)?'checked':''; ?> onchange="this.form.submit()"></td>
       <td style="white-space:nowrap">
           <button class="btn" type="submit">Modifier</button>
         </form>
