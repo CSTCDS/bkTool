@@ -10,7 +10,8 @@ $page = isset($_GET['page']) && is_string($_GET['page']) ? trim($_GET['page']) :
 
 if ($page === '') {
   // show minimal home: full HTML head so header.php is correctly styled
-  $termsFile = __DIR__ . '/terms.htm';
+  // Link to the central terms page
+  $termsFile = __DIR__ . '/terms.php';
   ?><!doctype html>
   <html>
   <head>
@@ -24,12 +25,8 @@ if ($page === '') {
   <?php include __DIR__ . '/header.php'; ?>
   <main style="padding:12px">
   <?php
-  if (is_readable($termsFile)) {
-    // terms.htm is HTML; include directly
-    echo '<section><h2>Conditions / Mentions</h2>' . file_get_contents($termsFile) . '</section>';
-  } else {
-    echo '<section><p>Fichier terms.htm introuvable.</p></section>';
-  }
+  // Show a short intro and link to the full Terms page
+  echo '<section><h2>Conditions / Mentions</h2><p>Voir la page complète des conditions d\'utilisation.</p><p><a href="terms.php">Voir les termes et conditions</a></p></section>';
   ?>
   </main>
   </body>

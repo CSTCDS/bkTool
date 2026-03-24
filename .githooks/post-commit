@@ -1,0 +1,5 @@
+#!/bin/sh
+# Post-commit hook: push current branch to origin
+# This script will push the current branch to the remote named 'origin'.
+branch=$(git rev-parse --abbrev-ref HEAD)
+git push --set-upstream origin "$branch"

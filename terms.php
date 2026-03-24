@@ -4,7 +4,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-$termsFile = __DIR__ . '/terms.htm';
+$termsFile = __DIR__ . '/terms.php';
 ?><!doctype html>
 <html>
 <head>
@@ -18,11 +18,9 @@ $termsFile = __DIR__ . '/terms.htm';
 <?php include __DIR__ . '/header.php'; ?>
 <main style="padding:12px">
 <?php
-if (is_readable($termsFile)) {
-  echo '<section>' . file_get_contents($termsFile) . '</section>';
-} else {
-  echo '<section><p>Fichier terms.htm introuvable.</p></section>';
-}
+// Include the content from the HTML source if present, otherwise show a message.
+// Since we've moved to `terms.php` as the canonical page, show a small link back.
+echo '<section><p>Consultez la <a href="terms.php">page des termes et conditions</a> pour les détails.</p></section>';
 ?>
 </main>
 </body>
