@@ -56,6 +56,10 @@ foreach ($allCats as $c) {
 $catLabels = [];
 foreach ($allCats as $c) { $catLabels[$c['id']] = $c['label']; }
 
+// map category id => criterion (1..4 or 0)
+$catCriteria = [];
+foreach ($allCats as $c) { $catCriteria[$c['id']] = (int)$c['criterion']; }
+
 // Build group children map (criterion=0): parent_id => [account_id, ...]
 $groupChildren = [];
 foreach ($allCats as $c) {
@@ -240,14 +244,17 @@ if ($tx && $groupSelected) {
   </div>
 
   <div class="m-cats">
-    <div id="suggestionBox" style="display:none;background:#eef7ff;border:1px solid #cfe8ff;padding:10px;border-radius:6px;margin-bottom:8px">
-      <strong>Suggestion :</strong> <span id="suggestLabel"></span>
-      <div style="margin-top:8px;display:flex;gap:8px">
-        <button id="applySuggestion" class="btn">Appliquer</button>
-        <button id="createRule" class="btn">Créer règle</button>
-        <button id="ignoreSuggestion" class="btn">Ignorer</button>
+    <?php for ($ci = 1; $ci <= 4; $ci++): ?>
+      <div id="suggestionBox_<?php echo $ci; ?>" style="display:none;background:#eef7ff;border:1px solid #cfe8ff;padding:10px;border-radius:6px;margin-bottom:8px">
+        <strong>Suggestion <?php echo $ci; ?> :</strong> <span id="suggestLabel_<?php echo $ci; ?>"></span>
+        <div style="margin-top:8px;display:flex;gap:8px">
+          <button data-ci="<?php echo $ci; ?>" class="applySuggestion btn">Appliquer</button>
+          <button data-ci="<?php echo $ci; ?>" class="createRule btn">Créer règle</button>
+          <button data-ci="<?php echo $ci; ?>" class="ignoreSuggestion btn">Ignorer</button>
+        </div>
+        <pre id="suggestDebug_<?php echo $ci; ?>" style="display:none;padding:8px;background:#f7f7f7;border:1px solid #eee;margin-top:8px"></pre>
       </div>
-    </div>
+    <?php endfor; ?>
     <?php for ($ci = 1; $ci <= 4; $ci++):
       $field = "cat{$ci}_id";
       $curVal = $tx[$field] ?? null;
@@ -274,102 +281,78 @@ if ($tx && $groupSelected) {
     <script>
     (function(){
       const txId = <?php echo json_encode($tx['id'] ?? ''); ?>;
+      const catLabels = <?php echo json_encode($catLabels); ?>;
+      const catCriteria = <?php echo json_encode($catCriteria); ?>;
       if (!txId) return;
+
+      // Hide all suggestion boxes
+      function hideAll() {
+        for (let i=1;i<=4;i++) {
+          const b = document.getElementById('suggestionBox_'+i);
+          if (b) { b.style.display = 'none'; const p = document.getElementById('suggestDebug_'+i); if (p) p.style.display='none'; }
+        }
+      }
+
       fetch('./mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId))
         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(data => {
-          const box = document.getElementById('suggestionBox');
-          // show box even when no suggestion so user sees debug info
-          box.style.display = 'block';
-          if (!data || !data.suggestion) {
-            document.getElementById('suggestLabel').textContent = 'Aucune suggestion';
-          } else {
-            const s = data.suggestion;
-            const catLabel = <?php echo json_encode($catLabels); ?>[s.category_id] || ('#' + s.category_id);
-            document.getElementById('suggestLabel').textContent = catLabel + (s.is_regex ? ' (regex)' : '');
-            document.getElementById('applySuggestion').onclick = function(){
-              const select = document.querySelector('.m-cats form select');
-              if (select) { select.value = s.category_id; select.form.submit(); }
-            };
-            // attach create rule handler (uses suggested category)
-            document.getElementById('createRule').onclick = function(){
-              const fd = new FormData();
-              fd.append('pattern', <?php echo json_encode($tx['description'] ?? ''); ?>);
-              fd.append('is_regex', '0');
-              fd.append('category_id', s.category_id);
-              fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>);
-              fd.append('priority', '100');
-              fetch('./mon-site/api/create_rule.php', { method: 'POST', body: fd }).then(r=>r.json()).then(resp=>{
-                if (resp && resp.ok && resp.rule_id) {
-                  // apply the created rule to this tx via AJAX
-                  const afd = new FormData(); afd.append('rule_id', resp.rule_id); afd.append('tx_id', txId);
-                  fetch('./mon-site/api/apply_rule.php', { method: 'POST', body: afd }).then(r2=>r2.json()).then(ar=>{
-                    if (ar && ar.ok) {
-                      // update the corresponding select in the UI without reload
-                      const targetField = ar.field; // e.g. cat1_id
-                      // find the form select whose hidden field 'field' has this value
-                      const forms = document.querySelectorAll('.m-cats form');
-                      for (const f of forms) {
-                        const hf = f.querySelector('input[name=field]');
-                        const sel = f.querySelector('select[name=value]');
-                        if (hf && hf.value === targetField && sel) {
-                          sel.value = String(ar.new);
-                          sel.style.background = 'orange';
-                        }
-                      }
-                      alert('Règle créée et appliquée');
-                      box.style.display='none';
-                    } else {
-                      alert('Règle créée mais erreur application');
-                    }
-                  }).catch(()=>alert('Erreur réseau')); 
-                } else alert('Erreur création règle');
-              }).catch(()=>alert('Erreur réseau'));
-            };
-          }
-          // If there's no suggestion, allow creating a rule manually: ask for category id
-          document.getElementById('createRule').onclick = function(){
-            const manualCat = prompt('ID de la catégorie à assigner (entier) — laisser vide pour annuler');
-            if (!manualCat) return;
+          hideAll();
+          if (!data || !data.suggestion) return;
+          const s = data.suggestion;
+          const catLabel = catLabels[s.category_id] || ('#' + s.category_id);
+          const crit = parseInt(catCriteria[s.category_id] || 0, 10);
+          if (!crit || crit < 1 || crit > 4) return;
+          const bx = document.getElementById('suggestionBox_'+crit);
+          if (!bx) return;
+          bx.style.display = 'block';
+          const lbl = document.getElementById('suggestLabel_'+crit);
+          if (lbl) lbl.textContent = catLabel + (s.is_regex ? ' (regex)' : '');
+          const dbg = document.getElementById('suggestDebug_'+crit);
+          if (dbg) { dbg.style.display='block'; dbg.textContent = JSON.stringify(data, null, 2); }
+
+          // Apply handler: find the form with hidden input field == 'cat{crit}_id'
+          bx.querySelector('.applySuggestion').onclick = function(){
+            const fieldName = 'cat'+crit+'_id';
+            const hf = document.querySelector('.m-cats form input[name="field"][value="' + fieldName + '"]');
+            if (!hf) return alert('Formulaire cible introuvable');
+            const form = hf.closest('form');
+            const sel = form.querySelector('select[name="value"]');
+            if (sel) { sel.value = s.category_id; form.submit(); }
+          };
+
+          // Create rule handler (create + apply)
+          bx.querySelector('.createRule').onclick = function(){
             const fd = new FormData();
             fd.append('pattern', <?php echo json_encode($tx['description'] ?? ''); ?>);
             fd.append('is_regex', '0');
-            fd.append('category_id', manualCat);
+            fd.append('category_id', s.category_id);
             fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>);
             fd.append('priority', '100');
-            fetch('./mon-site/api/create_rule.php', { method: 'POST', body: fd }).then(r=>r.json()).then(resp=>{
-              if (resp && resp.ok && resp.rule_id) {
-                const afd = new FormData(); afd.append('rule_id', resp.rule_id); afd.append('tx_id', txId);
-                fetch('./mon-site/api/apply_rule.php', { method: 'POST', body: afd }).then(r2=>r2.json()).then(ar=>{
-                  if (ar && ar.ok) {
-                    const targetField = ar.field;
-                    const forms = document.querySelectorAll('.m-cats form');
-                    for (const f of forms) {
-                      const hf = f.querySelector('input[name=field]');
-                      const sel = f.querySelector('select[name=value]');
-                      if (hf && hf.value === targetField && sel) {
-                        sel.value = String(ar.new);
-                        sel.style.background = 'orange';
-                      }
-                    }
-                    alert('Règle créée et appliquée'); box.style.display='none';
-                  } else alert('Règle créée mais erreur application');
-                }).catch(()=>alert('Erreur réseau'));
-              } else alert('Erreur création règle');
-            }).catch(()=>alert('Erreur réseau'));
+            fetch('./mon-site/api/create_rule.php', { method: 'POST', body: fd })
+              .then(r=>r.json()).then(resp=>{
+                if (resp && resp.ok && resp.rule_id) {
+                  const afd = new FormData(); afd.append('rule_id', resp.rule_id); afd.append('tx_id', txId);
+                  return fetch('./mon-site/api/apply_rule.php', { method: 'POST', body: afd }).then(r2=>r2.json());
+                }
+                throw new Error('create failed');
+              }).then(ar=>{
+                if (ar && ar.ok) {
+                  // update select for this criterion
+                  const fieldName = ar.field;
+                  const hf = document.querySelector('.m-cats form input[name="field"][value="' + fieldName + '"]');
+                  if (hf) {
+                    const form = hf.closest('form');
+                    const sel = form.querySelector('select[name="value"]');
+                    if (sel) { sel.value = String(ar.new); sel.style.background = 'orange'; }
+                  }
+                  alert('Règle créée et appliquée'); hideAll();
+                } else alert('Erreur application');
+              }).catch(e=>{ console.error(e); alert('Erreur réseau ou création'); });
           };
 
-          document.getElementById('ignoreSuggestion').onclick = function(){ box.style.display='none'; };
-
-          // show debug JSON below box for troubleshooting
-          let dbg = document.getElementById('suggestDebug');
-          if (!dbg) { dbg = document.createElement('pre'); dbg.id = 'suggestDebug'; dbg.style.padding='8px'; dbg.style.background='#f7f7f7'; dbg.style.border='1px solid #eee'; dbg.style.marginTop='8px'; document.getElementById('suggestionBox').appendChild(dbg); }
-          dbg.textContent = JSON.stringify(data, null, 2);
-        }).catch((err)=>{
-          const box = document.getElementById('suggestionBox'); box.style.display='block';
-          document.getElementById('suggestLabel').textContent = 'Erreur réseau: ' + (err && err.message ? err.message : '');
-          console.error('suggest fetch error', err);
-        });
+          bx.querySelector('.ignoreSuggestion').onclick = function(){ bx.style.display='none'; };
+        })
+        .catch(err=>{ console.error('suggest fetch error', err); });
     })();
     </script>
     <script>
