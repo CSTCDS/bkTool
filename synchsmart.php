@@ -95,23 +95,39 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
         body.appendChild(ul);
       } else {
         var no = document.createElement('div'); no.style.color = '#666'; no.innerHTML = '<strong>Aucune nouvelles écritures</strong>'; body.appendChild(no);
-        var sec = document.createElement('div'); sec.style.marginTop = '8px'; var h2 = document.createElement('strong'); h2.textContent = 'Dernières écritures'; sec.appendChild(h2);
-        if (!a.txs || a.txs.length === 0) {
-          var none = document.createElement('div'); none.style.color = '#666'; none.textContent = 'Aucune écriture BOOK'; sec.appendChild(none);
-        } else {
-          var ul2 = document.createElement('ul');
-          a.txs.forEach(function(t){
-            var li = document.createElement('li');
-            var amt = parseFloat(t.amount) || 0;
-            var fmt = amt.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-            var amtHtml = (amt >= 0) ? '<strong style="color:#2e7d32">' + fmt + '</strong>' : '<strong style="color:#000">' + fmt + '</strong>';
-            li.innerHTML = escapeHtml(t.booking_date || '') + ' — ' + amtHtml + ' — ' + escapeHtml((t.description||'').substring(0,80));
-            ul2.appendChild(li);
-          });
-          sec.appendChild(ul2);
-        }
-        body.appendChild(sec);
+        // Replace 'Dernières écritures' block with a button that opens transactions.php filtered by account
+        var btnWrap = document.createElement('div'); btnWrap.style.marginTop = '8px';
+        var btn = document.createElement('button'); btn.textContent = '>>';
+        btn.title = 'Voir toutes les écritures pour ce compte';
+        btn.style.padding = '6px 8px'; btn.style.borderRadius = '6px'; btn.style.border = '1px solid #ccc'; btn.style.background = '#f5f5f5'; btn.style.cursor = 'pointer';
+        btn.addEventListener('click', function(){
+          // navigate to transactions page showing only this account
+          var accId = encodeURIComponent(a.id || a.account_id || '');
+          if (accId) {
+            window.location.href = 'transactions.php?account=' + accId;
+          } else {
+            alert('Aucun identifiant de compte disponible');
+          }
+        });
+        btnWrap.appendChild(btn);
+        body.appendChild(btnWrap);
       }
+      // Add a visual badge if balance is below threshold (fallback when notifications unsupported)
+      var thVal = (div.dataset.threshold !== '') ? parseFloat(div.dataset.threshold) : NaN;
+      if (!isNaN(thVal) && !isNaN(balance) && balance < thVal) {
+        var badge = document.createElement('span');
+        badge.textContent = 'ALERTE';
+        badge.style.display = 'inline-block';
+        badge.style.marginLeft = '8px';
+        badge.style.padding = '2px 6px';
+        badge.style.background = '#ffcdd2';
+        badge.style.color = '#c62828';
+        badge.style.border = '1px solid #ef9a9a';
+        badge.style.borderRadius = '12px';
+        badge.style.fontWeight = '700';
+        nameEl.appendChild(badge);
+      }
+
       div.appendChild(body);
       return div;
     }
