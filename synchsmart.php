@@ -70,22 +70,28 @@ unset($a);
       $th = (float)$a['alert_threshold'];
       $below = ($balance < $th);
     ?>
-      <div class="mobile-card" style="margin-bottom:12px">
+      <div class="mobile-card" style="margin-bottom:12px" data-threshold="<?php echo htmlspecialchars($th); ?>">
         <div class="mobile-card-row"><strong><?php echo htmlspecialchars($a['name']); ?></strong><span><?php echo htmlspecialchars(number_format($balance,2,',',' ')); ?> €</span></div>
-        <div class="mobile-card-row"><span>Seuil</span><span><?php echo htmlspecialchars(number_format($th,2,',',' ')); ?> €</span></div>
         <div style="padding:8px 0">
           <?php if (!empty($a['received'])): ?>
             <strong>Écritures reçues</strong>
             <ul>
               <?php foreach ($a['received'] as $t) {
-                echo '<li>' . htmlspecialchars($t['booking_date']) . ' — ' . htmlspecialchars(number_format((float)$t['amount'],2,',',' ')) . ' € — ' . htmlspecialchars(substr($t['description'],0,80)) . '</li>';
+                $amt = (float)$t['amount'];
+                $fmt = htmlspecialchars(number_format($amt,2,',',' '));
+                $amtHtml = ($amt < 0) ? '<strong style="color:#c62828">' . $fmt . ' €</strong>' : '<strong>' . $fmt . ' €</strong>';
+                echo '<li>' . htmlspecialchars($t['booking_date']) . ' — ' . $amtHtml . ' — ' . htmlspecialchars(substr($t['description'],0,80)) . '</li>';
               } ?>
             </ul>
           <?php else: ?>
             <div style="color:#666"><strong>Aucune nouvelles écritures</strong></div>
             <div style="margin-top:8px"><strong>Dernières écritures</strong>
               <?php if (empty($a['txs'])): ?><div style="color:#666">Aucune écriture BOOK</div><?php else: ?>
-                <ul><?php foreach ($a['txs'] as $t) { echo '<li>' . htmlspecialchars($t['booking_date']) . ' — ' . htmlspecialchars(number_format((float)$t['amount'],2,',',' ')) . ' € — ' . htmlspecialchars(substr($t['description'],0,80)) . '</li>'; } ?></ul>
+                <ul><?php foreach ($a['txs'] as $t) {
+                  $amt = (float)$t['amount'];
+                  $fmt = htmlspecialchars(number_format($amt,2,',',' '));
+                  $amtHtml = ($amt < 0) ? '<strong style="color:#c62828">' . $fmt . ' €</strong>' : '<strong>' . $fmt . ' €</strong>';
+                  echo '<li>' . htmlspecialchars($t['booking_date']) . ' — ' . $amtHtml . ' — ' . htmlspecialchars(substr($t['description'],0,80)) . '</li>';} ?></ul>
               <?php endif; ?>
             </div>
           <?php endif; ?>
@@ -110,19 +116,15 @@ unset($a);
       var cards = document.querySelectorAll('.mobile-card');
       cards.forEach(function(card){
         var name = card.querySelector('strong').innerText || 'Compte';
-        var vals = card.querySelectorAll('.mobile-card-row span:last-child');
-        // first row is balance, second is threshold
-        if (vals.length >= 2) {
-          var balance = parseFloat(vals[0].innerText.replace(/[ €\s]/g,''.replace(',', '.')));
-          var threshold = parseFloat(vals[1].innerText.replace(/[ €\s]/g,''.replace(',', '.')));
-          // fallback parsing using dataset not reliable; instead detect visually: if balance < threshold, notify
-          var bText = vals[0].innerText.replace(/\./g,'').replace(',','.').replace(/[^0-9.\-]/g,'');
-          var tText = vals[1].innerText.replace(/\./g,'').replace(',','.').replace(/[^0-9.\-]/g,'');
-          var b = parseFloat(bText);
-          var t = parseFloat(tText);
-          if (!isNaN(b) && !isNaN(t) && b < t) {
-            notify('Alerte solde: ' + name, 'Solde ' + b.toFixed(2) + ' € < seuil ' + t.toFixed(2) + ' €');
-          }
+        var balSpan = card.querySelector('.mobile-card-row span:last-child');
+        var b = NaN;
+        if (balSpan) {
+          var bText = balSpan.innerText.replace(/\./g,'').replace(',','.').replace(/[^0-9.\-]/g,'');
+          b = parseFloat(bText);
+        }
+        var t = parseFloat(card.dataset.threshold);
+        if (!isNaN(b) && !isNaN(t) && b < t) {
+          notify('Alerte solde: ' + name, 'Solde ' + b.toFixed(2) + ' € < seuil ' + t.toFixed(2) + ' €');
         }
       });
     })();
