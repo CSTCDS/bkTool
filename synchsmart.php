@@ -66,7 +66,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
       var div = document.createElement('div');
       div.className = 'mobile-card';
       div.style.marginBottom = '12px';
-      div.dataset.threshold = a.alert_threshold || '';
+      var th = (typeof a.alert_threshold !== 'undefined' && a.alert_threshold !== null && a.alert_threshold !== '') ? a.alert_threshold : '';
+      div.dataset.threshold = th;
       var balance = parseFloat(a.balance) || 0;
       var balFmt = balance.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
       var balRow = document.createElement('div'); balRow.className = 'mobile-card-row';
