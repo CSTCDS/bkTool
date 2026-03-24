@@ -126,11 +126,11 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     </select>
   </div>
 
-  <div class="m-nav" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
+  <div class="mobile-nav" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
     <div>
       <button class="arrow-btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=0<?php echo ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : '0'; ?>)">&lt;&lt;</button>
       <button class="arrow-btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo max(0,$idx-1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : 0; ?>)">&lt;</button>
-      <span class="m-counter" style="margin:0 8px"><?php echo ($idx + 1) . ' / ' . $total; ?></span>
+      <span id="mcCounter" style="margin:0 8px"><?php echo ($idx + 1) . ' / ' . $total; ?></span>
       <button class="arrow-btn" <?php echo ($idx >= $total - 1) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo min($total - 1,$idx+1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : 0; ?>)">&gt;</button>
     </div>
     <label style="font-size:.95rem"><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?>> Afficher les opérations en attente</label>
@@ -139,18 +139,19 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 <?php if (!$tx): ?>
   <div class="m-empty">Aucune écriture trouvée.</div>
 <?php else: ?>
-  <div class="m-card">
-    <div class="m-row"><span class="m-label">Compte</span><span class="m-value"><?php echo htmlspecialchars($tx['account_name'] ?? $tx['account_id']); ?></span></div>
-    <div class="m-row"><span class="m-label">Date</span><span class="m-value"><?php if ($isPending) echo '<span class="badge-pending">en attente</span><br>'; ?><?php echo htmlspecialchars($tx['booking_date'] ?? ''); ?></span></div>
-    <div class="m-row"><span class="m-label">Montant</span><span class="m-value" style="color:<?php echo ($tx['amount'] < 0) ? '#c62828' : '#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$tx['amount'], 2, ',', ' ')); ?></span></div>
-    <div class="m-row"><span class="m-label">Devise</span><span class="m-value"><?php echo htmlspecialchars($tx['currency'] ?? ''); ?></span></div>
-    <div class="m-row m-desc"><span class="m-label">Commentaire</span><span class="m-value"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>
+  <div class="mobile-card">
+    <div class="mobile-card-row"><span class="mobile-card-label">Compte</span><span class="m-value"><?php echo htmlspecialchars($tx['account_name'] ?? $tx['account_id']); ?></span></div>
+    <div class="mobile-card-row"><span class="mobile-card-label">Date</span><span class="m-value"><?php if ($isPending) echo '<span class="badge-pending">en attente</span><br>'; ?><?php echo htmlspecialchars($tx['booking_date'] ?? ''); ?></span></div>
+    <div class="mobile-card-row"><span class="mobile-card-label">Montant</span><span class="m-value" style="color:<?php echo ($tx['amount'] < 0) ? '#c62828' : '#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$tx['amount'], 2, ',', ' ')); ?></span></div>
+    <div class="mobile-card-row"><span class="mobile-card-label">Devise</span><span class="m-value"><?php echo htmlspecialchars($tx['currency'] ?? ''); ?></span></div>
+    <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Commentaire</span><span class="m-value"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>
     <?php if ($displayBalance !== null): ?>
-    <div class="m-row"><span class="m-label">Solde</span><span class="m-value" style="font-weight:700"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></span></div>
+    <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span class="m-value" style="font-weight:700"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></span></div>
     <?php endif; ?>
     <?php if ($groupVirtualBalance !== null): ?>
-    <div class="m-row"><span class="m-label">Solde virtuel</span><span class="m-value" style="font-weight:700;color:#5c6bc0"><?php echo htmlspecialchars(number_format($groupVirtualBalance, 2, ',', ' ')); ?></span></div>
+    <div class="mobile-card-row"><span class="mobile-card-label">Solde virtuel</span><span class="m-value" style="font-weight:700;color:#5c6bc0"><?php echo htmlspecialchars(number_format($groupVirtualBalance, 2, ',', ' ')); ?></span></div>
     <?php endif; ?>
+  </div>
   </div>
 
   <div class="m-cats">
