@@ -39,12 +39,9 @@ $accBalances = [];
 foreach ($accs as $a) { $accBalances[$a['id']] = (float)($a['balance'] ?? 0.0); }
 
 // Build group children map from categories criterion=0 (label expected to contain account id)
+// groupChildren will be built after we load categories into $allCats
+// initialize to avoid undefined variable notices in older PHP setups
 $groupChildren = [];
-foreach ($allCats as $c) {
-  if ((int)$c['criterion'] === 0 && $c['parent_id'] !== null) {
-    $groupChildren[(int)$c['parent_id']][] = $c['label'];
-  }
-}
 
 // Defaults for variables that may be missing in some environments (avoid PHP notices)
 $idx = isset($_GET['idx']) ? (int)$_GET['idx'] : 0;
@@ -88,6 +85,11 @@ foreach ($allCats as $c) { $catCriteria[$c['id']] = (int)$c['criterion']; }
 
 // Build group children map (criterion=0): parent_id => [account_id, ...]
 $groupChildren = [];
+foreach ($allCats as $c) {
+  if ((int)$c['criterion'] === 0 && $c['parent_id'] !== null) {
+    $groupChildren[(int)$c['parent_id']][] = (int)$c['label'];
+  }
+}
 // Load the transaction at index $idx (mobile card navigation)
 $idx = isset($_GET['idx']) ? (int)$_GET['idx'] : 0;
 $showPending = isset($_GET['show_pending']) ? ($_GET['show_pending'] === '1') : true;
@@ -175,12 +177,7 @@ if ($tx) {
     </select>
       <label style="font-size:.95rem;margin-left:8px;display:inline-block"><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?>> opérations en attente</label>
 
-      <?php if ($displayBalance !== null || $groupVirtualBalance !== null): ?>
-        <div class="mobile-balances" style="margin-top:6px;font-size:.95rem;color:#333">
-          <?php if ($displayBalance !== null): ?><span>Solde: <strong><?php echo htmlspecialchars(number_format($displayBalance,2,',',' ')); ?></strong></span><?php endif; ?>
-          <?php if ($groupVirtualBalance !== null): ?><span style="margin-left:12px">Solde virtuel: <strong><?php echo htmlspecialchars(number_format($groupVirtualBalance,2,',',' ')); ?></strong></span><?php endif; ?>
-        </div>
-      <?php endif; ?>
+      <!-- balances moved into the transaction card below; keep this area compact -->
   </div>
 
   <div class="mobile-nav" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
@@ -203,10 +200,10 @@ if ($tx) {
     <div class="mobile-card-row"><span class="mobile-card-label">Devise</span><span class="m-value"><?php echo htmlspecialchars($tx['currency'] ?? ''); ?></span></div>
     <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Commentaire</span><span class="m-value"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>
     <?php if ($displayBalance !== null): ?>
-    <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span class="m-value" style="font-weight:700"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></span></div>
+    <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span class="m-value"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></span></div>
     <?php endif; ?>
     <?php if ($groupVirtualBalance !== null): ?>
-    <div class="mobile-card-row"><span class="mobile-card-label">Solde virtuel</span><span class="m-value" style="font-weight:700;color:#5c6bc0"><?php echo htmlspecialchars(number_format($groupVirtualBalance, 2, ',', ' ')); ?></span></div>
+    <div class="mobile-card-row"><span class="mobile-card-label">Solde virtuel</span><span class="m-value" style="color:#5c6bc0"><?php echo htmlspecialchars(number_format($groupVirtualBalance, 2, ',', ' ')); ?></span></div>
     <?php endif; ?>
   </div>
   </div>
