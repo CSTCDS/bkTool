@@ -154,6 +154,33 @@ function bkt_migrate(PDO $pdo): void
                 INDEX (rule_id)
             )');
         },
+        // Version 10 : ajouter champs valeur_a_affecter (int) et category_level (tinyint)
+        10 => function (PDO $pdo) {
+            // ensure auto_category_rules exists (v9 may not have been applied on older installs)
+            $pdo->exec('CREATE TABLE IF NOT EXISTS auto_category_rules (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                pattern TEXT NOT NULL,
+                is_regex TINYINT(1) NOT NULL DEFAULT 0,
+                category_id INT NOT NULL,
+                scope_account_id INT DEFAULT NULL,
+                priority INT NOT NULL DEFAULT 100,
+                active TINYINT(1) NOT NULL DEFAULT 1,
+                created_by VARCHAR(100) DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (priority)
+            )');
+
+            // add colonne valeur_a_affecter si absente
+            $cols = $pdo->query('SHOW COLUMNS FROM auto_category_rules LIKE "valeur_a_affecter"')->fetchAll();
+            if (empty($cols)) {
+                $pdo->exec('ALTER TABLE auto_category_rules ADD COLUMN valeur_a_affecter INT DEFAULT NULL AFTER category_id');
+            }
+            // add colonne category_level si absente
+            $cols2 = $pdo->query('SHOW COLUMNS FROM auto_category_rules LIKE "category_level"')->fetchAll();
+            if (empty($cols2)) {
+                $pdo->exec('ALTER TABLE auto_category_rules ADD COLUMN category_level TINYINT DEFAULT NULL AFTER valeur_a_affecter');
+            }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées
