@@ -229,7 +229,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $bg = ($i % 2 === 0) ? 'silver' : 'gray';
   ?>
     <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>" style="background:<?php echo $bg; ?>">
-      <td rowspan="2" class="small" style="font-size:20px;font-weight:bold;text-align:center;vertical-align:middle"><?php echo $r['id']; ?></td>
+      <td rowspan="2" class="small" style="font-size:26px;font-weight:bold;color:#000;text-align:center;vertical-align:middle"><?php echo $r['id']; ?></td>
       <td>
         Critère<br>
         <select name="category_level[<?php echo $r['id']; ?>]" class="select-category-level-row">
