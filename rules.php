@@ -319,32 +319,44 @@ function submitRuleUpdate(id){
   try{
     var form = document.getElementById('update-form-'+id);
     if(!form) return;
-    // collect all inputs/selects for this rule by matching name suffix [id]
-    var selector = '[name$="['+id+']"]';
-    var nodes = document.querySelectorAll(selector);
+    // collect all elements whose name ends with [id]
+    var all = Array.from(document.querySelectorAll('[name]'));
+    var nodes = all.filter(function(n){ return /\[\d+\]$/.test(n.name) && n.name.endsWith('['+id+']'); });
     var map = {};
     nodes.forEach(function(n){
-      // name may be like pattern[123]
-      var nm = n.getAttribute('name');
+      var nm = n.name;
       var key = nm.replace(/\[\d+\]$/, '');
-      map[key] = n;
+      // if multiple elements with same name (unlikely) keep first
+      if (!(key in map)) map[key] = n;
     });
 
     console.log('submitRuleUpdate map for', id, map);
 
-    var patternVal = map['pattern'] ? map['pattern'].value : '';
-    var lvlVal = map['category_level'] ? map['category_level'].value : 0;
-    var valeurVal = map['valeur_a_affecter'] ? map['valeur_a_affecter'].value : 0;
-    var scopeVal = '';
-    if (map['scope_account_id']) { scopeVal = map['scope_account_id'].value; }
-    var prioVal = map['priority'] ? map['priority'].value : 0;
-    var isRegexChecked = map['is_regex'] ? (map['is_regex'].checked ? 1 : 0) : 0;
-    var activeChecked = map['active'] ? (map['active'].checked ? 1 : 0) : 0;
+    // helper to read value for different control types
+    function readVal(el){
+      if (!el) return '';
+      if (el.type === 'checkbox') return el.checked ? '1' : '0';
+      if (el.tagName === 'SELECT') return el.value;
+      return el.value;
+    }
 
-    // normalize scope for submission
-    if (scopeVal === 'NULL') { form.elements['scope_account_id'].value = 'NULL'; }
-    else if (scopeVal === '') { form.elements['scope_account_id'].value = ''; }
-    else { var n = parseInt(scopeVal,10); form.elements['scope_account_id'].value = isNaN(n) ? '' : String(n); }
+    var patternVal = readVal(map['pattern']) || '';
+    var lvlVal = readVal(map['category_level']) || 0;
+    var valeurVal = readVal(map['valeur_a_affecter']) || 0;
+    var scopeVal = readVal(map['scope_account_id']);
+    var prioVal = readVal(map['priority']) || 0;
+    var isRegexChecked = readVal(map['is_regex']) || 0;
+    var activeChecked = readVal(map['active']) || 0;
+
+    // normalize scope for submission: keep 'NULL' literal, empty string for none, numeric id otherwise
+    if (scopeVal === 'NULL') {
+      form.elements['scope_account_id'].value = 'NULL';
+    } else if (scopeVal === '') {
+      form.elements['scope_account_id'].value = '';
+    } else {
+      var n = parseInt(scopeVal,10);
+      form.elements['scope_account_id'].value = isNaN(n) ? '' : String(n);
+    }
 
     form.elements['pattern'].value = patternVal;
     form.elements['category_level'].value = lvlVal;
