@@ -299,10 +299,19 @@ if ($tx && $groupSelected) {
 
     <script>
     (function(){
-      const txId = <?php echo json_encode($tx['id'] ?? ''); ?>;
+      let txId = <?php echo json_encode($tx['id'] ?? ''); ?>;
+      // fallback: if PHP didn't provide tx id (empty string), try reading from the form data-txid
+      if (!txId) {
+        const f = document.querySelector('.m-cats form[data-txid]');
+        if (f && f.dataset && f.dataset.txid) txId = f.dataset.txid;
+      }
+      console.debug('suggest:init txId=', txId);
       const catLabels = <?php echo json_encode($catLabels); ?>;
       const catCriteria = <?php echo json_encode($catCriteria); ?>;
-      if (!txId) return;
+      if (!txId) {
+        console.debug('suggest: no txId, aborting suggestion fetch');
+        return;
+      }
 
       // Hide all suggestion boxes
       function hideAll() {
@@ -315,6 +324,7 @@ if ($tx && $groupSelected) {
       fetch('./mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId))
         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(data => {
+          console.debug('suggest: response', data);
           hideAll();
           if (!data || !data.suggestion) return;
           const s = data.suggestion;
