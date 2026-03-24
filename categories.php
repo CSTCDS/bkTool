@@ -302,41 +302,45 @@ foreach ($allCats as $c) {
     <h2>Paramètres de comptes</h2>
     <p>Modifier les paramètres par compte (libellé, devise, couleur).</p>
     <?php if (!empty($accounts)): ?>
-      <table>
-        <thead>
-          <tr><th>Numéro affichage</th><th>Libellé</th><th>Devise</th><th>Couleur</th><th>Seuil alerte</th><th>Solde</th><th>Dernière MAJ</th><th></th></tr>
-        </thead>
-        <tbody>
-        <?php foreach ($accounts as $ac): ?>
-          <tr>
-            <form method="post">
-              <td>
-                <input type="number" name="numero_affichage" value="<?php echo htmlspecialchars((string)($ac['numero_affichage'] ?? '')); ?>" class="acc-num" style="width:80px">
-              </td>
-              <td>
-                <input type="text" name="name" value="<?php echo htmlspecialchars($ac['name'] ?? ''); ?>" required class="acc-name">
-              </td>
-              <td>
-                <input type="text" name="currency" value="<?php echo htmlspecialchars($ac['currency'] ?? ''); ?>" class="acc-currency">
-              </td>
-              <td>
-                <input type="color" name="color" value="<?php echo htmlspecialchars($ac['color'] ?? '#000000'); ?>" title="Couleur du compte">
-              </td>
-              <td>
-                <input type="number" step="0.01" name="alert_threshold" value="<?php echo htmlspecialchars((string)($ac['alert_threshold'] ?? '')); ?>" class="acc-alert" placeholder="ex: -50.00">
-              </td>
-              <td style="text-align:right"><?php echo htmlspecialchars((string)($ac['balance'] ?? '0')); ?></td>
-              <td><?php echo htmlspecialchars((string)($ac['updated_at'] ?? '')); ?></td>
-              <td>
-                <input type="hidden" name="action" value="edit_account">
-                <input type="hidden" name="account_id" value="<?php echo htmlspecialchars($ac['id']); ?>">
-                <button type="submit">Enregistrer</button>
-              </td>
-            </form>
-          </tr>
-        <?php endforeach; ?>
-        </tbody>
-      </table>
+      <style>
+        .accounts-accordion .acc-item { border:1px solid #eee; margin-bottom:8px; border-radius:6px; overflow:hidden; }
+        .accounts-accordion .acc-header { width:100%; text-align:left; padding:10px; background:#f7f7f7; border:none; display:flex; justify-content:space-between; align-items:center; font-weight:600; cursor:pointer; }
+        .accounts-accordion .acc-body { padding:12px; background:#fff; }
+        .acc-form label { display:block; font-weight:600; margin-bottom:4px; }
+        .acc-form .field { margin-bottom:8px; }
+        .acc-form input[type="text"], .acc-form input[type="number"], .acc-form select, .acc-form input[type="color"] { width:100%; padding:6px; box-sizing:border-box; }
+        .acc-meta { font-weight:400; color:#666; font-size:0.95rem }
+      </style>
+
+      <div class="accounts-accordion">
+        <?php $first = true; foreach ($accounts as $ac): ?>
+          <div class="acc-item<?php echo $first ? ' open' : ''; ?>" data-acc-id="<?php echo htmlspecialchars($ac['id']); ?>">
+            <button type="button" class="acc-header">
+              <span class="acc-title"><?php echo htmlspecialchars($ac['name'] ?: $ac['id']); ?></span>
+              <span class="acc-meta"><?php echo htmlspecialchars($ac['currency'] ?? ''); ?> — Solde <?php echo htmlspecialchars((string)($ac['balance'] ?? '0')); ?></span>
+            </button>
+            <div class="acc-body" <?php echo $first ? '' : 'style="display:none"'; ?>>
+              <form method="post" class="acc-form">
+                <div class="field"><label>Numéro affichage</label><input type="number" name="numero_affichage" value="<?php echo htmlspecialchars((string)($ac['numero_affichage'] ?? '')); ?>"></div>
+                <div class="field"><label>Libellé</label><input type="text" name="name" value="<?php echo htmlspecialchars($ac['name'] ?? ''); ?>" required></div>
+                <div class="field"><label>Devise</label><input type="text" name="currency" value="<?php echo htmlspecialchars($ac['currency'] ?? ''); ?>"></div>
+                <div class="field"><label>Couleur</label><input type="color" name="color" value="<?php echo htmlspecialchars($ac['color'] ?? '#000000'); ?>"></div>
+                <div class="field"><label>Seuil alerte</label><input type="number" step="0.01" name="alert_threshold" value="<?php echo htmlspecialchars((string)($ac['alert_threshold'] ?? '')); ?>" placeholder="ex: -50.00"></div>
+                <div class="field"><label>Dernière MAJ</label><div><?php echo htmlspecialchars((string)($ac['updated_at'] ?? '')); ?></div></div>
+                <div style="display:flex;gap:8px;align-items:center"><input type="hidden" name="action" value="edit_account"><input type="hidden" name="account_id" value="<?php echo htmlspecialchars($ac['id']); ?>"><button type="submit">Enregistrer</button></div>
+              </form>
+            </div>
+          </div>
+        <?php $first = false; endforeach; ?>
+      </div>
+
+      <script>
+        (function(){
+          var acc = document.querySelectorAll('.accounts-accordion .acc-item');
+          function closeAll(){ acc.forEach(function(item){ item.classList.remove('open'); var body = item.querySelector('.acc-body'); if(body) body.style.display='none'; }); }
+          acc.forEach(function(item){ var header = item.querySelector('.acc-header'); header.addEventListener('click', function(){ var open = item.classList.contains('open'); if(open){ item.classList.remove('open'); item.querySelector('.acc-body').style.display='none'; } else { closeAll(); item.classList.add('open'); item.querySelector('.acc-body').style.display='block'; } }); });
+        })();
+      </script>
     <?php else: ?>
       <p>Aucun compte trouvé.</p>
     <?php endif; ?>
