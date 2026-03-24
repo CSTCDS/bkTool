@@ -181,6 +181,35 @@ function bkt_migrate(PDO $pdo): void
                 $pdo->exec('ALTER TABLE auto_category_rules ADD COLUMN category_level TINYINT DEFAULT NULL AFTER valeur_a_affecter');
             }
         },
+        // Version 11 : backfill category_level using categories.criterion for existing rules
+        11 => function (PDO $pdo) {
+            // ensure the table and column exist
+            try {
+                $pdo->exec('CREATE TABLE IF NOT EXISTS auto_category_rules (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    pattern TEXT NOT NULL,
+                    is_regex TINYINT(1) NOT NULL DEFAULT 0,
+                    category_id INT NOT NULL,
+                    scope_account_id INT DEFAULT NULL,
+                    priority INT NOT NULL DEFAULT 100,
+                    active TINYINT(1) NOT NULL DEFAULT 1,
+                    created_by VARCHAR(100) DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )');
+            } catch (Throwable $e) { /* ignore */ }
+
+            $cols = $pdo->query('SHOW COLUMNS FROM auto_category_rules LIKE "category_level"')->fetchAll();
+            if (empty($cols)) {
+                try {
+                    $pdo->exec('ALTER TABLE auto_category_rules ADD COLUMN category_level TINYINT DEFAULT NULL AFTER valeur_a_affecter');
+                } catch (Throwable $e) { /* ignore if not possible */ }
+            }
+
+            // backfill: set category_level = categories.criterion where missing
+            try {
+                $pdo->exec('UPDATE auto_category_rules ar JOIN categories c ON ar.category_id = c.id SET ar.category_level = c.criterion WHERE (ar.category_level IS NULL OR ar.category_level = 0) AND ar.category_id IS NOT NULL');
+            } catch (Throwable $e) { /* ignore errors during backfill */ }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées
