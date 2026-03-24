@@ -144,19 +144,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Edit full account fields (name, currency, color) from Paramètres -> Comptes
     if ($action === 'edit_account') {
       $accountId = trim((string)($_POST['account_id'] ?? ''));
-      $name = trim((string)($_POST['name'] ?? ''));
-      $currency = trim((string)($_POST['currency'] ?? ''));
-      $color = trim((string)($_POST['color'] ?? '')) ?: null;
-      $alert = isset($_POST['alert_threshold']) && $_POST['alert_threshold'] !== '' ? (float)$_POST['alert_threshold'] : null;
-      $numeroAff = isset($_POST['numero_affichage']) && $_POST['numero_affichage'] !== '' ? (int)$_POST['numero_affichage'] : null;
-      if ($accountId !== '' && $name !== '') {
-        $stmt = $pdo->prepare('UPDATE accounts SET name = :name, currency = :currency, color = :color, alert_threshold = :alert, numero_affichage = :numaff, updated_at = NOW() WHERE id = :id');
-        $stmt->execute([':name' => $name, ':currency' => $currency, ':color' => $color, ':alert' => $alert, ':numaff' => $numeroAff, ':id' => $accountId]);
-        $notice = 'Compte mis à jour.';
-        // refresh accounts list/map with full columns
-        $accounts = $pdo->query('SELECT id, name, currency, balance, color, alert_threshold, numero_affichage, updated_at FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage, name')->fetchAll(PDO::FETCH_ASSOC);
-        $accMap = [];
-        foreach ($accounts as $ac) $accMap[$ac['id']] = $ac['name'];
+      if ($accountId !== '') {
+        // load existing values
+        $q = $pdo->prepare('SELECT name, currency, color, alert_threshold, numero_affichage FROM accounts WHERE id = :id');
+        $q->execute([':id' => $accountId]);
+        $existing = $q->fetch(PDO::FETCH_ASSOC);
+        if ($existing) {
+          // determine new values: use posted values only when present, otherwise keep existing
+          $name = array_key_exists('name', $_POST) ? trim((string)($_POST['name'] ?? '')) : $existing['name'];
+          $currency = array_key_exists('currency', $_POST) ? trim((string)($_POST['currency'] ?? '')) : $existing['currency'];
+          $color = array_key_exists('color', $_POST) ? (trim((string)($_POST['color'] ?? '')) ?: null) : $existing['color'];
+          $alert = array_key_exists('alert_threshold', $_POST) ? (($_POST['alert_threshold'] !== '') ? (float)$_POST['alert_threshold'] : null) : $existing['alert_threshold'];
+          $numeroAff = array_key_exists('numero_affichage', $_POST) ? (($_POST['numero_affichage'] !== '') ? (int)$_POST['numero_affichage'] : null) : $existing['numero_affichage'];
+
+          // require a non-empty name
+          if ($name !== '') {
+            $stmt = $pdo->prepare('UPDATE accounts SET name = :name, currency = :currency, color = :color, alert_threshold = :alert, numero_affichage = :numaff, updated_at = NOW() WHERE id = :id');
+            $stmt->execute([':name' => $name, ':currency' => $currency, ':color' => $color, ':alert' => $alert, ':numaff' => $numeroAff, ':id' => $accountId]);
+            $notice = 'Compte mis à jour.';
+            // refresh accounts list/map with full columns
+            $accounts = $pdo->query('SELECT id, name, currency, balance, color, alert_threshold, numero_affichage, updated_at FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage, name')->fetchAll(PDO::FETCH_ASSOC);
+            $accMap = [];
+            foreach ($accounts as $ac) $accMap[$ac['id']] = $ac['name'];
+          }
+        }
       }
     }
 }
