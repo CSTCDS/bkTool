@@ -69,9 +69,15 @@ unset($a);
       $balance = (float)$a['balance'];
       $th = (float)$a['alert_threshold'];
       $below = ($balance < $th);
+      $balFmt = htmlspecialchars(number_format($balance,2,',',' '));
+      if ($balance < 0) {
+        $balHtml = '<strong style="color:#c62828">' . $balFmt . ' €</strong>';
+      } else {
+        $balHtml = '<strong style="color:#2e7d32">' . $balFmt . ' €</strong>';
+      }
     ?>
       <div class="mobile-card" style="margin-bottom:12px" data-threshold="<?php echo htmlspecialchars($th); ?>">
-        <div class="mobile-card-row"><strong><?php echo htmlspecialchars($a['name']); ?></strong><span><?php echo htmlspecialchars(number_format($balance,2,',',' ')); ?> €</span></div>
+        <div class="mobile-card-row"><strong><?php echo htmlspecialchars($a['name']); ?></strong><span><?php echo $balHtml; ?></span></div>
         <div style="padding:8px 0">
           <?php if (!empty($a['received'])): ?>
             <strong>Écritures reçues</strong>
@@ -79,7 +85,11 @@ unset($a);
               <?php foreach ($a['received'] as $t) {
                 $amt = (float)$t['amount'];
                 $fmt = htmlspecialchars(number_format($amt,2,',',' '));
-                $amtHtml = ($amt < 0) ? '<strong style="color:#c62828">' . $fmt . ' €</strong>' : '<strong>' . $fmt . ' €</strong>';
+                if ($amt >= 0) {
+                  $amtHtml = '<strong style="color:#2e7d32">' . $fmt . ' €</strong>';
+                } else {
+                  $amtHtml = '<strong style="color:#000">' . $fmt . ' €</strong>';
+                }
                 echo '<li>' . htmlspecialchars($t['booking_date']) . ' — ' . $amtHtml . ' — ' . htmlspecialchars(substr($t['description'],0,80)) . '</li>';
               } ?>
             </ul>
@@ -88,10 +98,14 @@ unset($a);
             <div style="margin-top:8px"><strong>Dernières écritures</strong>
               <?php if (empty($a['txs'])): ?><div style="color:#666">Aucune écriture BOOK</div><?php else: ?>
                 <ul><?php foreach ($a['txs'] as $t) {
-                  $amt = (float)$t['amount'];
-                  $fmt = htmlspecialchars(number_format($amt,2,',',' '));
-                  $amtHtml = ($amt < 0) ? '<strong style="color:#c62828">' . $fmt . ' €</strong>' : '<strong>' . $fmt . ' €</strong>';
-                  echo '<li>' . htmlspecialchars($t['booking_date']) . ' — ' . $amtHtml . ' — ' . htmlspecialchars(substr($t['description'],0,80)) . '</li>';} ?></ul>
+                    $amt = (float)$t['amount'];
+                    $fmt = htmlspecialchars(number_format($amt,2,',',' '));
+                    if ($amt >= 0) {
+                      $amtHtml = '<strong style="color:#2e7d32">' . $fmt . ' €</strong>';
+                    } else {
+                      $amtHtml = '<strong style="color:#000">' . $fmt . ' €</strong>';
+                    }
+                    echo '<li>' . htmlspecialchars($t['booking_date']) . ' — ' . $amtHtml . ' — ' . htmlspecialchars(substr($t['description'],0,80)) . '</li>';} ?></ul>
               <?php endif; ?>
             </div>
           <?php endif; ?>
