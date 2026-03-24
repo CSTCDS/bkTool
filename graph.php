@@ -132,12 +132,13 @@ try {
     *,*::before,*::after{box-sizing:border-box}
     html,body{height:100%;overflow-x:hidden}
     body{display:flex;flex-direction:column;min-height:100vh;margin:0}
-    main{flex:1;display:flex;flex-direction:column;padding:12px}
-    /* Ensure each section takes full width so the chart doesn't sit to the right */
-    main > section{display:block;width:100%}
+    /* Use block layout for main to avoid unexpected flex row wrapping */
+    main{display:block;padding:12px}
+    /* Ensure each section clears floats and takes full width */
+    main > section{display:block;width:100%;clear:both}
     /* chart section: center the chart and limit its size to 90vw / 60vh */
     main > section:last-of-type{display:flex;justify-content:center;align-items:center}
-    #chartWrapper{width:100%;max-width:90vw;height:60vh;display:flex;align-items:stretch;overflow:hidden;margin:0 auto}
+    #chartWrapper{width:90%;max-width:90vw;height:60vh;display:flex;align-items:stretch;overflow:hidden;margin:0 auto}
     #chart{display:block;max-width:100% !important;width:100% !important;height:100% !important}
   </style>
 </head>
