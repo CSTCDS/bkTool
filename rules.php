@@ -217,7 +217,6 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </form>
 
 <?php if ($accountFilter !== ''): ?>
-<h2>Liste des règles (<?php echo count($rules); ?>)</h2>
 <table>
   <thead>
     <tr>
@@ -236,11 +235,13 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </tr>
   </thead>
   <tbody>
-  <?php foreach ($rules as $r): 
+  <?php $i = 0; foreach ($rules as $r): 
+        $i++;
         $r_level = isset($r['category_level']) ? (int)$r['category_level'] : 0;
         $r_valeur = isset($r['valeur_a_affecter']) ? (int)$r['valeur_a_affecter'] : ((isset($r['category_id']) ? (int)$r['category_id'] : 0));
+        $bg = ($i % 2 === 0) ? '#f6f7fb' : '#ffffff';
   ?>
-    <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>">
+    <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>" style="background:<?php echo $bg; ?>">
       <td rowspan="2" class="small"><?php echo $r['id']; ?></td>
       <td>
         <strong>Critère</strong><br>
