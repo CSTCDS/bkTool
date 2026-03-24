@@ -213,6 +213,7 @@ if ($tx && $groupSelected) {
   <div class="m-nav" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
     <div>
       <button class="btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo max(0,$idx-1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : '') . '&show_pending=' . ($showPending ? '1' : '0'); ?>'">&larr; Préc.</button>
+      <span class="m-counter" style="margin:0 8px"><?php echo ($idx + 1) . ' / ' . $total; ?></span>
       <button class="btn" <?php echo ($idx >= $total - 1) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo min($total - 1,$idx+1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : '') . '&show_pending=' . ($showPending ? '1' : '0'); ?>'">Suiv. &rarr;</button>
     </div>
     <label style="font-size:.95rem"><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?>> Afficher les opérations en attente</label>
