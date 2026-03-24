@@ -103,8 +103,10 @@ if ($acctSel !== '') {
   }
 }
 
+$whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
+
 // Count total BOOK rows
-$countSql = 'SELECT COUNT(*) FROM transactions t WHERE ' . implode(' AND ', $where);
+$countSql = 'SELECT COUNT(*) FROM transactions t' . $whereSql;
 $stmt = $pdo->prepare($countSql);
 $stmt->execute($params);
 $total = (int)$stmt->fetchColumn();
@@ -121,12 +123,12 @@ if ($requestedTxId) {
   // Current index (0-based)
   $idx = max(0, min((int)($_GET['idx'] ?? 0), $total - 1));
 
-  // Fetch single row at offset
-  $sql = 'SELECT t.*, a.name AS account_name, a.balance AS account_balance
-          FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id
-          WHERE ' . implode(' AND ', $where) . '
-          ORDER BY t.booking_date DESC, t.amount DESC
-          LIMIT 1 OFFSET :off';
+    // Fetch single row at offset
+    $sql = 'SELECT t.*, a.name AS account_name, a.balance AS account_balance
+      FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id'
+      . $whereSql . '
+      ORDER BY t.booking_date DESC, t.amount DESC
+      LIMIT 1 OFFSET :off';
   $stmt = $pdo->prepare($sql);
   foreach ($params as $k => $v) $stmt->bindValue($k, $v);
   $stmt->bindValue(':off', $idx, PDO::PARAM_INT);
@@ -140,9 +142,10 @@ if ($tx) {
   $accountBalance = (float)($tx['account_balance'] ?? 0.0);
   $displayBalance = $accountBalance;
   if ($idx > 0) {
+    $subWhere = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
     $sumSql = 'SELECT COALESCE(SUM(sub.amount), 0) FROM (
-      SELECT t.amount, t.account_id FROM transactions t
-      WHERE ' . implode(' AND ', $where) . '
+      SELECT t.amount, t.account_id FROM transactions t'
+      . $subWhere . '
       ORDER BY t.booking_date DESC, t.amount DESC
       LIMIT :lim
     ) sub WHERE sub.account_id = :cur_acct';
@@ -167,9 +170,9 @@ if ($tx && $groupSelected) {
   }
   $groupVirtualBalance = $groupStartBalance;
   if ($idx > 0) {
+    $subWhere = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
     $gSumSql = 'SELECT COALESCE(SUM(sub.amount), 0) FROM (
-      SELECT t.amount FROM transactions t
-      WHERE ' . implode(' AND ', $where) . '
+      SELECT t.amount FROM transactions t' . $subWhere . '
       ORDER BY t.booking_date DESC, t.amount DESC
       LIMIT :lim
     ) sub';
