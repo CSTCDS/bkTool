@@ -46,12 +46,23 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Synchro mobile — bkTool</title>
+  <title>bkTool - Synchro</title>
   <link rel="stylesheet" href="assets/css/style.css">
   <style>body{font-family:Arial,Helvetica,sans-serif;padding:12px}</style>
 </head>
 <body>
-  <h1>Synchro mobile</h1>
+  <div style="display:flex;align-items:center;gap:12px">
+    <button id="hamburgerBtn" aria-label="Menu" style="font-size:20px;padding:6px;background:transparent;border:0;cursor:pointer">☰</button>
+    <h1 style="margin:0">bkTool - Synchro</h1>
+  </div>
+  <nav id="hamburgerMenu" style="display:none;position:absolute;left:12px;top:48px;background:#fff;border:1px solid #ddd;padding:8px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,.08)">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <a href="index.php">Dashboard</a>
+      <a href="transactions.php">Transactions</a>
+      <a href="categories.php?crit=account">Paramètres</a>
+      <a href="#" id="restartSyncLink">Relancer la synchro</a>
+    </div>
+  </nav>
   <div id="syncArea">
     <div id="loader" style="margin-top:12px">🔄 <strong>Synchronisation en cours...</strong></div>
     <div id="alerts" style="margin-top:12px"></div>
@@ -142,12 +153,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
       accounts.forEach(function(a){ alerts.appendChild(buildCard(a)); });
     }
 
-    // Auto-start sync on page load (no button, no token prompt)
-    (function(){
+    // runSync: perform sync then fetch accounts for the computed import and render
+    function runSync() {
       var loader = document.getElementById('loader'); var alerts = document.getElementById('alerts');
       alerts.innerHTML = '';
-      // loader shown by default
-      fetch('sync.php', { method: 'GET' })
+      loader.style.display = 'block';
+      return fetch('sync.php', { method: 'GET' })
         .then(function(r){ return r.json().catch(function(){ return { status: 'error', message: 'Invalid JSON response' }; }); })
         .then(function(j){
           loader.style.display = 'none';
@@ -155,15 +166,28 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
           if (j.status === 'ok') {
             var imp = (j.result && typeof j.result.import_num !== 'undefined') ? j.result.import_num : null;
             if (imp === null) {
-              fetch('synchsmart.php?ajax=1').then(function(r){ return r.json(); }).then(function(data){ renderAccounts(data.accounts); notifyIfNeeded(); });
+              return fetch('synchsmart.php?ajax=1').then(function(r){ return r.json(); }).then(function(data){ renderAccounts(data.accounts); notifyIfNeeded(); });
             } else {
-              fetch('synchsmart.php?ajax=1&import_num=' + encodeURIComponent(imp)).then(function(r){ return r.json(); }).then(function(data){ renderAccounts(data.accounts); notifyIfNeeded(); });
+              return fetch('synchsmart.php?ajax=1&import_num=' + encodeURIComponent(imp)).then(function(r){ return r.json(); }).then(function(data){ renderAccounts(data.accounts); notifyIfNeeded(); });
             }
           } else {
             alerts.innerHTML = '<div style="color:#c62828">Erreur: ' + (j.message || JSON.stringify(j)) + '</div>';
           }
         }).catch(function(e){ loader.style.display = 'none'; alerts.innerHTML = '<div style="color:#c62828">Erreur: '+e+'</div>'; });
-    })();
+    }
+
+    // start automatically
+    runSync();
+
+    // Hamburger menu toggle and restart link
+    var hb = document.getElementById('hamburgerBtn');
+    var menu = document.getElementById('hamburgerMenu');
+    if (hb && menu) {
+      hb.addEventListener('click', function(e){ e.stopPropagation(); menu.style.display = (menu.style.display === 'none' || menu.style.display === '') ? 'block' : 'none'; });
+      document.addEventListener('click', function(){ menu.style.display = 'none'; });
+    }
+    var rlink = document.getElementById('restartSyncLink');
+    if (rlink) { rlink.addEventListener('click', function(e){ e.preventDefault(); menu.style.display = 'none'; runSync(); }); }
   })();
   </script>
 </body>
