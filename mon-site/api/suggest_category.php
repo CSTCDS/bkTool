@@ -39,21 +39,33 @@ $debug = !empty($_GET['debug']);
 $acr = new AutoCategoryRule($pdo);
 $rules = $acr->fetchActiveRules();
 $matched = null;
+$debugAttempts = [];
 foreach ($rules as $r) {
     // Respect scope
     if (!empty($r['scope_account_id']) && $accountId !== null && (string)$r['scope_account_id'] !== (string)$accountId) continue;
-    if ($r['is_regex']) {
-        // try-catch in DAO but double-check
-        $ok = false;
-        try { $ok = (@preg_match($r['pattern'], $description) === 1); } catch (Throwable $e) { $ok = false; }
-        if ($ok) { $matched = $r; break; }
+    $pattern = $r['pattern'];
+    $usedRegex = false;
+    $ok = false;
+    // Detect regex-like pattern even if is_regex flag is not set (e.g. stored with delimiters)
+    $looksLikeRegex = is_string($pattern) && preg_match('#^/.+/[a-zA-Z]*$#', $pattern);
+    if (!empty($r['is_regex']) || $looksLikeRegex) {
+        $usedRegex = true;
+        try {
+            $ok = (@preg_match($pattern, $description) === 1);
+        } catch (Throwable $e) {
+            $ok = false;
+        }
     } else {
-        if (stripos($description, $r['pattern']) !== false) { $matched = $r; break; }
+        if ($pattern !== '' && stripos($description, $pattern) !== false) { $ok = true; }
     }
+    if (!empty($_GET['debug'])) {
+        $debugAttempts[] = ['rule_id' => $r['id'], 'pattern' => $pattern, 'is_regex_flag' => (bool)$r['is_regex'], 'used_regex' => $usedRegex, 'matched' => $ok];
+    }
+    if ($ok) { $matched = $r; break; }
 }
 
 if ($debug) {
-    echo json_encode(['suggestion' => $matched ? $matched : null, 'rules_count' => count($rules), 'rules' => $rules, 'description' => $description, 'accountId' => $accountId]);
+    echo json_encode(['suggestion' => $matched ? $matched : null, 'rules_count' => count($rules), 'rules' => $rules, 'description' => $description, 'accountId' => $accountId, 'attempts' => $debugAttempts]);
     exit;
 }
 
