@@ -8,9 +8,10 @@ $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
     <button class="hamburger" id="hamburgerBtn" aria-label="Menu">&#9776;</button>
   </div>
   <nav class="tabs" id="navTabs">
-    <a href="index.php" target="_self"<?php echo ($current === 'index.php') ? ' class="active"' : ''; ?>>Dashboard</a>
+    <a href="graph.php" target="_self"<?php echo ($current === 'graph.php') ? ' class="active"' : ''; ?>>Dashboard</a>
     <a href="transactions.php" target="_self"<?php echo ($current === 'transactions.php') ? ' class="active"' : ''; ?>>Transactions</a>
     <a href="categories.php" target="_self"<?php echo ($current === 'categories.php') ? ' class="active"' : ''; ?>>Paramètres</a>
+    <a href="terms.php" target="_self"<?php echo ($current === 'terms.php') ? ' class="active"' : ''; ?>>Termes et conditions</a>
     <a href="choix.php" target="_self" class="bank-link"<?php echo ($current === 'choix.php') ? ' class="active"' : ''; ?>>Banque</a>
     <a href="synchsmart.php" target="_self"<?php echo ($current === 'synchsmart.php') ? ' class="active"' : ''; ?>>Synchro</a>
   </nav>
