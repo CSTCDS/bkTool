@@ -309,6 +309,8 @@ foreach ($allCats as $c) {
         .acc-form label { display:block; font-weight:600; margin-bottom:4px; }
         .acc-form .field { margin-bottom:8px; }
         .acc-form input[type="text"], .acc-form input[type="number"], .acc-form select, .acc-form input[type="color"] { width:100%; padding:6px; box-sizing:border-box; }
+        .acc-grid { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+        @media (max-width:700px) { .acc-grid { grid-template-columns: 1fr; } }
         .acc-meta { font-weight:400; color:#666; font-size:0.95rem }
       </style>
 
@@ -321,13 +323,15 @@ foreach ($allCats as $c) {
             </button>
             <div class="acc-body" <?php echo $first ? '' : 'style="display:none"'; ?>>
               <form method="post" class="acc-form">
-                <div class="field"><label>Numéro affichage</label><input type="number" name="numero_affichage" value="<?php echo htmlspecialchars((string)($ac['numero_affichage'] ?? '')); ?>"></div>
-                <div class="field"><label>Libellé</label><input type="text" name="name" value="<?php echo htmlspecialchars($ac['name'] ?? ''); ?>" required></div>
-                <div class="field"><label>Devise</label><input type="text" name="currency" value="<?php echo htmlspecialchars($ac['currency'] ?? ''); ?>"></div>
-                <div class="field"><label>Couleur</label><input type="color" name="color" value="<?php echo htmlspecialchars($ac['color'] ?? '#000000'); ?>"></div>
-                <div class="field"><label>Seuil alerte</label><input type="number" step="0.01" name="alert_threshold" value="<?php echo htmlspecialchars((string)($ac['alert_threshold'] ?? '')); ?>" placeholder="ex: -50.00"></div>
-                <div class="field"><label>Dernière MAJ</label><div><?php echo htmlspecialchars((string)($ac['updated_at'] ?? '')); ?></div></div>
-                <div style="display:flex;gap:8px;align-items:center"><input type="hidden" name="action" value="edit_account"><input type="hidden" name="account_id" value="<?php echo htmlspecialchars($ac['id']); ?>"><button type="submit">Enregistrer</button></div>
+                <div class="acc-grid">
+                  <div class="field"><label>Numéro affichage</label><input type="number" name="numero_affichage" value="<?php echo htmlspecialchars((string)($ac['numero_affichage'] ?? '')); ?>"></div>
+                  <div class="field"><label>Libellé</label><input type="text" name="name" value="<?php echo htmlspecialchars($ac['name'] ?? ''); ?>" required></div>
+                  <div class="field"><label>Devise</label><input type="text" name="currency" value="<?php echo htmlspecialchars($ac['currency'] ?? ''); ?>"></div>
+                  <div class="field"><label>Couleur</label><input type="color" name="color" value="<?php echo htmlspecialchars($ac['color'] ?? '#000000'); ?>"></div>
+                  <div class="field"><label>Seuil alerte</label><input type="number" step="0.01" name="alert_threshold" value="<?php echo htmlspecialchars((string)($ac['alert_threshold'] ?? '')); ?>" placeholder="ex: -50.00"></div>
+                  <div class="field"><label>Dernière MAJ</label><div><?php echo htmlspecialchars((string)($ac['updated_at'] ?? '')); ?></div></div>
+                </div>
+                <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><input type="hidden" name="action" value="edit_account"><input type="hidden" name="account_id" value="<?php echo htmlspecialchars($ac['id']); ?>"><button type="submit">Enregistrer</button></div>
               </form>
             </div>
           </div>
