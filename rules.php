@@ -319,21 +319,29 @@ function submitRuleUpdate(id){
   try{
     var form = document.getElementById('update-form-'+id);
     if(!form) return;
-    function q(name){ return document.querySelector('[name="'+name+'['+id+']"]'); }
-    var patternEl = q('pattern');
-    var lvlEl = q('category_level');
-    var valEl = document.querySelector('select[name="valeur_a_affecter['+id+']"]');
-    var scopeEl = document.querySelector('select[name="scope_account_id['+id+']"]');
-    var prioEl = q('priority');
-    var isRegexEl = document.querySelector('[name="is_regex['+id+']"]');
-    var activeEl = document.querySelector('[name="active['+id+']"]');
+    function byName(n){ var els = document.getElementsByName(n+'['+id+']'); return (els && els.length>0)?els[0]:null; }
+    var patternEl = byName('pattern');
+    var lvlEl = byName('category_level');
+    var valEl = document.getElementsByName('valeur_a_affecter['+id+']')[0] || document.querySelector('select[name="valeur_a_affecter['+id+']"]');
+    var scopeEl = document.getElementsByName('scope_account_id['+id+']')[0] || document.querySelector('select[name="scope_account_id['+id+']"]');
+    var prioEl = byName('priority');
+    var isRegexEl = document.getElementsByName('is_regex['+id+']')[0] || document.querySelector('[name="is_regex['+id+']"]');
+    var activeEl = document.getElementsByName('active['+id+']')[0] || document.querySelector('[name="active['+id+']"]');
 
     form.elements['pattern'].value = patternEl ? patternEl.value : '';
     form.elements['category_level'].value = lvlEl ? lvlEl.value : 0;
     form.elements['valeur_a_affecter'].value = valEl ? valEl.value : 0;
+
     var scopeVal = '';
-    if(scopeEl){ scopeVal = scopeEl.value; }
+    if(scopeEl){
+      scopeVal = scopeEl.value;
+      // normalize: keep 'NULL' for global, keep '' for no selection, else numeric id
+      if(scopeVal === 'NULL') scopeVal = 'NULL';
+      else if(scopeVal === '') scopeVal = '';
+      else scopeVal = String(parseInt(scopeVal,10) || '');
+    }
     form.elements['scope_account_id'].value = scopeVal;
+
     form.elements['priority'].value = prioEl ? prioEl.value : 0;
     form.elements['is_regex'].value = (isRegexEl && isRegexEl.checked) ? 1 : 0;
     form.elements['active'].value = (activeEl && activeEl.checked) ? 1 : 0;
