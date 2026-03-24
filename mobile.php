@@ -29,6 +29,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['tx_id']) && !empty($
 $accs = $pdo->query('SELECT id, name, balance FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
 $acctSel = $_GET['account'] ?? ($_COOKIE['selected_account'] ?? '');
 
+// Defaults for variables that may be missing in some environments (avoid PHP notices)
+$idx = isset($_GET['idx']) ? (int)$_GET['idx'] : 0;
+$showPending = isset($_GET['show_pending']) && $_GET['show_pending'] !== '0' ? true : false;
+$total = $total ?? 0;
+$tx = $tx ?? null;
+$displayBalance = $displayBalance ?? null;
+$groupVirtualBalance = $groupVirtualBalance ?? null;
+$isPending = $isPending ?? false;
+
 // Criterion names
 $criterionNames = [];
 for ($i = 1; $i <= 4; $i++) {
