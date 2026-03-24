@@ -258,38 +258,44 @@ if ($tx && $groupSelected) {
     (function(){
       const txId = <?php echo json_encode($tx['id'] ?? ''); ?>;
       if (!txId) return;
-      fetch('mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId))
+      fetch('/mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId))
         .then(r => r.json())
         .then(data => {
-          if (!data || !data.suggestion) return;
-          const s = data.suggestion;
-          const catLabel = <?php echo json_encode($catLabels); ?>[s.category_id] || ('#' + s.category_id);
-          document.getElementById('suggestLabel').textContent = catLabel + (s.is_regex ? ' (regex)' : '');
           const box = document.getElementById('suggestionBox');
+          // show box even when no suggestion so user sees debug info
           box.style.display = 'block';
-          document.getElementById('applySuggestion').addEventListener('click', function(){
-            // apply to first category select (cat1) by setting its value and submitting its form
-            const select = document.querySelector('.m-cats form select');
-            if (select) {
-              select.value = s.category_id;
-              select.form.submit();
-            }
-          });
-          document.getElementById('ignoreSuggestion').addEventListener('click', function(){ box.style.display='none'; });
-          document.getElementById('createRule').addEventListener('click', function(){
-            // create rule via POST
-            const fd = new FormData();
-            fd.append('pattern', <?php echo json_encode($tx['description'] ?? ''); ?>);
-            fd.append('is_regex', '0');
-            fd.append('category_id', s.category_id);
-            fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>);
-            fd.append('priority', '100');
-            fetch('mon-site/api/create_rule.php', { method: 'POST', body: fd }).then(r=>r.json()).then(resp=>{
-              if (resp && resp.ok) { alert('Règle créée'); box.style.display='none'; }
-              else alert('Erreur création règle');
-            }).catch(()=>alert('Erreur réseau'));
-          });
-        }).catch(()=>{});
+          if (!data || !data.suggestion) {
+            document.getElementById('suggestLabel').textContent = 'Aucune suggestion';
+          } else {
+            const s = data.suggestion;
+            const catLabel = <?php echo json_encode($catLabels); ?>[s.category_id] || ('#' + s.category_id);
+            document.getElementById('suggestLabel').textContent = catLabel + (s.is_regex ? ' (regex)' : '');
+            document.getElementById('applySuggestion').onclick = function(){
+              const select = document.querySelector('.m-cats form select');
+              if (select) { select.value = s.category_id; select.form.submit(); }
+            };
+            document.getElementById('createRule').onclick = function(){
+              const fd = new FormData();
+              fd.append('pattern', <?php echo json_encode($tx['description'] ?? ''); ?>);
+              fd.append('is_regex', '0');
+              fd.append('category_id', s.category_id);
+              fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>);
+              fd.append('priority', '100');
+              fetch('/mon-site/api/create_rule.php', { method: 'POST', body: fd }).then(r=>r.json()).then(resp=>{
+                if (resp && resp.ok) { alert('Règle créée'); box.style.display='none'; }
+                else alert('Erreur création règle');
+              }).catch(()=>alert('Erreur réseau'));
+            };
+          }
+          document.getElementById('ignoreSuggestion').onclick = function(){ box.style.display='none'; };
+
+          // show debug JSON below box for troubleshooting
+          let dbg = document.getElementById('suggestDebug');
+          if (!dbg) { dbg = document.createElement('pre'); dbg.id = 'suggestDebug'; dbg.style.padding='8px'; dbg.style.background='#f7f7f7'; dbg.style.border='1px solid #eee'; dbg.style.marginTop='8px'; document.getElementById('suggestionBox').appendChild(dbg); }
+          dbg.textContent = JSON.stringify(data, null, 2);
+        }).catch((err)=>{
+          const box = document.getElementById('suggestionBox'); box.style.display='block'; document.getElementById('suggestLabel').textContent = 'Erreur réseau';
+        });
     })();
     </script>
 
