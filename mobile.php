@@ -71,6 +71,31 @@ foreach ($allCats as $c) { $catCriteria[$c['id']] = (int)$c['criterion']; }
 
 // Build group children map (criterion=0): parent_id => [account_id, ...]
 $groupChildren = [];
+// Load the transaction at index $idx (mobile card navigation)
+$idx = isset($_GET['idx']) ? (int)$_GET['idx'] : 0;
+$showPending = isset($_GET['show_pending']) ? ($_GET['show_pending'] === '1') : true;
+$where = [];
+$params = [];
+if (!empty($acctSel) && strpos((string)$acctSel, 'g:') !== 0) {
+  $where[] = 't.account_id = :account';
+  $params[':account'] = $acctSel;
+}
+if (!$showPending) {
+  $where[] = "UPPER(t.status) = 'BOOK'";
+}
+$countSql = 'SELECT COUNT(*) FROM transactions t' . ($where ? ' WHERE ' . implode(' AND ', $where) : '');
+$cntStmt = $pdo->prepare($countSql);
+foreach ($params as $k => $v) $cntStmt->bindValue($k, $v);
+$cntStmt->execute();
+$total = (int)$cntStmt->fetchColumn();
+
+$sql = 'SELECT t.*, a.name AS account_name FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id' . ($where ? ' WHERE ' . implode(' AND ', $where) : '');
+$sql .= ' ORDER BY t.booking_date DESC, t.amount DESC LIMIT 1 OFFSET :offset';
+$stmt = $pdo->prepare($sql);
+foreach ($params as $k => $v) $stmt->bindValue($k, $v);
+$stmt->bindValue(':offset', max(0, $idx), PDO::PARAM_INT);
+$stmt->execute();
+$tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 ?>
 <body>
 <?php include __DIR__ . '/header.php'; ?>
