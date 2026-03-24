@@ -96,8 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   exit;
 }
 
-// Filters
-$accountFilter = $_GET['account'] ?? 'global'; // 'global' = rules with scope_account_id IS NULL
+$accountFilter = $_GET['account'] ?? ''; // default: no account selected
 $categoryFilter = isset($_GET['category']) ? (int)$_GET['category'] : 0;
 
 // Load accounts (ordered by numero_affichage then name) and categories
@@ -230,7 +229,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $bg = ($i % 2 === 0) ? 'silver' : 'gray';
   ?>
     <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>" style="background:<?php echo $bg; ?>">
-      <td rowspan="2" class="small"><?php echo $r['id']; ?></td>
+      <td rowspan="2" class="small" style="font-size:20px;font-weight:bold;text-align:center;vertical-align:middle"><?php echo $r['id']; ?></td>
       <td>
         Critère<br>
         <select name="category_level[<?php echo $r['id']; ?>]" class="select-category-level-row">
@@ -256,7 +255,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </form>
       </td>
     </tr>
-    <tr>
+    <tr style="background:<?php echo $bg; ?>">
       <td>
         Actif<br>
         <input type="checkbox" name="active[<?php echo $r['id']; ?>]" value="1" <?php echo ((int)$r['active']===1)?'checked':''; ?>>
