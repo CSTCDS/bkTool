@@ -25,7 +25,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = (int)$_POST['id'];
     $pattern = $_POST['pattern'] ?? '';
     $is_regex = !empty($_POST['is_regex']) ? 1 : 0;
-    $category_id = isset($_POST['category_id']) ? (int)$_POST['category_id'] : 0;
+    // New fields: category_level (1..4) and valeur_a_affecter (category id to set)
+    $category_level = isset($_POST['category_level']) ? (int)$_POST['category_level'] : 0;
+    $valeur_a_affecter = isset($_POST['valeur_a_affecter']) ? (int)$_POST['valeur_a_affecter'] : 0;
+    // Backwards-compat: use valeur_a_affecter as category_id for older code
+    $category_id = $valeur_a_affecter ?: (isset($_POST['category_id']) ? (int)$_POST['category_id'] : 0);
     $scope_account_id = $_POST['scope_account_id'] !== '' ? ($_POST['scope_account_id'] === 'NULL' ? null : (int)$_POST['scope_account_id']) : null;
     $priority = isset($_POST['priority']) ? (int)$_POST['priority'] : 100;
     $active = !empty($_POST['active']) ? 1 : 0;
@@ -37,8 +41,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $joined = implode('.*', $escaped);
       $pattern = '/' . $joined . '/i';
     }
-    $stmt = $pdo->prepare('UPDATE auto_category_rules SET pattern = :p, is_regex = :ir, category_id = :cid, scope_account_id = :scope, priority = :prio, active = :act WHERE id = :id');
-    $stmt->execute([':p'=>$pattern,':ir'=>$is_regex,':cid'=>$category_id,':scope'=>$scope_account_id,':prio'=>$priority,':act'=>$active,':id'=>$id]);
+    // prefer to update new columns if present (valeur_a_affecter, category_level)
+    $cols = ['pattern = :p', 'is_regex = :ir', 'category_id = :cid', 'scope_account_id = :scope', 'priority = :prio', 'active = :act'];
+    $params = [':p'=>$pattern,':ir'=>$is_regex,':cid'=>$category_id,':scope'=>$scope_account_id,':prio'=>$priority,':act'=>$active,':id'=>$id];
+    // detect additional columns
+    $hasVal = false; $hasLevel = false;
+    try {
+      $desc = $pdo->query("DESCRIBE auto_category_rules")->fetchAll(PDO::FETCH_COLUMN);
+      $hasVal = in_array('valeur_a_affecter', $desc, true);
+      $hasLevel = in_array('category_level', $desc, true);
+    } catch (Throwable $e) { /* ignore - older schema */ }
+    if ($hasVal) { $cols[] = 'valeur_a_affecter = :val'; $params[':val'] = $valeur_a_affecter; }
+    if ($hasLevel) { $cols[] = 'category_level = :clevel'; $params[':clevel'] = $category_level; }
+    $sql = 'UPDATE auto_category_rules SET ' . implode(', ', $cols) . ' WHERE id = :id';
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
   } elseif ($action === 'delete' && !empty($_POST['id'])) {
     $id = (int)$_POST['id'];
     $stmt = $pdo->prepare('DELETE FROM auto_category_rules WHERE id = :id');
@@ -46,7 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   } elseif ($action === 'create') {
     $pattern = $_POST['pattern'] ?? '';
     $is_regex = !empty($_POST['is_regex']) ? 1 : 0;
-    $category_id = isset($_POST['category_id']) ? (int)$_POST['category_id'] : 0;
+    $category_level = isset($_POST['category_level']) ? (int)$_POST['category_level'] : 0;
+    $valeur_a_affecter = isset($_POST['valeur_a_affecter']) ? (int)$_POST['valeur_a_affecter'] : 0;
+    $category_id = $valeur_a_affecter ?: (isset($_POST['category_id']) ? (int)$_POST['category_id'] : 0);
     $scope_account_id = $_POST['scope_account_id'] !== '' ? ($_POST['scope_account_id'] === 'NULL' ? null : (int)$_POST['scope_account_id']) : null;
     $priority = isset($_POST['priority']) ? (int)$_POST['priority'] : 100;
     // If pattern contains % treat it as wildcard -> build regex
@@ -58,8 +77,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $pattern = '/' . $joined . '/i';
     }
     if ($pattern !== '' && $category_id > 0) {
-      $stmt = $pdo->prepare('INSERT INTO auto_category_rules (pattern, is_regex, category_id, scope_account_id, priority, active, created_by) VALUES (:p,:ir,:cid,:scope,:prio,1,:cb)');
-      $stmt->execute([':p'=>$pattern,':ir'=>$is_regex,':cid'=>$category_id,':scope'=>$scope_account_id,':prio'=>$priority,':cb'=>($_SERVER['REMOTE_USER'] ?? null)]);
+      // insert, prefer to include new columns when present
+      $cols = ['pattern','is_regex','category_id','scope_account_id','priority','active','created_by'];
+      $placeholders = [':p',':ir',':cid',':scope',':prio',':act',':cb'];
+      $params = [':p'=>$pattern,':ir'=>$is_regex,':cid'=>$category_id,':scope'=>$scope_account_id,':prio'=>$priority,':act'=>1,':cb'=>($_SERVER['REMOTE_USER'] ?? null)];
+      try {
+        $desc = $pdo->query("DESCRIBE auto_category_rules")->fetchAll(PDO::FETCH_COLUMN);
+        if (in_array('valeur_a_affecter',$desc,true)) { $cols[]='valeur_a_affecter'; $placeholders[]=':val'; $params[':val']=$valeur_a_affecter; }
+        if (in_array('category_level',$desc,true)) { $cols[]='category_level'; $placeholders[]=':clevel'; $params[':clevel']=$category_level; }
+      } catch (Throwable $e) { /* ignore */ }
+      $sql = 'INSERT INTO auto_category_rules (' . implode(',',$cols) . ') VALUES (' . implode(',',$placeholders) . ')';
+      $stmt = $pdo->prepare($sql);
+      $stmt->execute($params);
     }
   }
   // redirect to GET to avoid re-submission
@@ -162,20 +191,16 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <input type="hidden" name="action" value="create">
   <div style="display:flex;gap:8px;align-items:center">
     <input name="pattern" placeholder="Motif / libellé" style="flex:1;padding:8px">
-    <select name="category_id">
-      <option value="0">Choisir catégorie</option>
+    <select name="category_level" class="select-category-level">
+      <option value="0">Choisir critère (1..4)</option>
       <?php for ($ci=1;$ci<=4;$ci++): ?>
-        <?php if (empty($catTree[$ci])) continue; ?>
-        <optgroup label="<?php echo htmlspecialchars($criterionNames[$ci]); ?>">
-          <?php foreach ($catTree[$ci] as $pid => $node): if (!$node['info']) continue; ?>
-            <option value="<?php echo $node['info']['id']; ?>"><?php echo htmlspecialchars($node['info']['label']); ?></option>
-            <?php foreach ($node['children'] as $child): ?>
-              <option value="<?php echo $child['id']; ?>">&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
-            <?php endforeach; ?>
-          <?php endforeach; ?>
-        </optgroup>
+        <option value="<?php echo $ci; ?>"><?php echo $ci . ' - ' . htmlspecialchars($criterionNames[$ci]); ?></option>
       <?php endfor; ?>
     </select>
+    <select name="valeur_a_affecter" class="select-valeur" style="min-width:180px">
+      <option value="0">Valeur à affecter (sélectionner critère)</option>
+    </select>
+    <label style="margin-left:6px"><input type="checkbox" name="is_regex" value="1"> regexp</label>
     <select name="scope_account_id">
       <option value="NULL">Global (tous les comptes)</option>
       <?php foreach ($accounts as $a): ?>
@@ -189,10 +214,13 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <h2>Liste des règles (<?php echo count($rules); ?>)</h2>
 <table>
-  <thead><tr><th>ID</th><th>Motif</th><th>Catégorie</th><th>Compte</th><th>Priorité</th><th>Actif</th><th>Actions</th></tr></thead>
+  <thead><tr><th>ID</th><th>Motif</th><th>Critère</th><th>ValeurAaffecter</th><th>Regexp</th><th>Compte</th><th>Priorité</th><th>Actif</th><th>Actions</th></tr></thead>
   <tbody>
-  <?php foreach ($rules as $r): ?>
-    <tr>
+  <?php foreach ($rules as $r): 
+        $r_level = isset($r['category_level']) ? (int)$r['category_level'] : 0;
+        $r_valeur = isset($r['valeur_a_affecter']) ? (int)$r['valeur_a_affecter'] : ((isset($r['category_id']) ? (int)$r['category_id'] : 0));
+  ?>
+    <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>">
       <td class="small"><?php echo $r['id']; ?></td>
       <td>
         <form method="post" style="display:flex;gap:6px;align-items:center">
@@ -201,19 +229,21 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
           <input name="pattern" value="<?php echo htmlspecialchars($r['pattern']); ?>" style="flex:1;padding:6px">
       </td>
       <td>
-          <select name="category_id">
+          <select name="category_level" class="select-category-level-row">
+            <option value="0">Choisir critère</option>
             <?php for ($ci=1;$ci<=4;$ci++): ?>
-              <?php if (empty($catTree[$ci])) continue; ?>
-              <optgroup label="<?php echo htmlspecialchars($criterionNames[$ci]); ?>">
-                <?php foreach ($catTree[$ci] as $pid => $node): if (!$node['info']) continue; ?>
-                  <option value="<?php echo $node['info']['id']; ?>"<?php echo ((int)$r['category_id'] === (int)$node['info']['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
-                  <?php foreach ($node['children'] as $child): ?>
-                    <option value="<?php echo $child['id']; ?>"<?php echo ((int)$r['category_id'] === (int)$child['id']) ? ' selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
-                  <?php endforeach; ?>
-                <?php endforeach; ?>
-              </optgroup>
+              <option value="<?php echo $ci; ?>"<?php echo ($r_level === $ci) ? ' selected' : ''; ?>><?php echo $ci . ' - ' . htmlspecialchars($criterionNames[$ci]); ?></option>
             <?php endfor; ?>
           </select>
+      </td>
+      <td>
+          <select name="valeur_a_affecter" class="select-valeur-row" style="min-width:180px">
+            <option value="0">Choisir valeur</option>
+            <?php // populate with current rule's criterion categories if any; JS will adjust on change ?>
+          </select>
+      </td>
+      <td style="text-align:center">
+          <input type="checkbox" name="is_regex" value="1" <?php echo (!empty($r['is_regex']) ? 'checked' : ''); ?>>
       </td>
       <td>
           <select name="scope_account_id">
@@ -254,5 +284,53 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
       }
     }
   } catch(e) { /* ignore */ }
+})();
+</script>
+<script>
+// Build JS map of categories per criterion for populating "valeur_a_affecter" selects
+(function(){
+  var catMap = <?php
+    $out = [];
+    for ($ci=1;$ci<=4;$ci++) {
+      $out[$ci] = [];
+      if (!empty($catTree[$ci])) {
+        foreach ($catTree[$ci] as $pid => $node) {
+          if (!$node['info']) continue;
+          $out[$ci][] = ['id' => (int)$node['info']['id'], 'label' => $node['info']['label']];
+          foreach ($node['children'] as $child) { $out[$ci][] = ['id' => (int)$child['id'], 'label' => '  ' . $child['label']]; }
+        }
+      }
+    }
+    echo json_encode($out);
+  ?>;
+
+  function populateVal(selectEl, crit, selectedVal) {
+    if (!selectEl) return;
+    while (selectEl.firstChild) selectEl.removeChild(selectEl.firstChild);
+    var opt = document.createElement('option'); opt.value = '0'; opt.textContent = 'Choisir valeur'; selectEl.appendChild(opt);
+    var list = catMap[crit] || [];
+    list.forEach(function(it){ var o = document.createElement('option'); o.value = String(it.id); o.textContent = it.label; if (String(it.id) === String(selectedVal)) o.selected = true; selectEl.appendChild(o); });
+  }
+
+  // Hook create form selector
+  var levelSel = document.querySelector('select.select-category-level');
+  var valSel = document.querySelector('select.select-valeur');
+  if (levelSel && valSel) {
+    levelSel.addEventListener('change', function(){ populateVal(valSel, this.value, 0); });
+  }
+
+  // For each row, wire level->valeur population and initialize with server values
+  document.querySelectorAll('select.select-category-level-row').forEach(function(lsel){
+    var row = lsel.closest('tr');
+    var vsel = row.querySelector('select.select-valeur-row');
+    var selectedVal = row && row.dataset && row.dataset.rValeur ? row.dataset.rValeur : 0;
+    lsel.addEventListener('change', function(){ populateVal(vsel, this.value, 0); });
+    // initialize using either the select value or the data attribute
+    var initCrit = lsel.value && lsel.value !== '0' ? lsel.value : (row && row.dataset && row.dataset.rLevel ? row.dataset.rLevel : 0);
+    populateVal(vsel, initCrit, selectedVal);
+  });
+
+  // Also initialize any existing rows by triggering change to populate valeurs with selected option
+  document.querySelectorAll('select.select-category-level-row').forEach(function(s){ s.dispatchEvent(new Event('change')); });
 })();
 </script>
