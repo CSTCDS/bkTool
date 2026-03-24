@@ -68,8 +68,13 @@ foreach ($allCats as $c) {
 $accBalances = [];
 foreach ($accs as $a) $accBalances[$a['id']] = (float)($a['balance'] ?? 0);
 
+$showPending = isset($_GET['show_pending']) ? ($_GET['show_pending'] === '1') : true;
+
 // Build WHERE for account filter
-$where = ["UPPER(t.status) = 'BOOK'"];
+$where = [];
+if (!$showPending) {
+  $where[] = "UPPER(t.status) = 'BOOK'";
+}
 $params = [];
 $groupSelected = false;
 $groupAccountIds = [];
@@ -203,6 +208,14 @@ if ($tx && $groupSelected) {
         </option>
       <?php endforeach; endif; ?>
     </select>
+  </div>
+
+  <div class="m-nav" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
+    <div>
+      <button class="btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo max(0,$idx-1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : '') . '&show_pending=' . ($showPending ? '1' : '0'); ?>'">&larr; Préc.</button>
+      <button class="btn" <?php echo ($idx >= $total - 1) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo min($total - 1,$idx+1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : '') . '&show_pending=' . ($showPending ? '1' : '0'); ?>'">Suiv. &rarr;</button>
+    </div>
+    <label style="font-size:.95rem"><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?>> Afficher les opérations en attente</label>
   </div>
 
 <?php if (!$tx): ?>
@@ -355,17 +368,21 @@ if ($tx && $groupSelected) {
         });
     })();
     </script>
-
-  <div class="m-nav">
-    <?php
-      $prevIdx = max(0, $idx - 1);
-      $nextIdx = min($total - 1, $idx + 1);
-      $qs = $acctSel !== '' ? '&account=' . urlencode($acctSel) : '';
-    ?>
-    <button <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo $prevIdx . $qs; ?>'">&larr; Préc.</button>
-    <span class="m-counter"><?php echo ($idx + 1) . ' / ' . $total; ?></span>
-    <button <?php echo ($idx >= $total - 1) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo $nextIdx . $qs; ?>'">Suiv. &rarr;</button>
-  </div>
+    <script>
+    // toggle show pending checkbox handler
+    (function(){
+      var cb = document.getElementById('showPending');
+      if (!cb) return;
+      cb.addEventListener('change', function(){
+        var q = new URLSearchParams(location.search);
+        q.set('show_pending', this.checked ? '1' : '0');
+        // keep same index
+        q.set('idx', '<?php echo $idx; ?>');
+        if ('<?php echo addslashes($acctSel); ?>') q.set('account', '<?php echo addslashes($acctSel); ?>');
+        location.search = q.toString();
+      });
+    })();
+    </script>
 <?php endif; ?>
 </body>
 </html>
