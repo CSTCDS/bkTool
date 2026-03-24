@@ -97,6 +97,14 @@ $stmt->bindValue(':offset', max(0, $idx), PDO::PARAM_INT);
 $stmt->execute();
 $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 ?>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mobile — bkTool</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
 <body>
 <?php include __DIR__ . '/header.php'; ?>
 
