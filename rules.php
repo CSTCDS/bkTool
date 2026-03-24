@@ -161,6 +161,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <label>Compte:
     <select name="account" onchange="this.form.submit()">
       <option value=""<?php echo ($accountFilter==='') ? ' selected' : ''; ?>>-- pas de sélection --</option>
+      <option value="global"<?php echo ($accountFilter==='global') ? ' selected' : ''; ?>>Globales (Tous comptes)</option>
       <?php foreach ($accounts as $a): ?>
         <option value="<?php echo $a['id']; ?>"<?php echo ((string)$accountFilter === (string)$a['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($a['name']); ?></option>
       <?php endforeach; ?>
@@ -220,17 +221,17 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <table>
   <thead>
     <tr>
-      <th rowspan="2">N°</th>
-      <th>Critère</th>
-      <th colspan="2">Motif</th>
-      <th>Regexp</th>
-      <th>Actions</th>
+      <th rowspan="2"></th>
+      <th></th>
+      <th colspan="2"></th>
+      <th></th>
+      <th></th>
     </tr>
     <tr>
-      <th>Actif</th>
-      <th>Compte</th>
-      <th>Priorité</th>
-      <th>Valeur</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
       <th></th>
     </tr>
   </thead>
@@ -239,12 +240,12 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $i++;
         $r_level = isset($r['category_level']) ? (int)$r['category_level'] : 0;
         $r_valeur = isset($r['valeur_a_affecter']) ? (int)$r['valeur_a_affecter'] : ((isset($r['category_id']) ? (int)$r['category_id'] : 0));
-        $bg = ($i % 2 === 0) ? '#f6f7fb' : '#ffffff';
+        $bg = ($i % 2 === 0) ? '#eef6ff' : '#ffffff';
   ?>
     <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>" style="background:<?php echo $bg; ?>">
       <td rowspan="2" class="small"><?php echo $r['id']; ?></td>
       <td>
-        <strong>Critère</strong><br>
+        Critère<br>
         <select name="category_level[<?php echo $r['id']; ?>]" class="select-category-level-row">
           <option value="0">Choisir critère</option>
           <?php for ($ci=1;$ci<=4;$ci++): ?>
@@ -253,11 +254,11 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </select>
       </td>
       <td colspan="2">
-        <strong>Motif</strong><br>
+        Motif<br>
         <input name="pattern[<?php echo $r['id']; ?>]" value="<?php echo htmlspecialchars($r['pattern']); ?>" style="width:100%;padding:6px">
       </td>
       <td>
-        <strong>Regexp</strong><br>
+        Regexp<br>
         <input type="checkbox" name="is_regex[<?php echo $r['id']; ?>]" value="1" <?php echo (!empty($r['is_regex']) ? 'checked' : ''); ?>>
       </td>
       <td>
@@ -270,11 +271,11 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </tr>
     <tr>
       <td>
-        <strong>Actif</strong><br>
+        Actif<br>
         <input type="checkbox" name="active[<?php echo $r['id']; ?>]" value="1" <?php echo ((int)$r['active']===1)?'checked':''; ?>>
       </td>
       <td>
-        <strong>Compte</strong><br>
+        Compte<br>
         <select name="scope_account_id[<?php echo $r['id']; ?>]">
           <option value="">-- pas de sélection --</option>
           <option value="NULL"<?php echo ($r['scope_account_id'] === null ? ' selected' : ''); ?>>Global</option>
@@ -284,11 +285,11 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </select>
       </td>
       <td>
-        <strong>Priorité</strong><br>
+        Priorité<br>
         <input name="priority[<?php echo $r['id']; ?>]" value="<?php echo (int)$r['priority']; ?>" style="width:70px;padding:6px">
       </td>
       <td>
-        <strong>Valeur à affecter</strong><br>
+        Valeur à affecter<br>
         <select name="valeur_a_affecter[<?php echo $r['id']; ?>]" class="select-valeur-row" style="min-width:180px">
           <option value="0">Choisir valeur</option>
         </select>
