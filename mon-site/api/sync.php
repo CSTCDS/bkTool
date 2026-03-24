@@ -133,22 +133,7 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
             return ['action' => 'noop'];
         }
 
-        if ($hasNumImport) {
-            $stmt = $pdo->prepare(
-                'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, NumImport = :num_import, description = :description, booking_date = :booking_date, status = :status, raw = :raw WHERE id = :id'
-            );
-            $stmt->execute([
-                ':id' => $id,
-                ':account_id' => $accountId,
-                ':amount' => $amount,
-                ':currency' => $currency,
-                ':num_import' => $importNum,
-                ':description' => $description,
-                ':booking_date' => $bookingDate,
-                ':status' => $status,
-                ':raw' => $raw
-            ]);
-        } else {
+            // On updates, ne pas modifier NumImport (conserver la valeur existante)
             $stmt = $pdo->prepare(
                 'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, description = :description, booking_date = :booking_date, status = :status, raw = :raw WHERE id = :id'
             );
@@ -162,7 +147,6 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
                 ':status' => $status,
                 ':raw' => $raw
             ]);
-        }
         return ['action' => 'update'];
     }
 }
@@ -197,6 +181,8 @@ function run_sync($pdo, $config)
     } catch (Throwable $e) {
         $importNum = 1;
     }
+    // Expose le numéro d'import calculé dans le résultat pour affichage côté client
+    $result['import_num'] = $importNum;
 
     try {
         $client = new EnableBankingClient($config);

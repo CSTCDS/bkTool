@@ -11,10 +11,12 @@ try {
 }
 require __DIR__ . '/mon-site/api/sync.php';
 
+$importNumFromSync = null;
 // Run sync (may be slow)
 $syncResult = [];
 try {
   $syncResult = run_sync($pdo, $config);
+  if (isset($syncResult['import_num'])) $importNumFromSync = (int)$syncResult['import_num'];
 } catch (Throwable $e) {
   $syncResult = ['errors' => [(string)$e]];
 }
@@ -24,8 +26,13 @@ $stmt = $pdo->prepare('SELECT id, name, balance, alert_threshold FROM accounts O
 $stmt->execute();
 $accs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Determine current import number (most recent NumImport)
-$currentImport = (int)$pdo->query('SELECT COALESCE(MAX(NumImport), 0) FROM transactions')->fetchColumn();
+// Determine current import number: prefer the one computed during sync, else fallback to DB max
+$currentImport = null;
+if ($importNumFromSync !== null) {
+  $currentImport = $importNumFromSync;
+} else {
+  $currentImport = (int)$pdo->query('SELECT COALESCE(MAX(NumImport), 0) FROM transactions')->fetchColumn();
+}
 
 // For each account, fetch received transactions (current import) and last 3 BOOK transactions
 foreach ($accs as &$a) {

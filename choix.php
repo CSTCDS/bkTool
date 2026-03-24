@@ -162,7 +162,7 @@ if (syncBtn) {
     var resultEl = document.getElementById('syncResult');
     var statsEl = document.getElementById('syncStats');
     var jsonEl = document.getElementById('syncJson');
-    resultEl.textContent = 'Synchronisation lancée';
+    resultEl.textContent = 'Synchronisation en cours';
     statsEl.style.display = 'none';
     // Optionally ask for token if configured
     var token = prompt('Token de synchronisation (laisser vide si non configuré)');
