@@ -63,160 +63,67 @@ foreach ($allCats as $c) { $catCriteria[$c['id']] = (int)$c['criterion']; }
 // Build group children map (criterion=0): parent_id => [account_id, ...]
 $groupChildren = [];
 foreach ($allCats as $c) {
-  if ((int)$c['criterion'] === 0 && $c['parent_id'] !== null) {
-    $groupChildren[(int)$c['parent_id']][] = $c['label'];
-  }
-}
-
-// Account balances map
-$accBalances = [];
-foreach ($accs as $a) $accBalances[$a['id']] = (float)($a['balance'] ?? 0);
-
-$showPending = isset($_GET['show_pending']) ? ($_GET['show_pending'] === '1') : true;
-
-// Build WHERE for account filter
-$where = [];
-if (!$showPending) {
-  $where[] = "UPPER(t.status) = 'BOOK'";
-}
-$params = [];
-$groupSelected = false;
-$groupAccountIds = [];
-if ($acctSel !== '') {
-  if (is_string($acctSel) && strpos($acctSel, 'g:') === 0) {
-    $gid = (int)substr($acctSel, 2);
-    $acctIds = $groupChildren[$gid] ?? [];
-    $groupAccountIds = $acctIds;
-    if (!empty($acctIds)) {
-      $groupSelected = true;
-      $placeholders = [];
-      foreach ($acctIds as $i => $aid) {
-        $ph = ':g_' . $gid . '_' . $i;
-        $placeholders[] = $ph;
-        $params[$ph] = $aid;
+    (function(){
+      let txId = <?php echo json_encode($tx['id'] ?? ''); ?>;
+      if (!txId) {
+        const f = document.querySelector('.m-cats form[data-txid]');
+        if (f && f.dataset && f.dataset.txid) txId = f.dataset.txid;
       }
-      $where[] = 't.account_id IN (' . implode(',', $placeholders) . ')';
-    }
-  } else {
-    $where[] = 't.account_id = :account';
-    $params[':account'] = $acctSel;
-  }
-}
+      if (!txId) return;
+      const catLabels = <?php echo json_encode($catLabels); ?>;
+      const catCriteria = <?php echo json_encode($catCriteria); ?>;
 
-$whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
+      function showToast(msg, type) {
+        var t = document.getElementById('toast'); if (!t) return; t.className=''; if (type==='success') t.classList.add('toast-success'); if (type==='error') t.classList.add('toast-error'); t.textContent = msg; t.style.display='block'; setTimeout(function(){ t.style.display='none'; t.className=''; },3500);
+      }
 
-// Count total BOOK rows
-$countSql = 'SELECT COUNT(*) FROM transactions t' . $whereSql;
-$stmt = $pdo->prepare($countSql);
-$stmt->execute($params);
-$total = (int)$stmt->fetchColumn();
-// If tx_id supplied, load that transaction directly (used when opening from transactions list)
-$tx = null;
-$requestedTxId = isset($_GET['tx_id']) ? (int)$_GET['tx_id'] : 0;
-if ($requestedTxId) {
-  $sql = 'SELECT t.*, a.name AS account_name, a.balance AS account_balance FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id WHERE t.id = :tid LIMIT 1';
-  $stmt = $pdo->prepare($sql);
-  $stmt->execute([':tid' => $requestedTxId]);
-  $tx = $stmt->fetch(PDO::FETCH_ASSOC);
-  $idx = 0;
-} else {
-  // Current index (0-based)
-  $idx = max(0, min((int)($_GET['idx'] ?? 0), $total - 1));
+      function findFormForField(field) {
+        let f = document.querySelector('.m-cats form[data-field="'+field+'"][data-txid="'+txId+'"]'); if (f) return f;
+        f = document.querySelector('.m-cats form[data-field="'+field+'"]'); if (f) return f;
+        const forms = Array.from(document.querySelectorAll('.m-cats form'));
+        for (const fr of forms) { const hf = fr.querySelector('input[name="field"]'); if (hf && hf.value===field) return fr; }
+        return null;
+      }
 
-    // Fetch single row at offset
-    $sql = 'SELECT t.*, a.name AS account_name, a.balance AS account_balance
-      FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id'
-      . $whereSql . '
-      ORDER BY t.booking_date DESC, t.amount DESC
-      LIMIT 1 OFFSET :off';
-  $stmt = $pdo->prepare($sql);
-  foreach ($params as $k => $v) $stmt->bindValue($k, $v);
-  $stmt->bindValue(':off', $idx, PDO::PARAM_INT);
-  $stmt->execute();
-  $tx = $stmt->fetch(PDO::FETCH_ASSOC);
-}
-
-// Compute Solde (per-account balance at this position)
-$displayBalance = null;
-if ($tx) {
-  $accountBalance = (float)($tx['account_balance'] ?? 0.0);
-  $displayBalance = $accountBalance;
-  if ($idx > 0) {
-    $subWhere = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
-    $sumSql = 'SELECT COALESCE(SUM(sub.amount), 0) FROM (
-      SELECT t.amount, t.account_id FROM transactions t'
-      . $subWhere . '
-      ORDER BY t.booking_date DESC, t.amount DESC
-      LIMIT :lim
-    ) sub WHERE sub.account_id = :cur_acct';
-    $sumStmt = $pdo->prepare($sumSql);
-    foreach ($params as $k => $v) $sumStmt->bindValue($k, $v);
-    $sumStmt->bindValue(':lim', $idx, PDO::PARAM_INT);
-    $sumStmt->bindValue(':cur_acct', $tx['account_id']);
-    $sumStmt->execute();
-    $displayBalance = $accountBalance - (float)$sumStmt->fetchColumn();
-  }
-}
-
-// pending flag
-$isPending = $tx ? (strtoupper((string)($tx['status'] ?? '')) !== 'BOOK') : false;
-
-// Compute Solde virtuel (group total balance at this position)
-$groupVirtualBalance = null;
-if ($tx && $groupSelected) {
-  $groupStartBalance = 0.0;
-  foreach ($groupAccountIds as $aid) {
-    $groupStartBalance += (float)($accBalances[$aid] ?? 0.0);
-  }
-  $groupVirtualBalance = $groupStartBalance;
-  if ($idx > 0) {
-    $subWhere = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
-    $gSumSql = 'SELECT COALESCE(SUM(sub.amount), 0) FROM (
-      SELECT t.amount FROM transactions t' . $subWhere . '
-      ORDER BY t.booking_date DESC, t.amount DESC
-      LIMIT :lim
-    ) sub';
-    $gSumStmt = $pdo->prepare($gSumSql);
-    foreach ($params as $k => $v) $gSumStmt->bindValue($k, $v);
-    $gSumStmt->bindValue(':lim', $idx, PDO::PARAM_INT);
-    $gSumStmt->execute();
-    $groupVirtualBalance = $groupStartBalance - (float)$gSumStmt->fetchColumn();
-  }
-}
-?><!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>bkTool — Mobile</title>
-  <link rel="stylesheet" href="assets/css/style.css">
-  <style>
-    body{margin:0;padding:8px;font-size:17px}
-    .m-header{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
-    .m-header .site-title{font-size:1.1rem}
-    .m-account select{width:100%;padding:8px;font-size:1rem;border-radius:6px;border:1px solid #ccc}
-    .m-card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.08)}
-    .m-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0}
-    .m-row:last-child{border-bottom:none}
-    .m-label{font-weight:600;color:#666;font-size:.9rem}
-    .m-value{text-align:right;font-size:.95rem}
-    .m-desc{flex-direction:column}
-    .m-desc .m-value{text-align:left;margin-top:4px;color:#444}
-    .m-cats{margin-top:12px}
-    .m-cats select{width:100%;padding:8px;font-size:.95rem;border-radius:6px;border:1px solid #ccc;margin-bottom:8px}
-    .m-nav{display:flex;justify-content:space-between;align-items:center;padding:12px 0}
-    .m-nav button{padding:12px 24px;font-size:1rem;border-radius:8px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer}
-    .m-nav button:disabled{opacity:.4;cursor:default}
-    .m-nav .arrow-btn{padding:6px 10px;font-size:1rem;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer;margin-right:6px}
-    .m-nav .arrow-btn:disabled{opacity:.4;cursor:default}
-    .m-counter{font-size:.9rem;color:#666}
-    .m-empty{text-align:center;padding:40px 0;color:#999}
-    /* Toast */
-    #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;min-width:200px;padding:10px 16px;border-radius:8px;background:rgba(0,0,0,0.8);color:#fff;display:none;z-index:9999}
-    #toast.toast-success{background:linear-gradient(90deg,#2e7d32,#388e3c)}
-    #toast.toast-error{background:linear-gradient(90deg,#c62828,#d32f2f)}
-  </style>
-</head>
+      fetch('./mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId) + '&debug=1')
+        .then(r=>{ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+        .then(dd=>{
+          // clear placeholders
+          document.querySelectorAll('.suggestions-placeholder').forEach(function(p){ p.innerHTML = ''; });
+          // group rules by criterion
+          if (dd && Array.isArray(dd.rules)) {
+            dd.rules.forEach(function(r){
+              var crit = (catCriteria[r.category_id] || 0);
+              if (crit < 1 || crit > 4) return;
+              var container = document.getElementById('suggestions_cat'+crit);
+              if (!container) return;
+              var item = document.createElement('div'); item.style.padding='8px'; item.style.border='1px solid #eaeaea'; item.style.borderRadius='6px'; item.style.marginBottom='6px';
+              var title = document.createElement('div'); title.textContent = (catLabels[r.category_id] || ('#'+r.category_id)) + ' — ' + r.pattern; title.style.fontWeight='600'; item.appendChild(title);
+              var actions = document.createElement('div'); actions.style.marginTop='6px'; actions.style.display='flex'; actions.style.gap='8px';
+              var applyBtn = document.createElement('button'); applyBtn.className='btn'; applyBtn.textContent='Appliquer'; applyBtn.onclick = function(){
+                var fd = new FormData(); fd.append('rule_id', r.id); fd.append('tx_id', txId);
+                fetch('./mon-site/api/apply_rule.php', { method:'POST', body: fd }).then(rr=>rr.json()).then(function(ar){ if (ar && ar.ok) {
+                  var field = ar.field; var form = findFormForField(field); if (form) { var sel = form.querySelector('select[name="value"]'); if (sel) { sel.value = String(ar.new); sel.style.background='orange'; setTimeout(()=>sel.style.background='',3000); } }
+                  showToast('Appliqué', 'success'); } else { showToast('Erreur application', 'error'); } }).catch(function(e){ console.error(e); showToast('Erreur réseau', 'error'); });
+              };
+              actions.appendChild(applyBtn);
+              item.appendChild(actions);
+              container.appendChild(item);
+            });
+          }
+          // For each category placeholder always show 'Créer une règle sur catégorie N°'
+          document.querySelectorAll('.suggestions-placeholder').forEach(function(p){
+            var crit = p.getAttribute('data-crit');
+            var createBtn = document.createElement('button'); createBtn.className='btn'; createBtn.textContent = 'Créer une règle sur catégorie N°' + crit;
+            createBtn.onclick = function(){
+              var manualCat = prompt('ID de la catégorie à assigner (entier) — laisser vide pour annuler'); if (!manualCat) return;
+              var fd = new FormData(); fd.append('pattern', <?php echo json_encode($tx['description'] ?? ''); ?>); fd.append('is_regex','0'); fd.append('category_id', manualCat); fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>); fd.append('priority','100');
+              fetch('./mon-site/api/create_rule.php',{method:'POST', body: fd}).then(r=>r.json()).then(function(resp){ if (resp && resp.ok && resp.rule_id) { var afd = new FormData(); afd.append('rule_id', resp.rule_id); afd.append('tx_id', txId); return fetch('./mon-site/api/apply_rule.php',{method:'POST', body: afd}).then(r2=>r2.json()); } else throw new Error('create failed'); }).then(function(ar){ if (ar && ar.ok) { var field = ar.field; var form = findFormForField(field); if (form) { var sel = form.querySelector('select[name="value"]'); if (sel) { sel.value = String(ar.new); sel.style.background='orange'; setTimeout(()=>sel.style.background='',3000); } } showToast('Règle créée et appliquée','success'); } else showToast('Erreur application','error'); }).catch(function(e){ console.error(e); showToast('Erreur réseau ou création','error'); });
+            };
+            p.appendChild(createBtn);
+          });
+        }).catch(function(e){ console.error('suggest fetch error', e); });
+    })();
 <body>
 <?php include __DIR__ . '/header.php'; ?>
 
@@ -266,18 +173,6 @@ if ($tx && $groupSelected) {
   </div>
 
   <div class="m-cats">
-    <div id="suggestionDebugPanel" style="background:#fff8e1;border:1px solid #ffecb3;padding:8px;border-radius:6px;margin-bottom:8px;font-size:.9rem;color:#333">Debug suggestions: initialising...</div>
-    <?php for ($ci = 1; $ci <= 4; $ci++): ?>
-      <div id="suggestionBox_<?php echo $ci; ?>" style="display:none;background:#eef7ff;border:1px solid #cfe8ff;padding:10px;border-radius:6px;margin-bottom:8px">
-        <strong>Suggestion <?php echo $ci; ?> :</strong> <span id="suggestLabel_<?php echo $ci; ?>"></span>
-        <div style="margin-top:8px;display:flex;gap:8px">
-          <button data-ci="<?php echo $ci; ?>" class="applySuggestion btn">Appliquer</button>
-          <button data-ci="<?php echo $ci; ?>" class="createRule btn">Créer règle</button>
-          <button data-ci="<?php echo $ci; ?>" class="ignoreSuggestion btn">Ignorer</button>
-        </div>
-        <pre id="suggestDebug_<?php echo $ci; ?>" style="display:none;padding:8px;background:#f7f7f7;border:1px solid #eee;margin-top:8px"></pre>
-      </div>
-    <?php endfor; ?>
     <?php for ($ci = 1; $ci <= 4; $ci++):
       $field = "cat{$ci}_id";
       $curVal = $tx[$field] ?? null;
@@ -298,6 +193,7 @@ if ($tx && $groupSelected) {
           <?php endforeach; endif; ?>
         </select>
       </form>
+      <div class="suggestions-placeholder" id="suggestions_cat<?php echo $ci; ?>" data-crit="<?php echo $ci; ?>" style="margin:8px 0"></div>
     <?php endfor; ?>
   </div>
 
