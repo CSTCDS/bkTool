@@ -25,9 +25,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['tx_id']) && !empty($
   exit;
 }
 
-// Accounts list
-$accs = $pdo->query('SELECT id, name, balance FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+  // Prevent client/browser caching of the mobile review page
+  header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+  header('Pragma: no-cache');
+  header('Expires: 0');
+
+// Accounts list: order by numero_affichage (NULLs last), then numero_affichage, then name
+$accs = $pdo->query('SELECT id, name, balance, currency, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage ASC, name ASC')->fetchAll(PDO::FETCH_ASSOC);
 $acctSel = $_GET['account'] ?? ($_COOKIE['selected_account'] ?? '');
+
+// Build quick maps for balances and names
+$accBalances = [];
+foreach ($accs as $a) { $accBalances[$a['id']] = (float)($a['balance'] ?? 0.0); }
+
+// Build group children map from categories criterion=0 (label expected to contain account id)
+$groupChildren = [];
+foreach ($allCats as $c) {
+  if ((int)$c['criterion'] === 0 && $c['parent_id'] !== null) {
+    $groupChildren[(int)$c['parent_id']][] = $c['label'];
+  }
+}
 
 // Defaults for variables that may be missing in some environments (avoid PHP notices)
 $idx = isset($_GET['idx']) ? (int)$_GET['idx'] : 0;
@@ -96,6 +113,38 @@ foreach ($params as $k => $v) $stmt->bindValue($k, $v);
 $stmt->bindValue(':offset', max(0, $idx), PDO::PARAM_INT);
 $stmt->execute();
 $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+
+// compute displayBalance and groupVirtualBalance for this tx (similar to transactions.php)
+$displayBalance = null;
+$groupVirtualBalance = null;
+if ($tx) {
+  $acctId = $tx['account_id'];
+  $startBal = $accBalances[$acctId] ?? 0.0;
+  $sumNewer = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id = :aid AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND UPPER(status) = 'BOOK'");
+  $sumNewer->execute([':aid' => $acctId, ':bdate' => $tx['booking_date'], ':id' => $tx['id']]);
+  $newer = (float)$sumNewer->fetchColumn();
+  $displayBalance = $startBal - $newer;
+
+  // group virtual balance if account selection is a group 'g:ID'
+  if (is_string($acctSel) && strpos($acctSel, 'g:') === 0) {
+    $gid = (int)substr($acctSel, 2);
+    $acctIds = $groupChildren[$gid] ?? [];
+    $groupStart = 0.0;
+    foreach ($acctIds as $aid) { if (isset($accBalances[$aid])) $groupStart += $accBalances[$aid]; }
+    if (!empty($acctIds)) {
+      $placeholders = [];
+      $bindings = [];
+      foreach ($acctIds as $i => $aid) { $ph = ':g' . $i; $placeholders[] = $ph; $bindings[$ph] = $aid; }
+      $q = 'SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (' . implode(',', $placeholders) . ') AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND UPPER(status) = "BOOK"';
+      $stmtg = $pdo->prepare($q);
+      $stmtg->bindValue(':bdate', $tx['booking_date']); $stmtg->bindValue(':id', $tx['id']);
+      foreach ($bindings as $k => $v) $stmtg->bindValue($k, $v);
+      $stmtg->execute();
+      $groupNewer = (float)$stmtg->fetchColumn();
+      $groupVirtualBalance = $groupStart - $groupNewer;
+    }
+  }
+}
 ?>
 <!doctype html>
 <html>
@@ -184,6 +233,15 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         </select>
       </form>
       <div class="suggestions-placeholder" id="suggestions_cat<?php echo $ci; ?>" data-crit="<?php echo $ci; ?>" style="margin:8px 0"></div>
+      <div id="suggestionBox_<?php echo $ci; ?>" class="suggestion-box" style="display:none;border:1px solid #e0e0e0;padding:8px;border-radius:6px;margin-bottom:8px;background:#fff">
+        <div id="suggestLabel_<?php echo $ci; ?>" style="font-weight:700;margin-bottom:6px"></div>
+        <div id="suggestDebug_<?php echo $ci; ?>" style="display:none;font-family:monospace;white-space:pre-wrap;margin-bottom:6px;color:#444"></div>
+        <div style="display:flex;gap:8px">
+          <button class="applySuggestion btn">Appliquer</button>
+          <button class="createRule btn">Créer une règle</button>
+          <button class="ignoreSuggestion btn">Ignorer</button>
+        </div>
+      </div>
     <?php endfor; ?>
   </div>
 
