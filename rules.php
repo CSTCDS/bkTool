@@ -169,23 +169,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <option value="<?php echo $a['id']; ?>"<?php echo ((string)$accountFilter === (string)$a['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($a['name']); ?></option>
       <?php endforeach; ?>
       <option value="any"<?php echo ($accountFilter==='any')?' selected':''; ?>>Toutes (globales+comptes)</option>
-    <table>
-      <thead>
-        <tr style="background:#ccc;color:#111">
-          <th rowspan="2">N°</th>
-          <th>Critère</th>
-          <th colspan="2">Motif</th>
-          <th>Regexp</th>
-          <th>Actions</th>
-        </tr>
-        <tr style="background:#ddd;color:#111">
-          <th>Actif</th>
-          <th>Compte</th>
-          <th>Priorité</th>
-          <th>Valeur</th>
-          <th></th>
-        </tr>
-      </thead>
+    </select>
   </label>
   <button class="btn" type="submit">Filtrer</button>
 </form>
@@ -223,18 +207,18 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php if ($accountFilter !== ''): ?>
 <table>
   <thead>
-    <tr>
-      <th rowspan="2"><b>Listes des règles</b></th>
-      <th></th>
-      <th colspan="2"></th>
-      <th></th>
-      <th></th>
+    <tr style="background:#ccc;color:#111">
+      <th rowspan="2">N°</th>
+      <th>Critère</th>
+      <th colspan="2">Motif</th>
+      <th>Regexp</th>
+      <th>Actions</th>
     </tr>
-    <tr>
-      <th></th>
-      <th></th>
-      <th></th>
-      <th></th>
+    <tr style="background:#ddd;color:#111">
+      <th>Actif</th>
+      <th>Compte</th>
+      <th>Priorité</th>
+      <th>Valeur</th>
       <th></th>
     </tr>
   </thead>
