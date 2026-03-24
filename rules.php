@@ -287,7 +287,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
           <input type="hidden" name="priority" value="0">
           <input type="hidden" name="valeur_a_affecter" value="0">
           <input type="hidden" name="active" value="0">
-          <button class="btn" type="button" onclick="submitRuleUpdate(<?php echo $r['id']; ?>)">Modifier</button>
+          <button class="btn" type="button" onclick="showRuleSql(<?php echo $r['id']; ?>)">Modifier</button>
           <button class="btn danger" type="submit" name="action" value="delete" onclick="return confirm('Supprimer la règle ?');">Supprimer</button>
         </form>
       </td>
@@ -347,6 +347,39 @@ function submitRuleUpdate(id){
     form.elements['active'].value = (activeEl && activeEl.checked) ? 1 : 0;
     form.submit();
   }catch(e){ console.error(e); alert('Erreur soumission'); }
+}
+
+function showRuleSql(id){
+  try{
+    function byName(n){ var els = document.getElementsByName(n+'['+id+']'); return (els && els.length>0)?els[0]:null; }
+    var patternEl = byName('pattern');
+    var pattern = patternEl ? patternEl.value.replace(/'/g, "''") : '';
+    var isRegexEl = document.getElementsByName('is_regex['+id+']')[0] || document.querySelector('[name="is_regex['+id+']"]');
+    var is_regex = (isRegexEl && isRegexEl.checked) ? 1 : 0;
+    var lvlEl = byName('category_level');
+    var category_level = lvlEl ? lvlEl.value : 0;
+    var valEl = document.getElementsByName('valeur_a_affecter['+id+']')[0] || document.querySelector('select[name="valeur_a_affecter['+id+']"]');
+    var valeur = valEl ? valEl.value : 0;
+    var scopeEl = document.getElementsByName('scope_account_id['+id+']')[0] || document.querySelector('select[name="scope_account_id['+id+']"]');
+    var scope = scopeEl ? scopeEl.value : '';
+    var prioEl = byName('priority');
+    var priority = prioEl ? prioEl.value : 0;
+    var activeEl = document.getElementsByName('active['+id+']')[0] || document.querySelector('[name="active['+id+']"]');
+    var active = (activeEl && activeEl.checked) ? 1 : 0;
+
+    // normalize scope for SQL: empty -> NULL, 'NULL' -> NULL, numeric -> number
+    var scope_sql = 'NULL';
+    if (scope && scope !== 'NULL') {
+      var n = parseInt(scope,10);
+      scope_sql = isNaN(n) ? 'NULL' : n;
+    }
+
+    var sql = "UPDATE auto_category_rules SET pattern = '" + pattern + "', is_regex = " + is_regex + ", category_id = " + (valeur || 0) + ", scope_account_id = " + scope_sql + ", priority = " + (priority || 0) + ", active = " + active + ", valeur_a_affecter = " + (valeur || 0) + ", category_level = " + (category_level || 0) + " WHERE id = " + id + ";";
+
+    if (confirm('SQL généré:\n\n' + sql + '\n\nExécuter cette mise à jour ?')){
+      submitRuleUpdate(id);
+    }
+  }catch(e){ console.error(e); alert('Erreur génération SQL'); }
 }
 </script>
 <script>
