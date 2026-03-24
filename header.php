@@ -12,6 +12,8 @@ $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
     <a href="transactions.php"<?php echo ($current === 'transactions.php') ? ' class="active"' : ''; ?>>Transactions</a>
     <a href="categories.php"<?php echo ($current === 'categories.php') ? ' class="active"' : ''; ?>>Paramètres</a>
     <a href="choix.php"<?php echo ($current === 'choix.php') ? ' class="active"' : ''; ?>>Banque</a>
+    <a href="synchsmart.php"<?php echo ($current === 'synchsmart.php') ? ' class="active"' : ''; ?>>Sync. Mobile</a>
+    <a href="#" id="closeApp" style="display:none">Fermer l'appli</a>
   </nav>
 </div>
 <script>
@@ -40,5 +42,25 @@ document.getElementById('hamburgerBtn').addEventListener('click', function(){
       if (href) location.href = href;
     });
   });
+  // Show "Fermer l'appli" option and handle close action in PWA
+  var closeLink = document.getElementById('closeApp');
+  if (closeLink) {
+    closeLink.style.display = 'inline-block';
+    closeLink.addEventListener('click', function(e){
+      e.preventDefault();
+      // Try to close the window; many browsers ignore this if not opened via script.
+      try {
+        window.close();
+      } catch (ex) {}
+      // As a fallback, navigate to about:blank then attempt close again.
+      setTimeout(function(){
+        try { location.href = 'about:blank'; window.close(); } catch (ex) {}
+        // Final fallback: prompt user to close the app manually.
+        setTimeout(function(){
+          if (!document.hidden) alert('Pour fermer l\'application, utilisez la navigation système (fermer / revenir).');
+        }, 300);
+      }, 200);
+    });
+  }
 })();
 </script>
