@@ -304,13 +304,14 @@ foreach ($allCats as $c) {
     <?php if (!empty($accounts)): ?>
       <style>
         .accounts-accordion .acc-item { border:1px solid #eee; margin-bottom:8px; border-radius:6px; overflow:hidden; }
-        .accounts-accordion .acc-header { width:100%; text-align:left; padding:10px; background:#f7f7f7; border:none; display:flex; justify-content:space-between; align-items:center; font-weight:600; cursor:pointer; }
+        .accounts-accordion .acc-header { width:100%; text-align:left; padding:10px; background:#e6e6e6; border:none; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+        .accounts-accordion .acc-header .acc-title a { font-weight:700; color:inherit; text-decoration:none; }
         .accounts-accordion .acc-body { padding:12px; background:#fff; }
         .acc-form label { display:block; font-weight:600; margin-bottom:4px; }
         .acc-form .field { margin-bottom:8px; }
         .acc-form input[type="text"], .acc-form input[type="number"], .acc-form select, .acc-form input[type="color"] { width:100%; padding:6px; box-sizing:border-box; }
-        .acc-grid { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-        @media (max-width:700px) { .acc-grid { grid-template-columns: 1fr; } }
+        .acc-grid { display:grid; grid-template-columns: 220px 1fr; gap:12px; align-items:center; }
+        @media (max-width:700px) { .acc-grid { grid-template-columns: 1fr; } .acc-grid .label { margin-bottom:4px; } }
         .acc-meta { font-weight:400; color:#666; font-size:0.95rem }
       </style>
 
@@ -318,18 +319,29 @@ foreach ($allCats as $c) {
         <?php $first = true; foreach ($accounts as $ac): ?>
           <div class="acc-item<?php echo $first ? ' open' : ''; ?>" data-acc-id="<?php echo htmlspecialchars($ac['id']); ?>">
             <button type="button" class="acc-header">
-              <span class="acc-title"><?php echo htmlspecialchars($ac['name'] ?: $ac['id']); ?></span>
+              <span class="acc-title"><a href="#" class="acc-rename" data-acc-id="<?php echo htmlspecialchars($ac['id']); ?>"><?php echo htmlspecialchars($ac['name'] ?: $ac['id']); ?></a></span>
               <span class="acc-meta"><?php echo htmlspecialchars($ac['currency'] ?? ''); ?> — Solde <?php echo htmlspecialchars((string)($ac['balance'] ?? '0')); ?></span>
             </button>
             <div class="acc-body" <?php echo $first ? '' : 'style="display:none"'; ?>>
               <form method="post" class="acc-form">
                 <div class="acc-grid">
-                  <div class="field"><label>Numéro affichage</label><input type="number" name="numero_affichage" value="<?php echo htmlspecialchars((string)($ac['numero_affichage'] ?? '')); ?>"></div>
-                  <div class="field"><label>Libellé</label><input type="text" name="name" value="<?php echo htmlspecialchars($ac['name'] ?? ''); ?>" required></div>
-                  <div class="field"><label>Devise</label><input type="text" name="currency" value="<?php echo htmlspecialchars($ac['currency'] ?? ''); ?>"></div>
-                  <div class="field"><label>Couleur</label><input type="color" name="color" value="<?php echo htmlspecialchars($ac['color'] ?? '#000000'); ?>"></div>
-                  <div class="field"><label>Seuil alerte</label><input type="number" step="0.01" name="alert_threshold" value="<?php echo htmlspecialchars((string)($ac['alert_threshold'] ?? '')); ?>" placeholder="ex: -50.00"></div>
-                  <div class="field"><label>Dernière MAJ</label><div><?php echo htmlspecialchars((string)($ac['updated_at'] ?? '')); ?></div></div>
+                  <div class="cell label">Numéro affichage</div>
+                  <div class="cell value"><input type="number" name="numero_affichage" value="<?php echo htmlspecialchars((string)($ac['numero_affichage'] ?? '')); ?>"></div>
+
+                  <div class="cell label">Libellé</div>
+                  <div class="cell value"><input type="text" name="name" value="<?php echo htmlspecialchars($ac['name'] ?? ''); ?>" required></div>
+
+                  <div class="cell label">Devise</div>
+                  <div class="cell value"><input type="text" name="currency" value="<?php echo htmlspecialchars($ac['currency'] ?? ''); ?>"></div>
+
+                  <div class="cell label">Couleur</div>
+                  <div class="cell value"><input type="color" name="color" value="<?php echo htmlspecialchars($ac['color'] ?? '#000000'); ?>"></div>
+
+                  <div class="cell label">Seuil alerte</div>
+                  <div class="cell value"><input type="number" step="0.01" name="alert_threshold" value="<?php echo htmlspecialchars((string)($ac['alert_threshold'] ?? '')); ?>" placeholder="ex: -50.00"></div>
+
+                  <div class="cell label">Dernière MAJ</div>
+                  <div class="cell value"><?php echo htmlspecialchars((string)($ac['updated_at'] ?? '')); ?></div>
                 </div>
                 <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><input type="hidden" name="action" value="edit_account"><input type="hidden" name="account_id" value="<?php echo htmlspecialchars($ac['id']); ?>"><button type="submit">Enregistrer</button></div>
               </form>
@@ -342,7 +354,13 @@ foreach ($allCats as $c) {
         (function(){
           var acc = document.querySelectorAll('.accounts-accordion .acc-item');
           function closeAll(){ acc.forEach(function(item){ item.classList.remove('open'); var body = item.querySelector('.acc-body'); if(body) body.style.display='none'; }); }
-          acc.forEach(function(item){ var header = item.querySelector('.acc-header'); header.addEventListener('click', function(){ var open = item.classList.contains('open'); if(open){ item.classList.remove('open'); item.querySelector('.acc-body').style.display='none'; } else { closeAll(); item.classList.add('open'); item.querySelector('.acc-body').style.display='block'; } }); });
+          acc.forEach(function(item){ var header = item.querySelector('.acc-header'); header.addEventListener('click', function(){ var open = item.classList.contains('open'); if(open){ item.classList.remove('open'); item.querySelector('.acc-body').style.display='none'; } else { closeAll(); item.classList.add('open'); item.querySelector('.acc-body').style.display='block'; } });
+
+            // rename handler on the account name link
+            var renameLink = item.querySelector('.acc-rename');
+            if(renameLink){ renameLink.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); var accId = this.getAttribute('data-acc-id'); var current = this.textContent || ''; var newName = prompt('Nouveau libellé pour le compte', current); if(newName === null) return; newName = newName.trim(); if(newName === '' || newName === current) return; var fd = new FormData(); fd.append('action','edit_account'); fd.append('account_id', accId); fd.append('name', newName);
+                fetch(location.pathname + location.search, { method: 'POST', body: fd }).then(function(r){ if(r.ok) location.reload(); else alert('Erreur lors du renommage'); }).catch(function(){ alert('Erreur réseau'); }); }); }
+          });
         })();
       </script>
     <?php else: ?>
