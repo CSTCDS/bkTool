@@ -136,8 +136,8 @@ try {
     main{display:block;padding:12px}
     /* Ensure each section clears floats and takes full width */
     main > section{display:block;width:100%;clear:both}
-    /* chart section: center the chart and limit its size to 90vw / 60vh */
-    main > section:last-of-type{display:flex;justify-content:center;align-items:center}
+    /* chart block (independent) : center the chart and limit its size to 90vw / 60vh */
+    #dashboardBlock{display:flex;justify-content:center;align-items:center;padding:12px}
     #chartWrapper{width:90%;max-width:90vw;height:60vh;display:flex;align-items:stretch;overflow:hidden;margin:0 auto}
     #chart{display:block;max-width:100% !important;width:100% !important;height:100% !important}
   </style>
@@ -149,31 +149,36 @@ try {
     <h2>Solde total : <?php echo htmlspecialchars((string)$total); ?> </h2>
   </section>
 
-  <section>
-    <h3>Historique (exemple)</h3>
-    <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
-      <label>Type de graphique:
-        <select id="chartType">
-          <option value="balance">Solde compte</option>
-          <option value="category_month">Graphique mensuel sur une catégorie</option>
-        </select>
-      </label>
-      <label id="cat1Wrap" style="display:none">Catégorie:
-        <select id="cat1Select"><option value="all">— Tous —</option></select>
-      </label>
-      <label id="cat2Wrap" style="display:none">Niveau 1 sélectionné -> Niveau 2:
-        <select id="cat2Select"><option value="all">— Tous —</option></select>
-      </label>
-      <label style="margin-left:12px">Type:
-        <select id="chartStyle"><option value="line">Graph lignes</option><option value="bar">Graph à barres mensuelles</option></select>
-      </label>
-      <label style="margin-left:8px;display:none" id="barModeWrap">Mode barres:
-        <select id="barMode"><option value="cumulative">Cumuler</option><option value="split">Séparer débit/crédit</option></select>
-      </label>
-      <button id="chartRefresh">Rafraîchir</button>
+  </main>
+
+  <!-- Dashboard block moved out of main -->
+  <div id="dashboardBlock">
+    <div style="width:100%;max-width:1100px">
+      <h3>Historique (exemple)</h3>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+        <label>Type de graphique:
+          <select id="chartType">
+            <option value="balance">Solde compte</option>
+            <option value="category_month">Graphique mensuel sur une catégorie</option>
+          </select>
+        </label>
+        <label id="cat1Wrap" style="display:none">Catégorie:
+          <select id="cat1Select"><option value="all">— Tous —</option></select>
+        </label>
+        <label id="cat2Wrap" style="display:none">Niveau 1 sélectionné -> Niveau 2:
+          <select id="cat2Select"><option value="all">— Tous —</option></select>
+        </label>
+        <label style="margin-left:12px">Type:
+          <select id="chartStyle"><option value="line">Graph lignes</option><option value="bar">Graph à barres mensuelles</option></select>
+        </label>
+        <label style="margin-left:8px;display:none" id="barModeWrap">Mode barres:
+          <select id="barMode"><option value="cumulative">Cumuler</option><option value="split">Séparer débit/crédit</option></select>
+        </label>
+        <button id="chartRefresh">Rafraîchir</button>
+      </div>
+      <div id="chartWrapper"><canvas id="chart"></canvas></div>
     </div>
-    <div id="chartWrapper"><canvas id="chart"></canvas></div>
-  </section>
+  </div>
 
   <!-- Links removed: Voir transactions & Connecter une banque (now in Banque) -->
 </main>
