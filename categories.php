@@ -311,7 +311,6 @@ foreach ($allCats as $c) {
         .acc-form .field { margin-bottom:8px; }
         .acc-form input[type="text"], .acc-form input[type="number"], .acc-form select, .acc-form input[type="color"] { width:100%; padding:6px; box-sizing:border-box; }
         .acc-grid { display:grid; grid-template-columns: 220px 1fr; gap:12px; align-items:center; }
-        @media (max-width:700px) { .acc-grid { grid-template-columns: 1fr; } .acc-grid .label { margin-bottom:4px; } }
         .acc-meta { font-weight:400; color:#666; font-size:0.95rem }
       </style>
 
