@@ -62,6 +62,7 @@ foreach ($allCats as $c) { $catCriteria[$c['id']] = (int)$c['criterion']; }
 
 // Build group children map (criterion=0): parent_id => [account_id, ...]
 $groupChildren = [];
+?>
 <body>
 <?php include __DIR__ . '/header.php'; ?>
 
