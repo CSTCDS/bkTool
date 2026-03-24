@@ -128,6 +128,15 @@ try {
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="assets/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    html,body{height:100%;}
+    body{display:flex;flex-direction:column;min-height:100vh;margin:0}
+    main{flex:1;display:flex;flex-direction:column;padding:12px}
+    /* chart section should expand to fill available vertical space */
+    main > section:last-of-type{flex:1;display:flex;flex-direction:column}
+    #chartWrapper{flex:1;display:flex;align-items:stretch}
+    #chart{width:100%;height:100%;}
+  </style>
 </head>
 <body>
 <?php include __DIR__ . '/header.php'; ?>
@@ -159,7 +168,7 @@ try {
       </label>
       <button id="chartRefresh">Rafraîchir</button>
     </div>
-    <canvas id="chart"></canvas>
+    <div id="chartWrapper"><canvas id="chart"></canvas></div>
   </section>
 
   <!-- Links removed: Voir transactions & Connecter une banque (now in Banque) -->
@@ -176,7 +185,14 @@ const chart = new Chart(ctx, {
     labels: labels,
     datasets: datasets.map(ds => Object.assign({}, ds, { fill: false }))
   },
-  options: { responsive: true }
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: { display: true },
+      y: { display: true }
+    }
+  }
 });
 </script>
 </body>
