@@ -151,6 +151,16 @@ if (!empty($acctSel)) {
 if (!empty($_GET['from']))    { $where[] = 't.booking_date >= :from';  $params[':from'] = $_GET['from']; }
 if (!empty($_GET['to']))      { $where[] = 't.booking_date <= :to';    $params[':to'] = $_GET['to']; }
 
+// Show pending operations filter: default show pending (1). If show_pending=0, only include BOOK status
+$showPending = isset($_GET['show_pending']) ? ($_GET['show_pending'] === '1') : true;
+if (!$showPending) {
+  $where[] = "UPPER(t.status) = 'BOOK'";
+}
+
+// Pagination (prev/next) support: page param (0-based), limit per page
+$page = max(0, (int)($_GET['page'] ?? 0));
+$limit = 100;
+
 // Paramètre: type sélectionné (group ou crit 1..4)
 $paramType = $_GET['param_type'] ?? '';
 if ($paramType === 'group' && !empty($_GET['fgroup'])) {
@@ -190,10 +200,13 @@ for ($fi = 1; $fi <= 4; $fi++) {
 
 $sql = 'SELECT t.*, a.name AS account_name FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id';
 if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
- $sql .= ' ORDER BY t.booking_date DESC, t.amount DESC LIMIT 1000';
+ $sql .= ' ORDER BY t.booking_date DESC, t.amount DESC LIMIT :limit OFFSET :offset';
 
  $stmt = $pdo->prepare($sql);
- $stmt->execute($params);
+ foreach ($params as $k => $v) $stmt->bindValue($k, $v);
+ $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+ $stmt->bindValue(':offset', $page * $limit, PDO::PARAM_INT);
+ $stmt->execute();
  $txs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Determine whether to show the "Solde" column.
@@ -342,6 +355,16 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       </div>
     </div>
   </form>
+
+  <div style="display:flex;align-items:center;gap:12px;margin:8px 0">
+    <div>
+      <button class="btn" onclick="location.href='transactions.php?<?php echo htmlentities(http_build_query(array_merge($_GET, ['page'=>max(0,$page-1)]))); ?>'" <?php echo $page<=0 ? 'disabled' : ''; ?>>&larr; Préc.</button>
+      <button class="btn" onclick="location.href='transactions.php?<?php echo htmlentities(http_build_query(array_merge($_GET, ['page'=>$page+1]))); ?>'" <?php echo (count($txs) < $limit) ? 'disabled' : ''; ?>>Suiv. &rarr;</button>
+    </div>
+    <div style="margin-left:8px">
+      <label><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?> onchange="(function(){ var q = new URLSearchParams(location.search); q.set('show_pending', this.checked ? '1' : '0'); q.set('page', '0'); location.search = q.toString(); }).call(this);"> Afficher les opérations en attente</label>
+    </div>
+  </div>
 
   <table class="tx-table">
     <thead>
