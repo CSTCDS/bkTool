@@ -62,68 +62,6 @@ foreach ($allCats as $c) { $catCriteria[$c['id']] = (int)$c['criterion']; }
 
 // Build group children map (criterion=0): parent_id => [account_id, ...]
 $groupChildren = [];
-foreach ($allCats as $c) {
-    (function(){
-      let txId = <?php echo json_encode($tx['id'] ?? ''); ?>;
-      if (!txId) {
-        const f = document.querySelector('.m-cats form[data-txid]');
-        if (f && f.dataset && f.dataset.txid) txId = f.dataset.txid;
-      }
-      if (!txId) return;
-      const catLabels = <?php echo json_encode($catLabels); ?>;
-      const catCriteria = <?php echo json_encode($catCriteria); ?>;
-
-      function showToast(msg, type) {
-        var t = document.getElementById('toast'); if (!t) return; t.className=''; if (type==='success') t.classList.add('toast-success'); if (type==='error') t.classList.add('toast-error'); t.textContent = msg; t.style.display='block'; setTimeout(function(){ t.style.display='none'; t.className=''; },3500);
-      }
-
-      function findFormForField(field) {
-        let f = document.querySelector('.m-cats form[data-field="'+field+'"][data-txid="'+txId+'"]'); if (f) return f;
-        f = document.querySelector('.m-cats form[data-field="'+field+'"]'); if (f) return f;
-        const forms = Array.from(document.querySelectorAll('.m-cats form'));
-        for (const fr of forms) { const hf = fr.querySelector('input[name="field"]'); if (hf && hf.value===field) return fr; }
-        return null;
-      }
-
-      fetch('./mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId) + '&debug=1')
-        .then(r=>{ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
-        .then(dd=>{
-          // clear placeholders
-          document.querySelectorAll('.suggestions-placeholder').forEach(function(p){ p.innerHTML = ''; });
-          // group rules by criterion
-          if (dd && Array.isArray(dd.rules)) {
-            dd.rules.forEach(function(r){
-              var crit = (catCriteria[r.category_id] || 0);
-              if (crit < 1 || crit > 4) return;
-              var container = document.getElementById('suggestions_cat'+crit);
-              if (!container) return;
-              var item = document.createElement('div'); item.style.padding='8px'; item.style.border='1px solid #eaeaea'; item.style.borderRadius='6px'; item.style.marginBottom='6px';
-              var title = document.createElement('div'); title.textContent = (catLabels[r.category_id] || ('#'+r.category_id)) + ' — ' + r.pattern; title.style.fontWeight='600'; item.appendChild(title);
-              var actions = document.createElement('div'); actions.style.marginTop='6px'; actions.style.display='flex'; actions.style.gap='8px';
-              var applyBtn = document.createElement('button'); applyBtn.className='btn'; applyBtn.textContent='Appliquer'; applyBtn.onclick = function(){
-                var fd = new FormData(); fd.append('rule_id', r.id); fd.append('tx_id', txId);
-                fetch('./mon-site/api/apply_rule.php', { method:'POST', body: fd }).then(rr=>rr.json()).then(function(ar){ if (ar && ar.ok) {
-                  var field = ar.field; var form = findFormForField(field); if (form) { var sel = form.querySelector('select[name="value"]'); if (sel) { sel.value = String(ar.new); sel.style.background='orange'; setTimeout(()=>sel.style.background='',3000); } }
-                  showToast('Appliqué', 'success'); } else { showToast('Erreur application', 'error'); } }).catch(function(e){ console.error(e); showToast('Erreur réseau', 'error'); });
-              };
-              actions.appendChild(applyBtn);
-              item.appendChild(actions);
-              container.appendChild(item);
-            });
-          }
-          // For each category placeholder always show 'Créer une règle sur catégorie N°'
-          document.querySelectorAll('.suggestions-placeholder').forEach(function(p){
-            var crit = p.getAttribute('data-crit');
-            var createBtn = document.createElement('button'); createBtn.className='btn'; createBtn.textContent = 'Créer une règle sur catégorie N°' + crit;
-            createBtn.onclick = function(){
-              var manualCat = prompt('ID de la catégorie à assigner (entier) — laisser vide pour annuler'); if (!manualCat) return;
-              var fd = new FormData(); fd.append('pattern', <?php echo json_encode($tx['description'] ?? ''); ?>); fd.append('is_regex','0'); fd.append('category_id', manualCat); fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>); fd.append('priority','100');
-              fetch('./mon-site/api/create_rule.php',{method:'POST', body: fd}).then(r=>r.json()).then(function(resp){ if (resp && resp.ok && resp.rule_id) { var afd = new FormData(); afd.append('rule_id', resp.rule_id); afd.append('tx_id', txId); return fetch('./mon-site/api/apply_rule.php',{method:'POST', body: afd}).then(r2=>r2.json()); } else throw new Error('create failed'); }).then(function(ar){ if (ar && ar.ok) { var field = ar.field; var form = findFormForField(field); if (form) { var sel = form.querySelector('select[name="value"]'); if (sel) { sel.value = String(ar.new); sel.style.background='orange'; setTimeout(()=>sel.style.background='',3000); } } showToast('Règle créée et appliquée','success'); } else showToast('Erreur application','error'); }).catch(function(e){ console.error(e); showToast('Erreur réseau ou création','error'); });
-            };
-            p.appendChild(createBtn);
-          });
-        }).catch(function(e){ console.error('suggest fetch error', e); });
-    })();
 <body>
 <?php include __DIR__ . '/header.php'; ?>
 
