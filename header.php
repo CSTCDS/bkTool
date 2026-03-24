@@ -11,11 +11,17 @@ $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
     <a href="index.php"<?php echo ($current === 'index.php') ? ' class="active"' : ''; ?>>Dashboard</a>
     <a href="transactions.php"<?php echo ($current === 'transactions.php') ? ' class="active"' : ''; ?>>Transactions</a>
     <a href="categories.php"<?php echo ($current === 'categories.php') ? ' class="active"' : ''; ?>>Paramètres</a>
-    <a href="choix.php"<?php echo ($current === 'choix.php') ? ' class="active"' : ''; ?>>Banque</a>
-    <a href="synchsmart.php"<?php echo ($current === 'synchsmart.php') ? ' class="active"' : ''; ?>>Sync. Mobile</a>
+    <a href="choix.php" class="bank-link"<?php echo ($current === 'choix.php') ? ' class="active"' : ''; ?>>Banque</a>
+    <a href="synchsmart.php"<?php echo ($current === 'synchsmart.php') ? ' class="active"' : ''; ?>>Synchro</a>
     <a href="#" id="closeApp" style="display:none">Fermer l'appli</a>
   </nav>
 </div>
+<style>
+  /* hide Banque on small screens (mobile) */
+  @media (max-width: 600px) {
+    .site-header .tabs a.bank-link { display: none !important; }
+  }
+</style>
 <script>
 document.getElementById('hamburgerBtn').addEventListener('click', function(){
   document.getElementById('navTabs').classList.toggle('tabs-open');
@@ -32,34 +38,31 @@ document.getElementById('hamburgerBtn').addEventListener('click', function(){
   if (!isStandalone()) return;
   var nav = document.getElementById('navTabs');
   if (!nav) return;
-  nav.querySelectorAll('a').forEach(function(a){
-    // ensure links open in same context
-    a.target = '_self';
-    a.rel = (a.rel || '') + ' noopener';
-    a.addEventListener('click', function(e){
-      e.preventDefault();
-      var href = a.getAttribute('href');
-      if (href) location.href = href;
-    });
-  });
+  // Ensure links open in the same window and prevent iOS from opening a new one.
+  // Use a capture-phase global listener to catch taps on anchors inside the nav.
+  document.addEventListener('click', function(ev){
+    var a = ev.target.closest && ev.target.closest('a');
+    if (!a) return;
+    if (!nav.contains(a)) return;
+    var href = a.getAttribute('href');
+    if (!href || href === '#') return;
+    ev.preventDefault();
+    // force same-window navigation
+    try { location.href = href; } catch (ex) { window.location = href; }
+  }, true);
+
   // Show "Fermer l'appli" option and handle close action in PWA
   var closeLink = document.getElementById('closeApp');
   if (closeLink) {
     closeLink.style.display = 'inline-block';
     closeLink.addEventListener('click', function(e){
       e.preventDefault();
-      // Try to close the window; many browsers ignore this if not opened via script.
-      try {
-        window.close();
-      } catch (ex) {}
-      // As a fallback, navigate to about:blank then attempt close again.
+      // Most browsers won't allow scripts to close a top-level window.
+      // Attempt to close; if it fails, notify the user instead of navigating to about:blank.
+      try { window.close(); } catch (ex) {}
       setTimeout(function(){
-        try { location.href = 'about:blank'; window.close(); } catch (ex) {}
-        // Final fallback: prompt user to close the app manually.
-        setTimeout(function(){
-          if (!document.hidden) alert('Pour fermer l\'application, utilisez la navigation système (fermer / revenir).');
-        }, 300);
-      }, 200);
+        alert('Impossible de fermer automatiquement. Utilisez la navigation système (bouton Home / geste) pour quitter l\'application.');
+      }, 250);
     });
   }
 })();
