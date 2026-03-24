@@ -19,13 +19,25 @@ try {
   $syncResult = ['errors' => [(string)$e]];
 }
 
-// Fetch accounts with non-null alert_threshold
-$stmt = $pdo->prepare('SELECT id, name, balance, alert_threshold FROM accounts WHERE alert_threshold IS NOT NULL');
+// Fetch all accounts (include those with NULL alert_threshold)
+$stmt = $pdo->prepare('SELECT id, name, balance, alert_threshold FROM accounts ORDER BY name');
 $stmt->execute();
 $accs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// For each account, fetch last 3 BOOK transactions
+// Determine current import number (most recent NumImport)
+$currentImport = (int)$pdo->query('SELECT COALESCE(MAX(NumImport), 0) FROM transactions')->fetchColumn();
+
+// For each account, fetch received transactions (current import) and last 3 BOOK transactions
 foreach ($accs as &$a) {
+  // Received in current import batch (NumImport == currentImport) — only if currentImport > 0
+  $a['received'] = [];
+  if ($currentImport > 0) {
+    $rstmt = $pdo->prepare('SELECT booking_date, amount, description FROM transactions WHERE account_id = :aid AND NumImport = :imp ORDER BY booking_date DESC');
+    $rstmt->execute([':aid' => $a['id'], ':imp' => $currentImport]);
+    $a['received'] = $rstmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+
+  // Last 3 BOOK transactions (fallback)
   $tstmt = $pdo->prepare('SELECT booking_date, amount, description FROM transactions WHERE account_id = :aid AND UPPER(status) = "BOOK" ORDER BY booking_date DESC LIMIT 3');
   $tstmt->execute([':aid' => $a['id']]);
   $a['txs'] = $tstmt->fetchAll(PDO::FETCH_ASSOC);
@@ -61,9 +73,21 @@ unset($a);
       <div class="mobile-card" style="margin-bottom:12px">
         <div class="mobile-card-row"><strong><?php echo htmlspecialchars($a['name']); ?></strong><span><?php echo htmlspecialchars(number_format($balance,2,',',' ')); ?> €</span></div>
         <div class="mobile-card-row"><span>Seuil</span><span><?php echo htmlspecialchars(number_format($th,2,',',' ')); ?> €</span></div>
-        <div style="padding:8px 0"><strong>Dernières écritures</strong>
-          <?php if (empty($a['txs'])): ?><div style="color:#666">Aucune écriture BOOK</div><?php else: ?>
-            <ul><?php foreach ($a['txs'] as $t) { echo '<li>' . htmlspecialchars($t['booking_date']) . ' — ' . htmlspecialchars(number_format((float)$t['amount'],2,',',' ')) . ' € — ' . htmlspecialchars(substr($t['description'],0,80)) . '</li>'; } ?></ul>
+        <div style="padding:8px 0">
+          <?php if (!empty($a['received'])): ?>
+            <strong>Écritures reçues</strong>
+            <ul>
+              <?php foreach ($a['received'] as $t) {
+                echo '<li>' . htmlspecialchars($t['booking_date']) . ' — ' . htmlspecialchars(number_format((float)$t['amount'],2,',',' ')) . ' € — ' . htmlspecialchars(substr($t['description'],0,80)) . '</li>';
+              } ?>
+            </ul>
+          <?php else: ?>
+            <div style="color:#666"><strong>Aucune nouvelles écritures</strong></div>
+            <div style="margin-top:8px"><strong>Dernières écritures</strong>
+              <?php if (empty($a['txs'])): ?><div style="color:#666">Aucune écriture BOOK</div><?php else: ?>
+                <ul><?php foreach ($a['txs'] as $t) { echo '<li>' . htmlspecialchars($t['booking_date']) . ' — ' . htmlspecialchars(number_format((float)$t['amount'],2,',',' ')) . ' € — ' . htmlspecialchars(substr($t['description'],0,80)) . '</li>'; } ?></ul>
+              <?php endif; ?>
+            </div>
           <?php endif; ?>
         </div>
       </div>
