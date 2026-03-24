@@ -220,60 +220,80 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <h2>Liste des règles (<?php echo count($rules); ?>)</h2>
 <table>
   <thead>
-    <tr><th>ID</th><th>Actif</th><th>Critère</th><th>Motif</th><th colspan="5"></th></tr>
-    <tr><th></th><th></th><th></th><th></th><th>Compte</th><th>Priorité</th><th>ValeurAaffecter</th><th>Regexp</th><th>Actions</th></tr>
+    <tr>
+      <th rowspan="2">N°</th>
+      <th>Critère</th>
+      <th colspan="2">Motif</th>
+      <th>Regexp</th>
+      <th>Actions</th>
+    </tr>
+    <tr>
+      <th>Actif</th>
+      <th>Compte</th>
+      <th>Priorité</th>
+      <th>Valeur</th>
+      <th></th>
+    </tr>
   </thead>
   <tbody>
   <?php foreach ($rules as $r): 
         $r_level = isset($r['category_level']) ? (int)$r['category_level'] : 0;
         $r_valeur = isset($r['valeur_a_affecter']) ? (int)$r['valeur_a_affecter'] : ((isset($r['category_id']) ? (int)$r['category_id'] : 0));
   ?>
-    <form method="post">
-      <input type="hidden" name="action" value="update">
-      <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
-      <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>">
-        <td class="small"><?php echo $r['id']; ?></td>
-        <td style="text-align:center"><input type="checkbox" name="active" value="1" <?php echo ((int)$r['active']===1)?'checked':''; ?>></td>
-        <td>
-          <select name="category_level" class="select-category-level-row">
-            <option value="0">Choisir critère</option>
-            <?php for ($ci=1;$ci<=4;$ci++): ?>
-              <option value="<?php echo $ci; ?>"<?php echo ($r_level === $ci) ? ' selected' : ''; ?>><?php echo $ci . ' - ' . htmlspecialchars($criterionNames[$ci]); ?></option>
-            <?php endfor; ?>
-          </select>
-        </td>
-        <td><input name="pattern" value="<?php echo htmlspecialchars($r['pattern']); ?>" style="width:100%;padding:6px"></td>
-        <td colspan="5"></td>
-      </tr>
-      <tr>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td>
-          <select name="scope_account_id">
-            <option value="">-- pas de sélection --</option>
-            <option value="NULL"<?php echo ($r['scope_account_id'] === null ? ' selected' : ''); ?>>Global</option>
-            <?php foreach ($accounts as $a): ?>
-              <option value="<?php echo $a['id']; ?>"<?php echo ((string)$r['scope_account_id'] === (string)$a['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($a['name']); ?></option>
-            <?php endforeach; ?>
-          </select>
-        </td>
-        <td><input name="priority" value="<?php echo (int)$r['priority']; ?>" style="width:70px;padding:6px"></td>
-        <td>
-          <select name="valeur_a_affecter" class="select-valeur-row" style="min-width:180px">
-            <option value="0">Choisir valeur</option>
-          </select>
-        </td>
-        <td style="text-align:center"><input type="checkbox" name="is_regex" value="1" <?php echo (!empty($r['is_regex']) ? 'checked' : ''); ?>></td>
-        <td style="white-space:nowrap">
+    <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>">
+      <td rowspan="2" class="small"><?php echo $r['id']; ?></td>
+      <td>
+        <strong>Critère</strong><br>
+        <select name="category_level[<?php echo $r['id']; ?>]" class="select-category-level-row">
+          <option value="0">Choisir critère</option>
+          <?php for ($ci=1;$ci<=4;$ci++): ?>
+            <option value="<?php echo $ci; ?>"<?php echo ($r_level === $ci) ? ' selected' : ''; ?>><?php echo $ci . ' - ' . htmlspecialchars($criterionNames[$ci]); ?></option>
+          <?php endfor; ?>
+        </select>
+      </td>
+      <td colspan="2">
+        <strong>Motif</strong><br>
+        <input name="pattern[<?php echo $r['id']; ?>]" value="<?php echo htmlspecialchars($r['pattern']); ?>" style="width:100%;padding:6px">
+      </td>
+      <td>
+        <strong>Regexp</strong><br>
+        <input type="checkbox" name="is_regex[<?php echo $r['id']; ?>]" value="1" <?php echo (!empty($r['is_regex']) ? 'checked' : ''); ?>>
+      </td>
+      <td>
+        <form method="post" style="display:inline">
+          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
           <button class="btn" type="submit">Modifier</button>
-        </td>
-      </tr>
-    </form>
+        </form>
+      </td>
+    </tr>
     <tr>
-      <td colspan="9" style="padding:4px 8px 12px 8px">
-        <form method="post" style="display:inline" onsubmit="return confirm('Supprimer la règle ?');">
+      <td>
+        <strong>Actif</strong><br>
+        <input type="checkbox" name="active[<?php echo $r['id']; ?>]" value="1" <?php echo ((int)$r['active']===1)?'checked':''; ?>>
+      </td>
+      <td>
+        <strong>Compte</strong><br>
+        <select name="scope_account_id[<?php echo $r['id']; ?>]">
+          <option value="">-- pas de sélection --</option>
+          <option value="NULL"<?php echo ($r['scope_account_id'] === null ? ' selected' : ''); ?>>Global</option>
+          <?php foreach ($accounts as $a): ?>
+            <option value="<?php echo $a['id']; ?>"<?php echo ((string)$r['scope_account_id'] === (string)$a['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($a['name']); ?></option>
+          <?php endforeach; ?>
+        </select>
+      </td>
+      <td>
+        <strong>Priorité</strong><br>
+        <input name="priority[<?php echo $r['id']; ?>]" value="<?php echo (int)$r['priority']; ?>" style="width:70px;padding:6px">
+      </td>
+      <td>
+        <strong>Valeur à affecter</strong><br>
+        <select name="valeur_a_affecter[<?php echo $r['id']; ?>]" class="select-valeur-row" style="min-width:180px">
+          <option value="0">Choisir valeur</option>
+        </select>
+      </td>
+      <td>
+        <form method="post" onsubmit="return confirm('Supprimer la règle ?');" style="display:inline">
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
           <button class="btn danger" type="submit">Supprimer</button>
