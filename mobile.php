@@ -52,6 +52,10 @@ foreach ($allCats as $c) {
   }
 }
 
+// Flat map id=>label for quick lookup (used for suggestion display)
+$catLabels = [];
+foreach ($allCats as $c) { $catLabels[$c['id']] = $c['label']; }
+
 // Build group children map (criterion=0): parent_id => [account_id, ...]
 $groupChildren = [];
 foreach ($allCats as $c) {
@@ -219,6 +223,14 @@ if ($tx && $groupSelected) {
   </div>
 
   <div class="m-cats">
+    <div id="suggestionBox" style="display:none;background:#eef7ff;border:1px solid #cfe8ff;padding:10px;border-radius:6px;margin-bottom:8px">
+      <strong>Suggestion :</strong> <span id="suggestLabel"></span>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button id="applySuggestion" class="btn">Appliquer</button>
+        <button id="createRule" class="btn">Créer règle</button>
+        <button id="ignoreSuggestion" class="btn">Ignorer</button>
+      </div>
+    </div>
     <?php for ($ci = 1; $ci <= 4; $ci++):
       $field = "cat{$ci}_id";
       $curVal = $tx[$field] ?? null;
@@ -241,6 +253,45 @@ if ($tx && $groupSelected) {
       </form>
     <?php endfor; ?>
   </div>
+
+    <script>
+    (function(){
+      const txId = <?php echo json_encode($tx['id'] ?? ''); ?>;
+      if (!txId) return;
+      fetch('mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId))
+        .then(r => r.json())
+        .then(data => {
+          if (!data || !data.suggestion) return;
+          const s = data.suggestion;
+          const catLabel = <?php echo json_encode($catLabels); ?>[s.category_id] || ('#' + s.category_id);
+          document.getElementById('suggestLabel').textContent = catLabel + (s.is_regex ? ' (regex)' : '');
+          const box = document.getElementById('suggestionBox');
+          box.style.display = 'block';
+          document.getElementById('applySuggestion').addEventListener('click', function(){
+            // apply to first category select (cat1) by setting its value and submitting its form
+            const select = document.querySelector('.m-cats form select');
+            if (select) {
+              select.value = s.category_id;
+              select.form.submit();
+            }
+          });
+          document.getElementById('ignoreSuggestion').addEventListener('click', function(){ box.style.display='none'; });
+          document.getElementById('createRule').addEventListener('click', function(){
+            // create rule via POST
+            const fd = new FormData();
+            fd.append('pattern', <?php echo json_encode($tx['description'] ?? ''); ?>);
+            fd.append('is_regex', '0');
+            fd.append('category_id', s.category_id);
+            fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>);
+            fd.append('priority', '100');
+            fetch('mon-site/api/create_rule.php', { method: 'POST', body: fd }).then(r=>r.json()).then(resp=>{
+              if (resp && resp.ok) { alert('Règle créée'); box.style.display='none'; }
+              else alert('Erreur création règle');
+            }).catch(()=>alert('Erreur réseau'));
+          });
+        }).catch(()=>{});
+    })();
+    </script>
 
   <div class="m-nav">
     <?php
