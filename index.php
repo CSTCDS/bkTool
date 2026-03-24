@@ -9,29 +9,8 @@ error_reporting(E_ALL);
 $page = isset($_GET['page']) && is_string($_GET['page']) ? trim($_GET['page']) : '';
 
 if ($page === '') {
-  // show minimal home: full HTML head so header.php is correctly styled
-  // Link to the central terms page
-  $termsFile = __DIR__ . '/terms.php';
-  ?><!doctype html>
-  <html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>bkTool</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="assets/css/style.css">
-  </head>
-  <body>
-  <?php include __DIR__ . '/header.php'; ?>
-  <main style="padding:12px">
-  <?php
-  // Show a short intro and link to the full Terms page
-  echo '<section><h2>Conditions / Mentions</h2><p>Voir la page complète des conditions d\'utilisation.</p><p><a href="terms.php">Voir les termes et conditions</a></p></section>';
-  ?>
-  </main>
-  </body>
-  </html>
-  <?php
+  // Redirect root to the asynchronous sync page
+  header('Location: index.php?page=synchro');
   exit;
 }
 
