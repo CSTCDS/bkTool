@@ -372,6 +372,11 @@ if ($tx && $groupSelected) {
           if (!crit || crit < 1 || crit > 4) return;
           const bx = document.getElementById('suggestionBox_'+crit);
           if (!bx) return;
+          // Move the suggestion box next to the corresponding category form (so it's visible near the select)
+          const formForCrit = document.querySelector('.m-cats form[data-field="cat'+crit+'_id"][data-txid="'+txId+'"]') || document.querySelector('.m-cats form[data-field="cat'+crit+'_id"]');
+          if (formForCrit && formForCrit.insertAdjacentElement) {
+            try { formForCrit.insertAdjacentElement('afterend', bx); } catch(e){ /* ignore DOM errors */ }
+          }
           bx.style.display = 'block';
           const lbl = document.getElementById('suggestLabel_'+crit);
           if (lbl) lbl.textContent = catLabel + (s.is_regex ? ' (regex)' : '');
