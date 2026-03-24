@@ -130,12 +130,14 @@ try {
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box}
-    html,body{height:100%;}
-    body{display:flex;flex-direction:column;min-height:100vh;margin:0;overflow-x:hidden}
+    html,body{height:100%;overflow-x:hidden}
+    body{display:flex;flex-direction:column;min-height:100vh;margin:0}
     main{flex:1;display:flex;flex-direction:column;padding:12px}
-    /* chart section: center the chart and limit its size to 90% width / 60% viewport height */
+    /* Ensure each section takes full width so the chart doesn't sit to the right */
+    main > section{display:block;width:100%}
+    /* chart section: center the chart and limit its size to 90vw / 60vh */
     main > section:last-of-type{display:flex;justify-content:center;align-items:center}
-    #chartWrapper{width:90%;height:60vh;display:flex;align-items:stretch;overflow:hidden;margin:0 auto}
+    #chartWrapper{width:100%;max-width:90vw;height:60vh;display:flex;align-items:stretch;overflow:hidden;margin:0 auto}
     #chart{display:block;max-width:100% !important;width:100% !important;height:100% !important}
   </style>
 </head>
