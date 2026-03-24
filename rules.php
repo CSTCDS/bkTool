@@ -29,6 +29,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $scope_account_id = $_POST['scope_account_id'] !== '' ? ($_POST['scope_account_id'] === 'NULL' ? null : (int)$_POST['scope_account_id']) : null;
     $priority = isset($_POST['priority']) ? (int)$_POST['priority'] : 100;
     $active = !empty($_POST['active']) ? 1 : 0;
+    // If pattern contains % treat it as wildcard -> build regex
+    if (strpos($pattern, '%') !== false) {
+      $is_regex = 1;
+      $parts = explode('%', $pattern);
+      $escaped = array_map(function($p){ return preg_quote($p, '/'); }, $parts);
+      $joined = implode('.*', $escaped);
+      $pattern = '/' . $joined . '/i';
+    }
     $stmt = $pdo->prepare('UPDATE auto_category_rules SET pattern = :p, is_regex = :ir, category_id = :cid, scope_account_id = :scope, priority = :prio, active = :act WHERE id = :id');
     $stmt->execute([':p'=>$pattern,':ir'=>$is_regex,':cid'=>$category_id,':scope'=>$scope_account_id,':prio'=>$priority,':act'=>$active,':id'=>$id]);
   } elseif ($action === 'delete' && !empty($_POST['id'])) {
@@ -41,6 +49,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $category_id = isset($_POST['category_id']) ? (int)$_POST['category_id'] : 0;
     $scope_account_id = $_POST['scope_account_id'] !== '' ? ($_POST['scope_account_id'] === 'NULL' ? null : (int)$_POST['scope_account_id']) : null;
     $priority = isset($_POST['priority']) ? (int)$_POST['priority'] : 100;
+    // If pattern contains % treat it as wildcard -> build regex
+    if (strpos($pattern, '%') !== false) {
+      $is_regex = 1;
+      $parts = explode('%', $pattern);
+      $escaped = array_map(function($p){ return preg_quote($p, '/'); }, $parts);
+      $joined = implode('.*', $escaped);
+      $pattern = '/' . $joined . '/i';
+    }
     if ($pattern !== '' && $category_id > 0) {
       $stmt = $pdo->prepare('INSERT INTO auto_category_rules (pattern, is_regex, category_id, scope_account_id, priority, active, created_by) VALUES (:p,:ir,:cid,:scope,:prio,1,:cb)');
       $stmt->execute([':p'=>$pattern,':ir'=>$is_regex,':cid'=>$category_id,':scope'=>$scope_account_id,':prio'=>$priority,':cb'=>($_SERVER['REMOTE_USER'] ?? null)]);
@@ -185,7 +201,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
           <input name="pattern" value="<?php echo htmlspecialchars($r['pattern']); ?>" style="flex:1;padding:6px">
       </td>
       <td>
-          <select name="category_id" onchange="this.form.submit()">
+          <select name="category_id">
             <?php for ($ci=1;$ci<=4;$ci++): ?>
               <?php if (empty($catTree[$ci])) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($criterionNames[$ci]); ?>">
@@ -200,7 +216,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
           </select>
       </td>
       <td>
-          <select name="scope_account_id" onchange="this.form.submit()">
+          <select name="scope_account_id">
             <option value="NULL"<?php echo ($r['scope_account_id'] === null ? ' selected' : ''); ?>>Global</option>
             <?php foreach ($accounts as $a): ?>
               <option value="<?php echo $a['id']; ?>"<?php echo ((string)$r['scope_account_id'] === (string)$a['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($a['name']); ?></option>
@@ -208,7 +224,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
           </select>
       </td>
       <td><input name="priority" value="<?php echo (int)$r['priority']; ?>" style="width:70px;padding:6px"></td>
-      <td><input type="checkbox" name="active" value="1" <?php echo ((int)$r['active']===1)?'checked':''; ?> onchange="this.form.submit()"></td>
+      <td><input type="checkbox" name="active" value="1" <?php echo ((int)$r['active']===1)?'checked':''; ?>></td>
       <td style="white-space:nowrap">
           <button class="btn" type="submit">Modifier</button>
         </form>
