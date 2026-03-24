@@ -127,6 +127,33 @@ function bkt_migrate(PDO $pdo): void
                 $pdo->exec("ALTER TABLE accounts ADD COLUMN numero_affichage SMALLINT DEFAULT NULL AFTER alert_threshold");
             }
         },
+        // Version 9 : add auto_category_rules and transaction_changes_log tables
+        9 => function (PDO $pdo) {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS auto_category_rules (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                pattern TEXT NOT NULL,
+                is_regex TINYINT(1) NOT NULL DEFAULT 0,
+                category_id INT NOT NULL,
+                scope_account_id INT DEFAULT NULL,
+                priority INT NOT NULL DEFAULT 100,
+                active TINYINT(1) NOT NULL DEFAULT 1,
+                created_by VARCHAR(100) DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (priority)
+            )');
+
+            $pdo->exec('CREATE TABLE IF NOT EXISTS transaction_changes_log (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                tx_id VARCHAR(191) NOT NULL,
+                old_category_id INT DEFAULT NULL,
+                new_category_id INT DEFAULT NULL,
+                rule_id INT DEFAULT NULL,
+                user_id VARCHAR(100) DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (tx_id),
+                INDEX (rule_id)
+            )');
+        },
     ];
 
     // Exécuter les migrations non encore appliquées
