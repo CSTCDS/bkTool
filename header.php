@@ -18,4 +18,27 @@ $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
 document.getElementById('hamburgerBtn').addEventListener('click', function(){
   document.getElementById('navTabs').classList.toggle('tabs-open');
 });
+
+// When installed as a standalone web app (Add to Home Screen), iOS/Safari
+// may open links in a new window which looks like a separate screen with
+// a close button. Detect standalone mode and force header links to
+// navigate in the same window to keep a single app experience.
+(function(){
+  function isStandalone(){
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  }
+  if (!isStandalone()) return;
+  var nav = document.getElementById('navTabs');
+  if (!nav) return;
+  nav.querySelectorAll('a').forEach(function(a){
+    // ensure links open in same context
+    a.target = '_self';
+    a.rel = (a.rel || '') + ' noopener';
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      var href = a.getAttribute('href');
+      if (href) location.href = href;
+    });
+  });
+})();
 </script>
