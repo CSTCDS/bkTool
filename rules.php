@@ -240,3 +240,19 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </table>
 
 </body></html>
+<script>
+// Auto-submit filter form once on first page load in this tab to trigger initial search
+(function(){
+  try {
+    var qs = location.search || '';
+    var applied = sessionStorage.getItem('rules_auto_submitted');
+    if (!applied) {
+      // if no query string or no explicit filter params, submit to apply defaults
+      if (!/([?&](account|category)=)/.test(qs)) {
+        var f = document.querySelector('form.controls');
+        if (f) { sessionStorage.setItem('rules_auto_submitted','1'); f.submit(); }
+      }
+    }
+  } catch(e) { /* ignore */ }
+})();
+</script>
