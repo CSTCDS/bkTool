@@ -35,15 +35,35 @@ if (!empty($input['tx_id'])) {
     $accountId = isset($input['account_id']) ? (string)$input['account_id'] : null;
 }
 
+$debug = !empty($_GET['debug']);
 $acr = new AutoCategoryRule($pdo);
-$rule = $acr->findMatchingRule($description, $accountId);
-if ($rule) {
+$rules = $acr->fetchActiveRules();
+$matched = null;
+foreach ($rules as $r) {
+    // Respect scope
+    if (!empty($r['scope_account_id']) && $accountId !== null && (string)$r['scope_account_id'] !== (string)$accountId) continue;
+    if ($r['is_regex']) {
+        // try-catch in DAO but double-check
+        $ok = false;
+        try { $ok = (@preg_match($r['pattern'], $description) === 1); } catch (Throwable $e) { $ok = false; }
+        if ($ok) { $matched = $r; break; }
+    } else {
+        if (stripos($description, $r['pattern']) !== false) { $matched = $r; break; }
+    }
+}
+
+if ($debug) {
+    echo json_encode(['suggestion' => $matched ? $matched : null, 'rules_count' => count($rules), 'rules' => $rules, 'description' => $description, 'accountId' => $accountId]);
+    exit;
+}
+
+if ($matched) {
     echo json_encode(['suggestion' => [
-        'rule_id' => $rule['id'],
-        'category_id' => $rule['category_id'],
-        'pattern' => $rule['pattern'],
-        'is_regex' => (bool)$rule['is_regex'],
-        'priority' => (int)$rule['priority']
+        'rule_id' => $matched['id'],
+        'category_id' => $matched['category_id'],
+        'pattern' => $matched['pattern'],
+        'is_regex' => (bool)$matched['is_regex'],
+        'priority' => (int)$matched['priority']
     ]]);
 } else {
     echo json_encode(['suggestion' => null]);
