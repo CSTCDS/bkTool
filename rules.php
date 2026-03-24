@@ -166,23 +166,23 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <option value="<?php echo $a['id']; ?>"<?php echo ((string)$accountFilter === (string)$a['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($a['name']); ?></option>
       <?php endforeach; ?>
       <option value="any"<?php echo ($accountFilter==='any')?' selected':''; ?>>Toutes (globales+comptes)</option>
-    </select>
-  </label>
-  <label>Catégorie:
-    <select name="category" onchange="this.form.submit()">
-      <option value="0">Toutes les catégories</option>
-      <?php for ($ci=1;$ci<=4;$ci++): ?>
-        <?php if (empty($catTree[$ci])) continue; ?>
-        <optgroup label="<?php echo htmlspecialchars($criterionNames[$ci]); ?>">
-          <?php foreach ($catTree[$ci] as $pid => $node): if (!$node['info']) continue; ?>
-            <option value="<?php echo $node['info']['id']; ?>"<?php echo ($categoryFilter === (int)$node['info']['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
-            <?php foreach ($node['children'] as $child): ?>
-              <option value="<?php echo $child['id']; ?>"<?php echo ($categoryFilter === (int)$child['id']) ? ' selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
-            <?php endforeach; ?>
-          <?php endforeach; ?>
-        </optgroup>
-      <?php endfor; ?>
-    </select>
+    <table>
+      <thead>
+        <tr style="background:#ccc;color:#111">
+          <th rowspan="2">N°</th>
+          <th>Critère</th>
+          <th colspan="2">Motif</th>
+          <th>Regexp</th>
+          <th>Actions</th>
+        </tr>
+        <tr style="background:#ddd;color:#111">
+          <th>Actif</th>
+          <th>Compte</th>
+          <th>Priorité</th>
+          <th>Valeur</th>
+          <th></th>
+        </tr>
+      </thead>
   </label>
   <button class="btn" type="submit">Filtrer</button>
 </form>
@@ -221,7 +221,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <table>
   <thead>
     <tr>
-      <th rowspan="2"></th>
+      <th rowspan="2"><b>Listes des règles</b></th>
       <th></th>
       <th colspan="2"></th>
       <th></th>
@@ -240,7 +240,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $i++;
         $r_level = isset($r['category_level']) ? (int)$r['category_level'] : 0;
         $r_valeur = isset($r['valeur_a_affecter']) ? (int)$r['valeur_a_affecter'] : ((isset($r['category_id']) ? (int)$r['category_id'] : 0));
-        $bg = ($i % 2 === 0) ? '#eef6ff' : '#ffffff';
+        $bg = ($i % 2 === 0) ? 'silver' : 'gray';
   ?>
     <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>" style="background:<?php echo $bg; ?>">
       <td rowspan="2" class="small"><?php echo $r['id']; ?></td>
