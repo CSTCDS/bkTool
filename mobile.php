@@ -274,6 +274,7 @@ if ($tx && $groupSelected) {
               const select = document.querySelector('.m-cats form select');
               if (select) { select.value = s.category_id; select.form.submit(); }
             };
+            // attach create rule handler (uses suggested category)
             document.getElementById('createRule').onclick = function(){
               const fd = new FormData();
               fd.append('pattern', <?php echo json_encode($tx['description'] ?? ''); ?>);
@@ -281,12 +282,28 @@ if ($tx && $groupSelected) {
               fd.append('category_id', s.category_id);
               fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>);
               fd.append('priority', '100');
-              fetch('/mon-site/api/create_rule.php', { method: 'POST', body: fd }).then(r=>r.json()).then(resp=>{
+              fetch('./mon-site/api/create_rule.php', { method: 'POST', body: fd }).then(r=>r.json()).then(resp=>{
                 if (resp && resp.ok) { alert('Règle créée'); box.style.display='none'; }
                 else alert('Erreur création règle');
               }).catch(()=>alert('Erreur réseau'));
             };
           }
+          // If there's no suggestion, allow creating a rule manually: ask for category id
+          document.getElementById('createRule').onclick = function(){
+            const manualCat = prompt('ID de la catégorie à assigner (entier) — laisser vide pour annuler');
+            if (!manualCat) return;
+            const fd = new FormData();
+            fd.append('pattern', <?php echo json_encode($tx['description'] ?? ''); ?>);
+            fd.append('is_regex', '0');
+            fd.append('category_id', manualCat);
+            fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>);
+            fd.append('priority', '100');
+            fetch('./mon-site/api/create_rule.php', { method: 'POST', body: fd }).then(r=>r.json()).then(resp=>{
+              if (resp && resp.ok) { alert('Règle créée'); box.style.display='none'; }
+              else alert('Erreur création règle');
+            }).catch(()=>alert('Erreur réseau'));
+          };
+
           document.getElementById('ignoreSuggestion').onclick = function(){ box.style.display='none'; };
 
           // show debug JSON below box for troubleshooting
