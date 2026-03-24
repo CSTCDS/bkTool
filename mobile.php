@@ -254,6 +254,8 @@ if ($tx) {
       logDebug('init txId=' + txId);
       const catLabels = <?php echo json_encode($catLabels); ?>;
       const catCriteria = <?php echo json_encode($catCriteria); ?>;
+      const txDescription = <?php echo json_encode($tx['description'] ?? ''); ?>;
+      const txAccount = <?php echo json_encode($tx['account_id'] ?? null); ?>;
 
       function logDebug(msg, obj) {
         try {
@@ -283,130 +285,94 @@ if ($tx) {
         .then(data => {
           console.debug('suggest: response', data);
           logDebug('fetch response', data);
-          hideAll();
-          if (!data || !data.suggestion) {
-            // no suggestion — fetch debug dump (rules + match info) to help diagnose
-            fetch('./mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId) + '&debug=1')
-              .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-              .then(dd => {
-                console.debug('suggest: debug dump', dd);
-                logDebug('no suggestion — debug dump', dd);
-                // display full rules count and description
-                var p = document.getElementById('suggestionDebugPanel');
-                if (p) {
-                  p.textContent = '[DEBUG] rules_count=' + (dd.rules_count||0) + ' description="' + (dd.description||'') + '" account=' + (dd.accountId||'') + '\n' + (p.textContent||'');
-                }
-                // also populate per-criterion debug areas for visibility
-                if (dd.rules && Array.isArray(dd.rules)) {
-                  dd.rules.forEach(function(r){
-                    var crit = (<?php echo json_encode($catCriteria); ?>[r.category_id] || 0);
-                    var el = document.getElementById('suggestDebug_' + (crit || 1));
-                    if (el) el.textContent = JSON.stringify(r, null, 2);
-                  });
-                }
-              }).catch(e=>{ console.debug('suggest debug fetch error', e); logDebug('suggest debug fetch error', String(e)); });
-            return;
-          }
-          const s = data.suggestion;
-          const catLabel = catLabels[s.category_id] || ('#' + s.category_id);
-          const crit = parseInt(catCriteria[s.category_id] || 0, 10);
-          if (!crit || crit < 1 || crit > 4) return;
-          const bx = document.getElementById('suggestionBox_'+crit);
-          if (!bx) return;
-          // Move the suggestion box next to the corresponding category form (so it's visible near the select)
-          const formForCrit = document.querySelector('.m-cats form[data-field="cat'+crit+'_id"][data-txid="'+txId+'"]') || document.querySelector('.m-cats form[data-field="cat'+crit+'_id"]');
-          if (formForCrit && formForCrit.insertAdjacentElement) {
-            try { formForCrit.insertAdjacentElement('afterend', bx); } catch(e){ /* ignore DOM errors */ }
-          }
-          bx.style.display = 'block';
-          const lbl = document.getElementById('suggestLabel_'+crit);
-          if (lbl) lbl.textContent = catLabel + (s.is_regex ? ' (regex)' : '');
-          const dbg = document.getElementById('suggestDebug_'+crit);
-          if (dbg) { dbg.style.display='block'; dbg.textContent = JSON.stringify(data, null, 2); }
-
-          // Apply handler: find the form with hidden input field == 'cat{crit}_id'
-              bx.querySelector('.applySuggestion').onclick = function(){
-                const fieldName = 'cat'+crit+'_id';
-                function findForm(field) {
-                  // 1) exact match data-field + data-txid
-                  let f = document.querySelector('.m-cats form[data-field="'+field+'"][data-txid="'+txId+'"]');
-                  if (f) return {form:f, selector:'data-field+txid'};
-                  // 2) match data-field only
-                  f = document.querySelector('.m-cats form[data-field="'+field+'"]');
-                  if (f) return {form:f, selector:'data-field'};
-                  // 3) fallback: scan hidden input[name=field]
-                  const forms = Array.from(document.querySelectorAll('.m-cats form'));
-                  for (const fr of forms) {
-                    const hf = fr.querySelector('input[name="field"]');
-                    if (hf && hf.value === field) return {form:fr, selector:'hidden-field'};
-                  }
-                  return null;
-                }
-                const found = findForm(fieldName);
-                if (!found) {
-                  const payload = {action:'apply_missing_form', tx_id:txId, field:fieldName, criterion:crit, time:(new Date()).toISOString()};
-                  console.debug('apply: target form not found', payload);
-                  logDebug('apply: target form not found', payload);
-                  try { navigator.sendBeacon('./mon-site/api/client_log.php', JSON.stringify(payload)); } catch(e) {}
-                  showToast('Formulaire cible introuvable', 'error');
-                  return;
-                }
-                const form = found.form;
-                const sel = form.querySelector('select[name="value"]');
-                if (!sel) {
-                  console.debug('apply: select not found in form', {txId, fieldName});
-                  logDebug('apply: select not found', {txId, fieldName});
-                  showToast('Sélecteur introuvable', 'error');
-                  return;
-                }
-                sel.value = s.category_id;
-                console.debug('apply: submitting form', {txId, fieldName, selector:found.selector});
-                form.submit();
-              };
-
-          // Create rule handler (create + apply)
-          bx.querySelector('.createRule').onclick = function(){
-            const fd = new FormData();
-            fd.append('pattern', <?php echo json_encode($tx['description'] ?? ''); ?>);
-            fd.append('is_regex', '0');
-            fd.append('category_id', s.category_id);
-            fd.append('scope_account_id', <?php echo json_encode($tx['account_id'] ?? null); ?>);
-            fd.append('priority', '100');
-            fetch('./mon-site/api/create_rule.php', { method: 'POST', body: fd })
-              .then(r=>r.json()).then(resp=>{
-                if (resp && resp.ok && resp.rule_id) {
-                  const afd = new FormData(); afd.append('rule_id', resp.rule_id); afd.append('tx_id', txId);
-                  return fetch('./mon-site/api/apply_rule.php', { method: 'POST', body: afd }).then(r2=>r2.json());
-                }
-                throw new Error('create failed');
-              }).then(ar=>{
-                if (ar && ar.ok) {
-                  // update select for this criterion (defensive)
-                  const fieldName = ar.field;
-                  const tryFind = (f)=>{
-                    let ff = document.querySelector('.m-cats form[data-field="'+f+'"][data-txid="'+txId+'"]');
-                    if (ff) return ff;
-                    ff = document.querySelector('.m-cats form[data-field="'+f+'"]');
-                    if (ff) return ff;
-                    const forms = Array.from(document.querySelectorAll('.m-cats form'));
-                    for (const fr of forms) { const hf = fr.querySelector('input[name="field"]'); if (hf && hf.value === f) return fr; }
-                    return null;
-                  };
-                  const form = tryFind(fieldName);
-                  if (form) {
-                    const sel = form.querySelector('select[name="value"]');
-                    if (sel) { sel.value = String(ar.new); sel.style.background = 'orange'; setTimeout(()=>sel.style.background='',3000); }
+          // Always request debug dump (rules + match info) to populate debug panels
+          fetch('./mon-site/api/suggest_category.php?tx_id=' + encodeURIComponent(txId) + '&debug=1')
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(dd => {
+              console.debug('suggest: debug dump', dd);
+              logDebug('debug dump', dd);
+              // populate per-criterion debug areas
+              if (dd && dd.rules && Array.isArray(dd.rules)) {
+                dd.rules.forEach(function(r){
+                  var crit = (<?php echo json_encode($catCriteria); ?>[r.category_id] || 0);
+                  var el = document.getElementById('suggestDebug_' + (crit || 1));
+                  if (el) el.textContent = JSON.stringify(r, null, 2);
+                });
+              }
+              // Now always show suggestion boxes for criteria 1..4 so user can create rules
+              for (let crit = 1; crit <= 4; crit++) {
+                const bx = document.getElementById('suggestionBox_' + crit);
+                if (!bx) continue;
+                bx.style.display = 'block';
+                const lbl = document.getElementById('suggestLabel_' + crit);
+                const dbg = document.getElementById('suggestDebug_' + crit);
+                // If server returned a suggestion for this criterion, render it
+                if (data && data.suggestion) {
+                  const s = data.suggestion;
+                  const sugCrit = parseInt(catCriteria[s.category_id] || 0, 10);
+                  if (sugCrit === crit) {
+                    const catLabel = catLabels[s.category_id] || ('#' + s.category_id);
+                    if (lbl) lbl.textContent = catLabel + (s.is_regex ? ' (regex)' : '');
+                    if (dbg) { dbg.style.display = 'block'; dbg.textContent = JSON.stringify(data, null, 2); }
+                    // enable apply
+                    const applyBtn = bx.querySelector('.applySuggestion'); if (applyBtn) { applyBtn.disabled = false; applyBtn.dataset.cat = s.category_id; }
                   } else {
-                    const payload = {action:'apply_update_missing', tx_id:txId, field:fieldName, server:ar, time:(new Date()).toISOString()};
-                    try { navigator.sendBeacon('./mon-site/api/client_log.php', JSON.stringify(payload)); } catch(e){}
-                    console.debug('create+apply: update target not found', payload);
+                    if (lbl) lbl.textContent = 'Aucune suggestion';
+                    if (dbg) { dbg.style.display = 'none'; dbg.textContent = ''; }
+                    const applyBtn = bx.querySelector('.applySuggestion'); if (applyBtn) applyBtn.disabled = true;
                   }
-                  showToast('Règle créée et appliquée', 'success'); hideAll();
-                } else showToast('Erreur application', 'error');
-              }).catch(e=>{ console.error(e); alert('Erreur réseau ou création'); });
-          };
+                } else {
+                  if (lbl) lbl.textContent = 'Aucune suggestion';
+                  if (dbg) { dbg.style.display = 'none'; dbg.textContent = ''; }
+                  const applyBtn = bx.querySelector('.applySuggestion'); if (applyBtn) applyBtn.disabled = true;
+                }
 
-          bx.querySelector('.ignoreSuggestion').onclick = function(){ bx.style.display='none'; };
+                // Apply handler (works only when a category id is present in dataset)
+                bx.querySelector('.applySuggestion').onclick = function(){
+                  const catId = this.dataset.cat;
+                  if (!catId) { showToast('Aucune suggestion à appliquer', 'error'); return; }
+                  const fieldName = 'cat'+crit+'_id';
+                  // find form similar to before
+                  function findForm(field) {
+                    let f = document.querySelector('.m-cats form[data-field="'+field+'"][data-txid="'+txId+'"]'); if (f) return {form:f};
+                    f = document.querySelector('.m-cats form[data-field="'+field+'"]'); if (f) return {form:f};
+                    const forms = Array.from(document.querySelectorAll('.m-cats form'));
+                    for (const fr of forms) { const hf = fr.querySelector('input[name="field"]'); if (hf && hf.value === field) return {form:fr}; }
+                    return null;
+                  }
+                  const found = findForm(fieldName);
+                  if (!found) { showToast('Formulaire cible introuvable', 'error'); return; }
+                  const form = found.form; const sel = form.querySelector('select[name="value"]'); if (!sel) { showToast('Sélecteur introuvable', 'error'); return; }
+                  sel.value = catId; form.submit();
+                };
+
+                // Create rule handler: prompt for target category when no suggestion available
+                bx.querySelector('.createRule').onclick = function(){
+                  let targetCat = null;
+                  // If there is an applied suggestion, reuse its category id
+                  const applyBtn = bx.querySelector('.applySuggestion');
+                  if (applyBtn && applyBtn.dataset && applyBtn.dataset.cat) targetCat = applyBtn.dataset.cat;
+                  if (!targetCat) {
+                    targetCat = prompt('ID de la catégorie cible pour la nouvelle règle (numéro) :');
+                    if (!targetCat) return;
+                  }
+                  const fd = new FormData();
+                  fd.append('pattern', txDescription || '');
+                  fd.append('is_regex', '0');
+                  fd.append('category_id', targetCat);
+                  fd.append('scope_account_id', txAccount);
+                  fd.append('priority', '100');
+                  fetch('./mon-site/api/create_rule.php', { method: 'POST', body: fd })
+                    .then(r=>r.json()).then(resp=>{
+                      if (resp && resp.ok && resp.rule_id) {
+                        showToast('Règle créée', 'success');
+                      } else throw new Error('create failed');
+                    }).catch(e=>{ console.error(e); alert('Erreur création règle'); });
+                };
+
+                bx.querySelector('.ignoreSuggestion').onclick = function(){ bx.style.display='none'; };
+              }
+            }).catch(e => { console.debug('suggest debug fetch error', e); logDebug('suggest debug fetch error', String(e)); });
         })
         .catch(err=>{ console.error('suggest fetch error', err); });
     })();

@@ -216,34 +216,41 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
   </div>
 </form>
 
+<?php if ($accountFilter !== ''): ?>
 <h2>Liste des règles (<?php echo count($rules); ?>)</h2>
 <table>
-  <thead><tr><th>ID</th><th>Actif</th><th>Critère</th><th>Motif</th><th>Compte</th><th>Priorité</th><th>ValeurAaffecter</th><th>Regexp</th><th>Actions</th></tr></thead>
+  <thead>
+    <tr><th>ID</th><th>Actif</th><th>Critère</th><th>Motif</th><th colspan="5"></th></tr>
+    <tr><th></th><th></th><th></th><th></th><th>Compte</th><th>Priorité</th><th>ValeurAaffecter</th><th>Regexp</th><th>Actions</th></tr>
+  </thead>
   <tbody>
   <?php foreach ($rules as $r): 
         $r_level = isset($r['category_level']) ? (int)$r['category_level'] : 0;
         $r_valeur = isset($r['valeur_a_affecter']) ? (int)$r['valeur_a_affecter'] : ((isset($r['category_id']) ? (int)$r['category_id'] : 0));
   ?>
-    <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>">
-      <td class="small"><?php echo $r['id']; ?></td>
-      <td style="text-align:center">
-        <form method="post" style="display:flex;gap:6px;align-items:center">
-          <input type="hidden" name="action" value="update">
-          <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
-          <input type="checkbox" name="active" value="1" <?php echo ((int)$r['active']===1)?'checked':''; ?>>
-      </td>
-      <td>
+    <form method="post">
+      <input type="hidden" name="action" value="update">
+      <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
+      <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>">
+        <td class="small"><?php echo $r['id']; ?></td>
+        <td style="text-align:center"><input type="checkbox" name="active" value="1" <?php echo ((int)$r['active']===1)?'checked':''; ?>></td>
+        <td>
           <select name="category_level" class="select-category-level-row">
             <option value="0">Choisir critère</option>
             <?php for ($ci=1;$ci<=4;$ci++): ?>
               <option value="<?php echo $ci; ?>"<?php echo ($r_level === $ci) ? ' selected' : ''; ?>><?php echo $ci . ' - ' . htmlspecialchars($criterionNames[$ci]); ?></option>
             <?php endfor; ?>
           </select>
-      </td>
-      <td>
-          <input name="pattern" value="<?php echo htmlspecialchars($r['pattern']); ?>" style="width:100%;padding:6px">
-      </td>
-      <td>
+        </td>
+        <td><input name="pattern" value="<?php echo htmlspecialchars($r['pattern']); ?>" style="width:100%;padding:6px"></td>
+        <td colspan="5"></td>
+      </tr>
+      <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>
           <select name="scope_account_id">
             <option value="">-- pas de sélection --</option>
             <option value="NULL"<?php echo ($r['scope_account_id'] === null ? ' selected' : ''); ?>>Global</option>
@@ -251,19 +258,21 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
               <option value="<?php echo $a['id']; ?>"<?php echo ((string)$r['scope_account_id'] === (string)$a['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($a['name']); ?></option>
             <?php endforeach; ?>
           </select>
-      </td>
-      <td><input name="priority" value="<?php echo (int)$r['priority']; ?>" style="width:70px;padding:6px"></td>
-      <td>
+        </td>
+        <td><input name="priority" value="<?php echo (int)$r['priority']; ?>" style="width:70px;padding:6px"></td>
+        <td>
           <select name="valeur_a_affecter" class="select-valeur-row" style="min-width:180px">
             <option value="0">Choisir valeur</option>
           </select>
-      </td>
-      <td style="text-align:center">
-          <input type="checkbox" name="is_regex" value="1" <?php echo (!empty($r['is_regex']) ? 'checked' : ''); ?>>
-      </td>
-      <td style="white-space:nowrap">
+        </td>
+        <td style="text-align:center"><input type="checkbox" name="is_regex" value="1" <?php echo (!empty($r['is_regex']) ? 'checked' : ''); ?>></td>
+        <td style="white-space:nowrap">
           <button class="btn" type="submit">Modifier</button>
-        </form>
+        </td>
+      </tr>
+    </form>
+    <tr>
+      <td colspan="9" style="padding:4px 8px 12px 8px">
         <form method="post" style="display:inline" onsubmit="return confirm('Supprimer la règle ?');">
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
@@ -274,6 +283,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <?php endforeach; ?>
   </tbody>
 </table>
+<?php endif; ?>
 
 </body></html>
 <script>
