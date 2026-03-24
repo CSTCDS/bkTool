@@ -141,6 +141,9 @@ if ($tx) {
   }
 }
 
+// pending flag
+$isPending = $tx ? (strtoupper((string)($tx['status'] ?? '')) !== 'BOOK') : false;
+
 // Compute Solde virtuel (group total balance at this position)
 $groupVirtualBalance = null;
 if ($tx && $groupSelected) {
@@ -224,7 +227,7 @@ if ($tx && $groupSelected) {
 <?php else: ?>
   <div class="m-card">
     <div class="m-row"><span class="m-label">Compte</span><span class="m-value"><?php echo htmlspecialchars($tx['account_name'] ?? $tx['account_id']); ?></span></div>
-    <div class="m-row"><span class="m-label">Date</span><span class="m-value"><?php echo htmlspecialchars($tx['booking_date'] ?? ''); ?></span></div>
+    <div class="m-row"><span class="m-label">Date</span><span class="m-value"><?php if ($isPending) echo '<span class="badge-pending">en attente</span><br>'; ?><?php echo htmlspecialchars($tx['booking_date'] ?? ''); ?></span></div>
     <div class="m-row"><span class="m-label">Montant</span><span class="m-value" style="color:<?php echo ($tx['amount'] < 0) ? '#c62828' : '#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$tx['amount'], 2, ',', ' ')); ?></span></div>
     <div class="m-row"><span class="m-label">Devise</span><span class="m-value"><?php echo htmlspecialchars($tx['currency'] ?? ''); ?></span></div>
     <div class="m-row m-desc"><span class="m-label">Commentaire</span><span class="m-value"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>
