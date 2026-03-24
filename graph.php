@@ -133,9 +133,9 @@ try {
     html,body{height:100%;}
     body{display:flex;flex-direction:column;min-height:100vh;margin:0;overflow-x:hidden}
     main{flex:1;display:flex;flex-direction:column;padding:12px}
-    /* chart section should expand to fill available vertical space */
-    main > section:last-of-type{flex:1;display:flex;flex-direction:column}
-    #chartWrapper{flex:1;display:flex;align-items:stretch;overflow:hidden}
+    /* chart section: center the chart and limit its size to 90% width / 60% viewport height */
+    main > section:last-of-type{display:flex;justify-content:center;align-items:center}
+    #chartWrapper{width:90%;height:60vh;display:flex;align-items:stretch;overflow:hidden;margin:0 auto}
     #chart{display:block;max-width:100% !important;width:100% !important;height:100% !important}
   </style>
 </head>
