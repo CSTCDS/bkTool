@@ -13,7 +13,6 @@ $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
     <a href="categories.php"<?php echo ($current === 'categories.php') ? ' class="active"' : ''; ?>>Paramètres</a>
     <a href="choix.php" class="bank-link"<?php echo ($current === 'choix.php') ? ' class="active"' : ''; ?>>Banque</a>
     <a href="synchsmart.php"<?php echo ($current === 'synchsmart.php') ? ' class="active"' : ''; ?>>Synchro</a>
-    <a href="#" id="closeApp" style="display:none">Fermer l'appli</a>
   </nav>
 </div>
 <style>
@@ -51,19 +50,6 @@ document.getElementById('hamburgerBtn').addEventListener('click', function(){
     try { location.href = href; } catch (ex) { window.location = href; }
   }, true);
 
-  // Show "Fermer l'appli" option and handle close action in PWA
-  var closeLink = document.getElementById('closeApp');
-  if (closeLink) {
-    closeLink.style.display = 'inline-block';
-    closeLink.addEventListener('click', function(e){
-      e.preventDefault();
-      // Most browsers won't allow scripts to close a top-level window.
-      // Attempt to close; if it fails, notify the user instead of navigating to about:blank.
-      try { window.close(); } catch (ex) {}
-      setTimeout(function(){
-        alert('Impossible de fermer automatiquement. Utilisez la navigation système (bouton Home / geste) pour quitter l\'application.');
-      }, 250);
-    });
-  }
+  // no close-app action — removed because it can open a blank window on some platforms
 })();
 </script>

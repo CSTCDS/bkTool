@@ -52,7 +52,10 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
 </head>
 <body>
   <?php include __DIR__ . '/header.php'; ?>
-  <div style="margin-top:8px"><button id="restartSyncBtn" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer">Relancer la synchro</button></div>
+  <div style="margin-top:8px">
+    <button id="restartSyncBtn" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer;margin-right:8px">Relancer la synchro</button>
+    <button id="goTransactionsBtn" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer">Transactions</button>
+  </div>
   <div id="syncArea">
     <div id="loader" style="margin-top:12px">🔄 <strong>Synchronisation en cours...</strong></div>
     <div id="alerts" style="margin-top:12px"></div>
@@ -172,6 +175,10 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
     // Restart button handler (uses shared header hamburger for navigation)
     var restartBtn = document.getElementById('restartSyncBtn');
     if (restartBtn) restartBtn.addEventListener('click', function(e){ e.preventDefault(); runSync(); });
+
+    // Transactions button: navigate to transactions list
+    var txBtn = document.getElementById('goTransactionsBtn');
+    if (txBtn) txBtn.addEventListener('click', function(e){ e.preventDefault(); location.href = 'transactions.php'; });
   })();
   </script>
 </body>
