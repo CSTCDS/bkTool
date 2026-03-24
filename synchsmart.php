@@ -51,18 +51,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
   <style>body{font-family:Arial,Helvetica,sans-serif;padding:12px}</style>
 </head>
 <body>
-  <div style="display:flex;align-items:center;gap:12px">
-    <button id="hamburgerBtn" aria-label="Menu" style="font-size:20px;padding:6px;background:transparent;border:0;cursor:pointer">☰</button>
-    <h1 style="margin:0">bkTool - Synchro</h1>
-  </div>
-  <nav id="hamburgerMenu" style="display:none;position:absolute;left:12px;top:48px;background:#fff;border:1px solid #ddd;padding:8px;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,.08)">
-    <div style="display:flex;flex-direction:column;gap:6px">
-      <a href="index.php">Dashboard</a>
-      <a href="transactions.php">Transactions</a>
-      <a href="categories.php?crit=account">Paramètres</a>
-      <a href="#" id="restartSyncLink">Relancer la synchro</a>
-    </div>
-  </nav>
+  <?php include __DIR__ . '/header.php'; ?>
+  <div style="margin-top:8px"><button id="restartSyncBtn" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer">Relancer la synchro</button></div>
   <div id="syncArea">
     <div id="loader" style="margin-top:12px">🔄 <strong>Synchronisation en cours...</strong></div>
     <div id="alerts" style="margin-top:12px"></div>
@@ -179,15 +169,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
     // start automatically
     runSync();
 
-    // Hamburger menu toggle and restart link
-    var hb = document.getElementById('hamburgerBtn');
-    var menu = document.getElementById('hamburgerMenu');
-    if (hb && menu) {
-      hb.addEventListener('click', function(e){ e.stopPropagation(); menu.style.display = (menu.style.display === 'none' || menu.style.display === '') ? 'block' : 'none'; });
-      document.addEventListener('click', function(){ menu.style.display = 'none'; });
-    }
-    var rlink = document.getElementById('restartSyncLink');
-    if (rlink) { rlink.addEventListener('click', function(e){ e.preventDefault(); menu.style.display = 'none'; runSync(); }); }
+    // Restart button handler (uses shared header hamburger for navigation)
+    var restartBtn = document.getElementById('restartSyncBtn');
+    if (restartBtn) restartBtn.addEventListener('click', function(e){ e.preventDefault(); runSync(); });
   })();
   </script>
 </body>
