@@ -124,6 +124,14 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         </option>
       <?php endforeach; endif; ?>
     </select>
+      <label style="font-size:.95rem;margin-left:8px;display:inline-block"><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?>> opérations en attente</label>
+
+      <?php if ($displayBalance !== null || $groupVirtualBalance !== null): ?>
+        <div class="mobile-balances" style="margin-top:6px;font-size:.95rem;color:#333">
+          <?php if ($displayBalance !== null): ?><span>Solde: <strong><?php echo htmlspecialchars(number_format($displayBalance,2,',',' ')); ?></strong></span><?php endif; ?>
+          <?php if ($groupVirtualBalance !== null): ?><span style="margin-left:12px">Solde virtuel: <strong><?php echo htmlspecialchars(number_format($groupVirtualBalance,2,',',' ')); ?></strong></span><?php endif; ?>
+        </div>
+      <?php endif; ?>
   </div>
 
   <div class="mobile-nav" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
@@ -133,7 +141,7 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
       <span id="mcCounter" style="margin:0 8px"><?php echo ($idx + 1) . ' / ' . $total; ?></span>
       <button class="arrow-btn" <?php echo ($idx >= $total - 1) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo min($total - 1,$idx+1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : 0; ?>)">&gt;</button>
     </div>
-    <label style="font-size:.95rem"><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?>> Afficher les opérations en attente</label>
+    
   </div>
 
 <?php if (!$tx): ?>

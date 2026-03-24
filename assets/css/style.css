@@ -147,6 +147,12 @@ th{background:#f2f2f2}
   #mcCounter{font-size:.85rem;color:#666}
 }
 
+/* Make category selects full width in mobile view */
+.m-cats select { width: 100%; box-sizing: border-box; }
+
+/* Small balances display under account select */
+.mobile-balances { color: #333; font-size: .95rem; margin-top: 6px }
+
 /* Align only the data cells for Solde virtuel to the right; leave the header aligned normally */
 .tx-table td.col-solde-virtuel { text-align: right; }
 
