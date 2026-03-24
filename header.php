@@ -8,11 +8,11 @@ $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
     <button class="hamburger" id="hamburgerBtn" aria-label="Menu">&#9776;</button>
   </div>
   <nav class="tabs" id="navTabs">
-    <a href="index.php"<?php echo ($current === 'index.php') ? ' class="active"' : ''; ?>>Dashboard</a>
-    <a href="transactions.php"<?php echo ($current === 'transactions.php') ? ' class="active"' : ''; ?>>Transactions</a>
-    <a href="categories.php"<?php echo ($current === 'categories.php') ? ' class="active"' : ''; ?>>Paramètres</a>
-    <a href="choix.php" class="bank-link"<?php echo ($current === 'choix.php') ? ' class="active"' : ''; ?>>Banque</a>
-    <a href="synchsmart.php"<?php echo ($current === 'synchsmart.php') ? ' class="active"' : ''; ?>>Synchro</a>
+    <a href="index.php" target="_self"<?php echo ($current === 'index.php') ? ' class="active"' : ''; ?>>Dashboard</a>
+    <a href="transactions.php" target="_self"<?php echo ($current === 'transactions.php') ? ' class="active"' : ''; ?>>Transactions</a>
+    <a href="categories.php" target="_self"<?php echo ($current === 'categories.php') ? ' class="active"' : ''; ?>>Paramètres</a>
+    <a href="choix.php" target="_self" class="bank-link"<?php echo ($current === 'choix.php') ? ' class="active"' : ''; ?>>Banque</a>
+    <a href="synchsmart.php" target="_self"<?php echo ($current === 'synchsmart.php') ? ' class="active"' : ''; ?>>Synchro</a>
   </nav>
 </div>
 <style>
@@ -28,28 +28,32 @@ document.getElementById('hamburgerBtn').addEventListener('click', function(){
 
 // When installed as a standalone web app (Add to Home Screen), iOS/Safari
 // may open links in a new window which looks like a separate screen with
-// a close button. Detect standalone mode and force header links to
+// a close button. Detect standalone mode and force ALL links to
 // navigate in the same window to keep a single app experience.
 (function(){
   function isStandalone(){
-    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+    return (window.matchMedia('(display-mode: standalone)').matches) || (window.navigator.standalone === true);
   }
   if (!isStandalone()) return;
-  var nav = document.getElementById('navTabs');
-  if (!nav) return;
-  // Ensure links open in the same window and prevent iOS from opening a new one.
-  // Use a capture-phase global listener to catch taps on anchors inside the nav.
+  
+  // Global click interceptor for ALL links in standalone PWA mode.
+  // This prevents iOS/Safari from opening new windows/tabs for any clicked link.
   document.addEventListener('click', function(ev){
-    var a = ev.target.closest && ev.target.closest('a');
-    if (!a) return;
-    if (!nav.contains(a)) return;
+    var a = ev.target;
+    // walk up DOM to find first <a> tag
+    while (a && a.tagName !== 'A') {
+      a = a.parentNode;
+    }
+    if (!a || a.tagName !== 'A') return;
+    
     var href = a.getAttribute('href');
-    if (!href || href === '#') return;
+    if (!href) return;
+    
+    // prevent default link behavior to avoid opening new window
     ev.preventDefault();
-    // force same-window navigation
-    try { location.href = href; } catch (ex) { window.location = href; }
+    
+    // force navigation in same window (not new tab/window)
+    window.location.href = href;
   }, true);
-
-  // no close-app action — removed because it can open a blank window on some platforms
 })();
 </script>
