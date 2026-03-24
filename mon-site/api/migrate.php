@@ -120,6 +120,13 @@ function bkt_migrate(PDO $pdo): void
                 $pdo->exec("ALTER TABLE accounts ADD COLUMN alert_threshold DECIMAL(20,2) DEFAULT NULL AFTER balance");
             }
         },
+        // Version 8 : add numero_affichage smallint to accounts for display ordering
+        8 => function (PDO $pdo) {
+            $cols = $pdo->query('SHOW COLUMNS FROM accounts LIKE \'numero_affichage\'')->fetchAll();
+            if (empty($cols)) {
+                $pdo->exec("ALTER TABLE accounts ADD COLUMN numero_affichage SMALLINT DEFAULT NULL AFTER alert_threshold");
+            }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées

@@ -14,7 +14,7 @@ require __DIR__ . '/mon-site/api/sync.php';
 // AJAX handler: return accounts + received/last entries for a given import_num
 if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
   $importNum = isset($_GET['import_num']) && ctype_digit((string)$_GET['import_num']) ? (int)$_GET['import_num'] : (int)$pdo->query('SELECT COALESCE(MAX(NumImport), 0) FROM transactions')->fetchColumn();
-  $stmt = $pdo->prepare('SELECT id, name, balance, alert_threshold FROM accounts ORDER BY name');
+  $stmt = $pdo->prepare('SELECT id, name, balance, alert_threshold, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage, name');
   $stmt->execute();
   $accs = $stmt->fetchAll(PDO::FETCH_ASSOC);
   foreach ($accs as &$a) {

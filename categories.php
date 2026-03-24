@@ -21,8 +21,7 @@ for ($i = 1; $i <= 4; $i++) {
 
 $notice = null;
 
-// Liste des comptes (pour l'association de regroupements)
-$accounts = $pdo->query('SELECT id, name, currency, balance, color, alert_threshold, updated_at FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+$accounts = $pdo->query('SELECT id, name, currency, balance, color, alert_threshold, numero_affichage, updated_at FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage, name')->fetchAll(PDO::FETCH_ASSOC);
 $accMap = [];
 foreach ($accounts as $ac) $accMap[$ac['id']] = $ac['name'];
 // --- Actions POST ---
@@ -149,12 +148,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $currency = trim((string)($_POST['currency'] ?? ''));
       $color = trim((string)($_POST['color'] ?? '')) ?: null;
       $alert = isset($_POST['alert_threshold']) && $_POST['alert_threshold'] !== '' ? (float)$_POST['alert_threshold'] : null;
+      $numeroAff = isset($_POST['numero_affichage']) && $_POST['numero_affichage'] !== '' ? (int)$_POST['numero_affichage'] : null;
       if ($accountId !== '' && $name !== '') {
-        $stmt = $pdo->prepare('UPDATE accounts SET name = :name, currency = :currency, color = :color, alert_threshold = :alert, updated_at = NOW() WHERE id = :id');
-        $stmt->execute([':name' => $name, ':currency' => $currency, ':color' => $color, ':alert' => $alert, ':id' => $accountId]);
+        $stmt = $pdo->prepare('UPDATE accounts SET name = :name, currency = :currency, color = :color, alert_threshold = :alert, numero_affichage = :numaff, updated_at = NOW() WHERE id = :id');
+        $stmt->execute([':name' => $name, ':currency' => $currency, ':color' => $color, ':alert' => $alert, ':numaff' => $numeroAff, ':id' => $accountId]);
         $notice = 'Compte mis à jour.';
         // refresh accounts list/map with full columns
-        $accounts = $pdo->query('SELECT id, name, currency, balance, color, alert_threshold, updated_at FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+        $accounts = $pdo->query('SELECT id, name, currency, balance, color, alert_threshold, numero_affichage, updated_at FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage, name')->fetchAll(PDO::FETCH_ASSOC);
         $accMap = [];
         foreach ($accounts as $ac) $accMap[$ac['id']] = $ac['name'];
       }
@@ -304,12 +304,15 @@ foreach ($allCats as $c) {
     <?php if (!empty($accounts)): ?>
       <table>
         <thead>
-          <tr><th>Libellé</th><th>Devise</th><th>Couleur</th><th>Seuil alerte</th><th>Solde</th><th>Dernière MAJ</th><th></th></tr>
+          <tr><th>Numéro affichage</th><th>Libellé</th><th>Devise</th><th>Couleur</th><th>Seuil alerte</th><th>Solde</th><th>Dernière MAJ</th><th></th></tr>
         </thead>
         <tbody>
         <?php foreach ($accounts as $ac): ?>
           <tr>
             <form method="post">
+              <td>
+                <input type="number" name="numero_affichage" value="<?php echo htmlspecialchars((string)($ac['numero_affichage'] ?? '')); ?>" class="acc-num" style="width:80px">
+              </td>
               <td>
                 <input type="text" name="name" value="<?php echo htmlspecialchars($ac['name'] ?? ''); ?>" required class="acc-name">
               </td>
