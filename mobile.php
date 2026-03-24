@@ -266,6 +266,7 @@ if ($tx && $groupSelected) {
   </div>
 
   <div class="m-cats">
+    <div id="suggestionDebugPanel" style="background:#fff8e1;border:1px solid #ffecb3;padding:8px;border-radius:6px;margin-bottom:8px;font-size:.9rem;color:#333">Debug suggestions: initialising...</div>
     <?php for ($ci = 1; $ci <= 4; $ci++): ?>
       <div id="suggestionBox_<?php echo $ci; ?>" style="display:none;background:#eef7ff;border:1px solid #cfe8ff;padding:10px;border-radius:6px;margin-bottom:8px">
         <strong>Suggestion <?php echo $ci; ?> :</strong> <span id="suggestLabel_<?php echo $ci; ?>"></span>
@@ -309,8 +310,20 @@ if ($tx && $groupSelected) {
         if (f && f.dataset && f.dataset.txid) txId = f.dataset.txid;
       }
       console.debug('suggest:init txId=', txId);
+      logDebug('init txId=' + txId);
       const catLabels = <?php echo json_encode($catLabels); ?>;
       const catCriteria = <?php echo json_encode($catCriteria); ?>;
+
+      function logDebug(msg, obj) {
+        try {
+          var p = document.getElementById('suggestionDebugPanel');
+          var line = '[' + (new Date()).toLocaleTimeString() + '] ' + msg;
+          if (obj !== undefined) {
+            try { line += ' ' + JSON.stringify(obj); } catch(e) { line += ' ' + String(obj); }
+          }
+          if (p) p.textContent = line + '\n' + p.textContent;
+        } catch(e) { console.debug('logDebug error', e); }
+      }
       if (!txId) {
         console.debug('suggest: no txId, aborting suggestion fetch');
         return;
@@ -328,6 +341,7 @@ if ($tx && $groupSelected) {
         .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
         .then(data => {
           console.debug('suggest: response', data);
+          logDebug('fetch response', data);
           hideAll();
           if (!data || !data.suggestion) return;
           const s = data.suggestion;
@@ -364,6 +378,7 @@ if ($tx && $groupSelected) {
                 if (!found) {
                   const payload = {action:'apply_missing_form', tx_id:txId, field:fieldName, criterion:crit, time:(new Date()).toISOString()};
                   console.debug('apply: target form not found', payload);
+                  logDebug('apply: target form not found', payload);
                   try { navigator.sendBeacon('./mon-site/api/client_log.php', JSON.stringify(payload)); } catch(e) {}
                   showToast('Formulaire cible introuvable', 'error');
                   return;
@@ -372,6 +387,7 @@ if ($tx && $groupSelected) {
                 const sel = form.querySelector('select[name="value"]');
                 if (!sel) {
                   console.debug('apply: select not found in form', {txId, fieldName});
+                  logDebug('apply: select not found', {txId, fieldName});
                   showToast('Sélecteur introuvable', 'error');
                   return;
                 }
