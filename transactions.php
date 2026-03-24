@@ -502,6 +502,37 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
 });
 </script>
 <script>
+// Responsive behavior: on small viewports, redirect to mobile.php preserving filters
+document.addEventListener('DOMContentLoaded', function(){
+  try {
+    var width = window.innerWidth || document.documentElement.clientWidth || window.screen.width;
+    var qs = location.search || '';
+    if (width <= 600 && qs.indexOf('desktop=1') === -1) {
+      location.href = 'mobile.php' + qs;
+      return;
+    }
+  } catch(e) { /* ignore */ }
+
+  // Click on a transaction row opens mobile.php for that tx
+  var tbody = document.querySelector('table.tx-table tbody');
+  if (!tbody) return;
+  var accountSel = <?php echo json_encode($acctSel); ?>;
+  var showPendingFlag = <?php echo $showPending ? '1' : '0'; ?>;
+  tbody.addEventListener('click', function(ev){
+    var tr = ev.target.closest('tr');
+    if (!tr) return;
+    // ignore clicks on selects/buttons/links
+    if (ev.target.closest('select') || ev.target.closest('button') || ev.target.closest('a')) return;
+    var txid = tr.dataset.txid;
+    if (!txid) return;
+    var url = 'mobile.php?tx_id=' + encodeURIComponent(txid);
+    if (accountSel) url += '&account=' + encodeURIComponent(accountSel);
+    url += '&show_pending=' + encodeURIComponent(showPendingFlag);
+    location.href = url;
+  });
+});
+</script>
+<script>
 // Quick range selector: set from/to and submit form
 document.getElementById('quickRange').addEventListener('change', function(){
   var v = this.value;

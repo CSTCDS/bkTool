@@ -108,21 +108,31 @@ $countSql = 'SELECT COUNT(*) FROM transactions t WHERE ' . implode(' AND ', $whe
 $stmt = $pdo->prepare($countSql);
 $stmt->execute($params);
 $total = (int)$stmt->fetchColumn();
+// If tx_id supplied, load that transaction directly (used when opening from transactions list)
+$tx = null;
+$requestedTxId = isset($_GET['tx_id']) ? (int)$_GET['tx_id'] : 0;
+if ($requestedTxId) {
+  $sql = 'SELECT t.*, a.name AS account_name, a.balance AS account_balance FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id WHERE t.id = :tid LIMIT 1';
+  $stmt = $pdo->prepare($sql);
+  $stmt->execute([':tid' => $requestedTxId]);
+  $tx = $stmt->fetch(PDO::FETCH_ASSOC);
+  $idx = 0;
+} else {
+  // Current index (0-based)
+  $idx = max(0, min((int)($_GET['idx'] ?? 0), $total - 1));
 
-// Current index (0-based)
-$idx = max(0, min((int)($_GET['idx'] ?? 0), $total - 1));
-
-// Fetch single row at offset
-$sql = 'SELECT t.*, a.name AS account_name, a.balance AS account_balance
-        FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id
-        WHERE ' . implode(' AND ', $where) . '
-        ORDER BY t.booking_date DESC, t.amount DESC
-        LIMIT 1 OFFSET :off';
-$stmt = $pdo->prepare($sql);
-foreach ($params as $k => $v) $stmt->bindValue($k, $v);
-$stmt->bindValue(':off', $idx, PDO::PARAM_INT);
-$stmt->execute();
-$tx = $stmt->fetch(PDO::FETCH_ASSOC);
+  // Fetch single row at offset
+  $sql = 'SELECT t.*, a.name AS account_name, a.balance AS account_balance
+          FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id
+          WHERE ' . implode(' AND ', $where) . '
+          ORDER BY t.booking_date DESC, t.amount DESC
+          LIMIT 1 OFFSET :off';
+  $stmt = $pdo->prepare($sql);
+  foreach ($params as $k => $v) $stmt->bindValue($k, $v);
+  $stmt->bindValue(':off', $idx, PDO::PARAM_INT);
+  $stmt->execute();
+  $tx = $stmt->fetch(PDO::FETCH_ASSOC);
+}
 
 // Compute Solde (per-account balance at this position)
 $displayBalance = null;
