@@ -196,10 +196,16 @@ if ($tx && $groupSelected) {
     .m-nav button:disabled{opacity:.4;cursor:default}
     .m-counter{font-size:.9rem;color:#666}
     .m-empty{text-align:center;padding:40px 0;color:#999}
+    /* Toast */
+    #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;min-width:200px;padding:10px 16px;border-radius:8px;background:rgba(0,0,0,0.8);color:#fff;display:none;z-index:9999}
+    #toast.toast-success{background:linear-gradient(90deg,#2e7d32,#388e3c)}
+    #toast.toast-error{background:linear-gradient(90deg,#c62828,#d32f2f)}
   </style>
 </head>
 <body>
 <?php include __DIR__ . '/header.php'; ?>
+
+  <div id="toast"></div>
 
   <div class="m-account">
     <select onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; location.href='mobile.php?account='+encodeURIComponent(this.value)">
@@ -259,7 +265,7 @@ if ($tx && $groupSelected) {
       $field = "cat{$ci}_id";
       $curVal = $tx[$field] ?? null;
     ?>
-      <form method="post" style="margin:0">
+      <form method="post" data-field="<?php echo $field; ?>" data-txid="<?php echo htmlspecialchars($tx['id']); ?>" style="margin:0">
         <input type="hidden" name="tx_id" value="<?php echo htmlspecialchars($tx['id']); ?>">
         <input type="hidden" name="field" value="<?php echo $field; ?>">
         <input type="hidden" name="idx" value="<?php echo $idx; ?>">
@@ -311,14 +317,42 @@ if ($tx && $groupSelected) {
           if (dbg) { dbg.style.display='block'; dbg.textContent = JSON.stringify(data, null, 2); }
 
           // Apply handler: find the form with hidden input field == 'cat{crit}_id'
-          bx.querySelector('.applySuggestion').onclick = function(){
-            const fieldName = 'cat'+crit+'_id';
-            const hf = document.querySelector('.m-cats form input[name="field"][value="' + fieldName + '"]');
-            if (!hf) return alert('Formulaire cible introuvable');
-            const form = hf.closest('form');
-            const sel = form.querySelector('select[name="value"]');
-            if (sel) { sel.value = s.category_id; form.submit(); }
-          };
+              bx.querySelector('.applySuggestion').onclick = function(){
+                const fieldName = 'cat'+crit+'_id';
+                function findForm(field) {
+                  // 1) exact match data-field + data-txid
+                  let f = document.querySelector('.m-cats form[data-field="'+field+'"][data-txid="'+txId+'"]');
+                  if (f) return {form:f, selector:'data-field+txid'};
+                  // 2) match data-field only
+                  f = document.querySelector('.m-cats form[data-field="'+field+'"]');
+                  if (f) return {form:f, selector:'data-field'};
+                  // 3) fallback: scan hidden input[name=field]
+                  const forms = Array.from(document.querySelectorAll('.m-cats form'));
+                  for (const fr of forms) {
+                    const hf = fr.querySelector('input[name="field"]');
+                    if (hf && hf.value === field) return {form:fr, selector:'hidden-field'};
+                  }
+                  return null;
+                }
+                const found = findForm(fieldName);
+                if (!found) {
+                  const payload = {action:'apply_missing_form', tx_id:txId, field:fieldName, criterion:crit, time:(new Date()).toISOString()};
+                  console.debug('apply: target form not found', payload);
+                  try { navigator.sendBeacon('./mon-site/api/client_log.php', JSON.stringify(payload)); } catch(e) {}
+                  showToast('Formulaire cible introuvable', 'error');
+                  return;
+                }
+                const form = found.form;
+                const sel = form.querySelector('select[name="value"]');
+                if (!sel) {
+                  console.debug('apply: select not found in form', {txId, fieldName});
+                  showToast('Sélecteur introuvable', 'error');
+                  return;
+                }
+                sel.value = s.category_id;
+                console.debug('apply: submitting form', {txId, fieldName, selector:found.selector});
+                form.submit();
+              };
 
           // Create rule handler (create + apply)
           bx.querySelector('.createRule').onclick = function(){
@@ -337,16 +371,28 @@ if ($tx && $groupSelected) {
                 throw new Error('create failed');
               }).then(ar=>{
                 if (ar && ar.ok) {
-                  // update select for this criterion
+                  // update select for this criterion (defensive)
                   const fieldName = ar.field;
-                  const hf = document.querySelector('.m-cats form input[name="field"][value="' + fieldName + '"]');
-                  if (hf) {
-                    const form = hf.closest('form');
+                  const tryFind = (f)=>{
+                    let ff = document.querySelector('.m-cats form[data-field="'+f+'"][data-txid="'+txId+'"]');
+                    if (ff) return ff;
+                    ff = document.querySelector('.m-cats form[data-field="'+f+'"]');
+                    if (ff) return ff;
+                    const forms = Array.from(document.querySelectorAll('.m-cats form'));
+                    for (const fr of forms) { const hf = fr.querySelector('input[name="field"]'); if (hf && hf.value === f) return fr; }
+                    return null;
+                  };
+                  const form = tryFind(fieldName);
+                  if (form) {
                     const sel = form.querySelector('select[name="value"]');
-                    if (sel) { sel.value = String(ar.new); sel.style.background = 'orange'; }
+                    if (sel) { sel.value = String(ar.new); sel.style.background = 'orange'; setTimeout(()=>sel.style.background='',3000); }
+                  } else {
+                    const payload = {action:'apply_update_missing', tx_id:txId, field:fieldName, server:ar, time:(new Date()).toISOString()};
+                    try { navigator.sendBeacon('./mon-site/api/client_log.php', JSON.stringify(payload)); } catch(e){}
+                    console.debug('create+apply: update target not found', payload);
                   }
-                  alert('Règle créée et appliquée'); hideAll();
-                } else alert('Erreur application');
+                  showToast('Règle créée et appliquée', 'success'); hideAll();
+                } else showToast('Erreur application', 'error');
               }).catch(e=>{ console.error(e); alert('Erreur réseau ou création'); });
           };
 
@@ -354,6 +400,21 @@ if ($tx && $groupSelected) {
         })
         .catch(err=>{ console.error('suggest fetch error', err); });
     })();
+    </script>
+    <script>
+    // small toast utility
+    function showToast(msg, type) {
+      try {
+        var t = document.getElementById('toast');
+        if (!t) return;
+        t.className = '';
+        if (type === 'success') t.classList.add('toast-success');
+        if (type === 'error') t.classList.add('toast-error');
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(function(){ t.style.display = 'none'; t.className = ''; }, 3500);
+      } catch(e){ console.debug('toast error', e); }
+    }
     </script>
     <script>
     // toggle show pending checkbox handler
