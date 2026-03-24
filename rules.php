@@ -248,11 +248,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <input type="checkbox" name="is_regex[<?php echo $r['id']; ?>]" value="1" <?php echo (!empty($r['is_regex']) ? 'checked' : ''); ?>>
       </td>
       <td>
-        <form method="post" style="display:inline">
-          <input type="hidden" name="action" value="update">
-          <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
-          <button class="btn" type="submit">Modifier</button>
-        </form>
+        <!-- Placeholder cell for actions: unified form is in the second row -->
       </td>
     </tr>
     <tr style="background:<?php echo $bg; ?>">
@@ -281,10 +277,18 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </select>
       </td>
       <td>
-        <form method="post" onsubmit="return confirm('Supprimer la règle ?');" style="display:inline">
-          <input type="hidden" name="action" value="delete">
+        <form id="update-form-<?php echo $r['id']; ?>" method="post" style="display:inline">
           <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
-          <button class="btn danger" type="submit">Supprimer</button>
+          <input type="hidden" name="action" value="update">
+          <input type="hidden" name="pattern" value="">
+          <input type="hidden" name="is_regex" value="0">
+          <input type="hidden" name="category_level" value="0">
+          <input type="hidden" name="scope_account_id" value="">
+          <input type="hidden" name="priority" value="0">
+          <input type="hidden" name="valeur_a_affecter" value="0">
+          <input type="hidden" name="active" value="0">
+          <button class="btn" type="button" onclick="submitRuleUpdate(<?php echo $r['id']; ?>)">Modifier</button>
+          <button class="btn danger" type="submit" name="action" value="delete" onclick="return confirm('Supprimer la règle ?');">Supprimer</button>
         </form>
       </td>
     </tr>
@@ -309,6 +313,33 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
   } catch(e) { /* ignore */ }
 })();
+</script>
+<script>
+function submitRuleUpdate(id){
+  try{
+    var form = document.getElementById('update-form-'+id);
+    if(!form) return;
+    function q(name){ return document.querySelector('[name="'+name+'['+id+']"]'); }
+    var patternEl = q('pattern');
+    var lvlEl = q('category_level');
+    var valEl = document.querySelector('select[name="valeur_a_affecter['+id+']"]');
+    var scopeEl = document.querySelector('select[name="scope_account_id['+id+']"]');
+    var prioEl = q('priority');
+    var isRegexEl = document.querySelector('[name="is_regex['+id+']"]');
+    var activeEl = document.querySelector('[name="active['+id+']"]');
+
+    form.elements['pattern'].value = patternEl ? patternEl.value : '';
+    form.elements['category_level'].value = lvlEl ? lvlEl.value : 0;
+    form.elements['valeur_a_affecter'].value = valEl ? valEl.value : 0;
+    var scopeVal = '';
+    if(scopeEl){ scopeVal = scopeEl.value; }
+    form.elements['scope_account_id'].value = scopeVal;
+    form.elements['priority'].value = prioEl ? prioEl.value : 0;
+    form.elements['is_regex'].value = (isRegexEl && isRegexEl.checked) ? 1 : 0;
+    form.elements['active'].value = (activeEl && activeEl.checked) ? 1 : 0;
+    form.submit();
+  }catch(e){ console.error(e); alert('Erreur soumission'); }
+}
 </script>
 <script>
 // Build JS map of categories per criterion for populating "valeur_a_affecter" selects
