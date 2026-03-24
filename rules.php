@@ -319,32 +319,39 @@ function submitRuleUpdate(id){
   try{
     var form = document.getElementById('update-form-'+id);
     if(!form) return;
-    function byName(n){ var els = document.getElementsByName(n+'['+id+']'); return (els && els.length>0)?els[0]:null; }
-    var patternEl = byName('pattern');
-    var lvlEl = byName('category_level');
-    var valEl = document.getElementsByName('valeur_a_affecter['+id+']')[0] || document.querySelector('select[name="valeur_a_affecter['+id+']"]');
-    var scopeEl = document.getElementsByName('scope_account_id['+id+']')[0] || document.querySelector('select[name="scope_account_id['+id+']"]');
-    var prioEl = byName('priority');
-    var isRegexEl = document.getElementsByName('is_regex['+id+']')[0] || document.querySelector('[name="is_regex['+id+']"]');
-    var activeEl = document.getElementsByName('active['+id+']')[0] || document.querySelector('[name="active['+id+']"]');
+    // collect all inputs/selects for this rule by matching name suffix [id]
+    var selector = '[name$="['+id+']"]';
+    var nodes = document.querySelectorAll(selector);
+    var map = {};
+    nodes.forEach(function(n){
+      // name may be like pattern[123]
+      var nm = n.getAttribute('name');
+      var key = nm.replace(/\[\d+\]$/, '');
+      map[key] = n;
+    });
 
-    form.elements['pattern'].value = patternEl ? patternEl.value : '';
-    form.elements['category_level'].value = lvlEl ? lvlEl.value : 0;
-    form.elements['valeur_a_affecter'].value = valEl ? valEl.value : 0;
+    console.log('submitRuleUpdate map for', id, map);
 
+    var patternVal = map['pattern'] ? map['pattern'].value : '';
+    var lvlVal = map['category_level'] ? map['category_level'].value : 0;
+    var valeurVal = map['valeur_a_affecter'] ? map['valeur_a_affecter'].value : 0;
     var scopeVal = '';
-    if(scopeEl){
-      scopeVal = scopeEl.value;
-      // normalize: keep 'NULL' for global, keep '' for no selection, else numeric id
-      if(scopeVal === 'NULL') scopeVal = 'NULL';
-      else if(scopeVal === '') scopeVal = '';
-      else scopeVal = String(parseInt(scopeVal,10) || '');
-    }
-    form.elements['scope_account_id'].value = scopeVal;
+    if (map['scope_account_id']) { scopeVal = map['scope_account_id'].value; }
+    var prioVal = map['priority'] ? map['priority'].value : 0;
+    var isRegexChecked = map['is_regex'] ? (map['is_regex'].checked ? 1 : 0) : 0;
+    var activeChecked = map['active'] ? (map['active'].checked ? 1 : 0) : 0;
 
-    form.elements['priority'].value = prioEl ? prioEl.value : 0;
-    form.elements['is_regex'].value = (isRegexEl && isRegexEl.checked) ? 1 : 0;
-    form.elements['active'].value = (activeEl && activeEl.checked) ? 1 : 0;
+    // normalize scope for submission
+    if (scopeVal === 'NULL') { form.elements['scope_account_id'].value = 'NULL'; }
+    else if (scopeVal === '') { form.elements['scope_account_id'].value = ''; }
+    else { var n = parseInt(scopeVal,10); form.elements['scope_account_id'].value = isNaN(n) ? '' : String(n); }
+
+    form.elements['pattern'].value = patternVal;
+    form.elements['category_level'].value = lvlVal;
+    form.elements['valeur_a_affecter'].value = valeurVal;
+    form.elements['priority'].value = prioVal;
+    form.elements['is_regex'].value = isRegexChecked;
+    form.elements['active'].value = activeChecked;
     form.submit();
   }catch(e){ console.error(e); alert('Erreur soumission'); }
 }
