@@ -176,25 +176,39 @@ try {
 </main>
 
   <script src="assets/js/app.js"></script>
+<div id="chartError" style="display:none;color:#900;background:#fee;padding:8px;border:1px solid #f99;margin:8px 12px;border-radius:4px"></div>
 <script>
 const labels = <?php echo json_encode($labels); ?>;
 const datasets = <?php echo json_encode($datasets); ?>;
-const ctx = document.getElementById('chart').getContext('2d');
-const chart = new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: labels,
-    datasets: datasets.map(ds => Object.assign({}, ds, { fill: false }))
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: { display: true },
-      y: { display: true }
+// debug info
+console.log('graph labels count', labels.length);
+console.log('graph datasets count', datasets.length);
+console.log('sample dataset', datasets[0] || null);
+
+try {
+  const canvas = document.getElementById('chart');
+  if (!canvas) throw new Error('Canvas element #chart introuvable');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Impossible d\'obtenir le contexte 2D');
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: datasets.map(ds => Object.assign({}, ds, { fill: false }))
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { x: { display: true }, y: { display: true } }
     }
-  }
-});
+  });
+  console.log('Chart initialisé', chart);
+} catch (e) {
+  console.error('Chart init error', e);
+  const el = document.getElementById('chartError');
+  if (el) { el.textContent = 'Erreur affichage graphique: ' + (e && e.message ? e.message : String(e)); el.style.display = 'block'; }
+}
 </script>
 </body>
 </html>
