@@ -319,14 +319,18 @@ function submitRuleUpdate(id){
   try{
     var form = document.getElementById('update-form-'+id);
     if(!form) return;
-    // collect all elements whose name ends with [id]
-    var all = Array.from(document.querySelectorAll('[name]'));
-    var nodes = all.filter(function(n){ return /\[\d+\]$/.test(n.name) && n.name.endsWith('['+id+']'); });
+    // collect inputs/selects from the two-row block that contains the form
+    var formRow = form.closest('tr');
+    var otherRow = formRow && formRow.previousElementSibling ? formRow.previousElementSibling : null;
+    var nodes = Array.from(formRow.querySelectorAll('input[name],select[name],textarea[name]'));
+    if (otherRow) nodes = nodes.concat(Array.from(otherRow.querySelectorAll('input[name],select[name],textarea[name]')));
     var map = {};
     nodes.forEach(function(n){
-      var nm = n.name;
-      var key = nm.replace(/\[\d+\]$/, '');
-      // if multiple elements with same name (unlikely) keep first
+      var nm = n.getAttribute('name');
+      if (!nm) return;
+      // handle names like 'pattern[123]' -> base 'pattern'
+      var m = nm.match(/^(.*)\[\d+\]$/);
+      var key = m ? m[1] : nm;
       if (!(key in map)) map[key] = n;
     });
 
