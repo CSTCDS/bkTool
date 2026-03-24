@@ -129,13 +129,14 @@ try {
   <link rel="stylesheet" href="assets/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    *,*::before,*::after{box-sizing:border-box}
     html,body{height:100%;}
-    body{display:flex;flex-direction:column;min-height:100vh;margin:0}
+    body{display:flex;flex-direction:column;min-height:100vh;margin:0;overflow-x:hidden}
     main{flex:1;display:flex;flex-direction:column;padding:12px}
     /* chart section should expand to fill available vertical space */
     main > section:last-of-type{flex:1;display:flex;flex-direction:column}
-    #chartWrapper{flex:1;display:flex;align-items:stretch}
-    #chart{width:100%;height:100%;}
+    #chartWrapper{flex:1;display:flex;align-items:stretch;overflow:hidden}
+    #chart{display:block;max-width:100% !important;width:100% !important;height:100% !important}
   </style>
 </head>
 <body>

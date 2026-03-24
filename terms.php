@@ -21,7 +21,6 @@ error_reporting(E_ALL);
 <p>L'utilisateur est responsable de la sécurité de son accès au service et doit informer l'administrateur en cas d'accès non autorisé.</p>
 <p>L'administrateur se réserve le droit de modifier ces conditions; les modifications seront publiées dans ce fichier.</p>
 
-<a href="index.php?page=graph">graph</a></section>
 </main>
 </body>
 </html>
