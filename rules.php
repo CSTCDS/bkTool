@@ -191,8 +191,13 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <style>
   body{padding:12px}
   .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:8px;border:1px solid #eee}
+  table{width:100%;border-collapse:collapse;table-layout:fixed}
+  th,td{padding:8px;border:1px solid #eee;vertical-align:top}
+  td{overflow:hidden}
+  .col-motif input{width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .col-valeur select{width:100%;box-sizing:border-box;overflow:hidden}
+  select.select-valeur, select.select-valeur-row{width:100%;box-sizing:border-box}
+  option.parent-option{font-weight:700;color:#000}
   .small{font-size:.9rem;color:#666}
   .btn{padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer}
   .danger{background:#ffecec;border-color:#f5c6cb}
@@ -361,8 +366,8 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
       var o = document.createElement('option');
       o.value = String(it.id);
       o.textContent = it.label;
-      // disable parent entries and style them bold
-      if (it.is_parent) { o.disabled = true; o.style.fontWeight = '700'; }
+      // disable parent entries and style them bold + black
+      if (it.is_parent) { o.disabled = true; o.style.fontWeight = '700'; o.style.color = '#000'; o.className = 'parent-option'; }
       if (String(it.id) === String(selectedVal)) o.selected = true;
       selectEl.appendChild(o);
     });
