@@ -127,7 +127,6 @@ th{background:#f2f2f2}
 /* Page-level wrapper for mobile layout (excludes header/banner which is included before the wrapper) */
 .mobile-page{max-width:800px;margin:12px auto;padding:8px;box-sizing:border-box}
 .mobile-page .m-account, .mobile-page .mobile-nav, .mobile-page .m-cats { width:100%; }
-.mobile-page .m-account select{width:100%;box-sizing:border-box}
 
 /* Ensure suggestion boxes respect the same max-width and are centered */
 .mobile-page .suggestion-box, .mobile-page .suggestions-placeholder {
