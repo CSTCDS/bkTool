@@ -277,18 +277,11 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </select>
       </td>
       <td>
-        <form id="update-form-<?php echo $r['id']; ?>" method="post" style="display:inline">
+        <button class="btn" type="button" onclick="showRuleSql(<?php echo $r['id']; ?>)">Modifier</button>
+        <form method="post" style="display:inline" onsubmit="return confirm('Supprimer la règle ?');">
+          <input type="hidden" name="action" value="delete">
           <input type="hidden" name="id" value="<?php echo $r['id']; ?>">
-          <input type="hidden" name="action" value="update">
-          <input type="hidden" name="pattern" value="">
-          <input type="hidden" name="is_regex" value="0">
-          <input type="hidden" name="category_level" value="0">
-          <input type="hidden" name="scope_account_id" value="">
-          <input type="hidden" name="priority" value="0">
-          <input type="hidden" name="valeur_a_affecter" value="0">
-          <input type="hidden" name="active" value="0">
-          <button class="btn" type="button" onclick="showRuleSql(<?php echo $r['id']; ?>)">Modifier</button>
-          <button class="btn danger" type="submit" name="action" value="delete" onclick="return confirm('Supprimer la règle ?');">Supprimer</button>
+          <button class="btn danger" type="submit">Supprimer</button>
         </form>
       </td>
     </tr>
@@ -315,91 +308,90 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 })();
 </script>
 <script>
+function collectRuleData(id){
+  // find the two TRs for this rule: the first TR has data-r-level attribute
+  var firstRow = document.querySelector('tr[data-r-level][data-r-valeur]');
+  // search all TRs with data-r-level, find the one for this id
+  var allRows = document.querySelectorAll('tr[data-r-level]');
+  var targetRow = null;
+  allRows.forEach(function(tr){
+    var td = tr.querySelector('td[rowspan]');
+    if(td && td.textContent.trim() === String(id)) targetRow = tr;
+  });
+  if(!targetRow) { console.error('Row not found for rule', id); return null; }
+  var secondRow = targetRow.nextElementSibling;
+
+  // collect all named inputs/selects from both rows
+  var nodes = Array.from(targetRow.querySelectorAll('input[name],select[name],textarea[name]'));
+  if(secondRow) nodes = nodes.concat(Array.from(secondRow.querySelectorAll('input[name],select[name],textarea[name]')));
+
+  var map = {};
+  nodes.forEach(function(n){
+    var nm = n.getAttribute('name');
+    if(!nm) return;
+    var m = nm.match(/^(.*)\[\d+\]$/);
+    var key = m ? m[1] : nm;
+    if(!(key in map)) map[key] = n;
+  });
+
+  function readVal(el){
+    if(!el) return '';
+    if(el.type === 'checkbox') return el.checked ? '1' : '0';
+    return el.value;
+  }
+
+  var data = {
+    action: 'update',
+    id: String(id),
+    pattern: readVal(map['pattern']),
+    is_regex: readVal(map['is_regex']),
+    category_level: readVal(map['category_level']) || '0',
+    valeur_a_affecter: readVal(map['valeur_a_affecter']) || '0',
+    scope_account_id: readVal(map['scope_account_id']),
+    priority: readVal(map['priority']) || '0',
+    active: readVal(map['active'])
+  };
+
+  console.log('collectRuleData', id, map, data);
+  return data;
+}
+
 function submitRuleUpdate(id){
   try{
-    var form = document.getElementById('update-form-'+id);
-    if(!form) return;
-    // collect inputs/selects from the two-row block that contains the form
-    var formRow = form.closest('tr');
-    var otherRow = formRow && formRow.previousElementSibling ? formRow.previousElementSibling : null;
-    var nodes = Array.from(formRow.querySelectorAll('input[name],select[name],textarea[name]'));
-    if (otherRow) nodes = nodes.concat(Array.from(otherRow.querySelectorAll('input[name],select[name],textarea[name]')));
-    var map = {};
-    nodes.forEach(function(n){
-      var nm = n.getAttribute('name');
-      if (!nm) return;
-      // handle names like 'pattern[123]' -> base 'pattern'
-      var m = nm.match(/^(.*)\[\d+\]$/);
-      var key = m ? m[1] : nm;
-      if (!(key in map)) map[key] = n;
-    });
-
-    console.log('submitRuleUpdate map for', id, map);
-
-    // helper to read value for different control types
-    function readVal(el){
-      if (!el) return '';
-      if (el.type === 'checkbox') return el.checked ? '1' : '0';
-      if (el.tagName === 'SELECT') return el.value;
-      return el.value;
-    }
-
-    var patternVal = readVal(map['pattern']) || '';
-    var lvlVal = readVal(map['category_level']) || 0;
-    var valeurVal = readVal(map['valeur_a_affecter']) || 0;
-    var scopeVal = readVal(map['scope_account_id']);
-    var prioVal = readVal(map['priority']) || 0;
-    var isRegexChecked = readVal(map['is_regex']) || 0;
-    var activeChecked = readVal(map['active']) || 0;
-
-    // normalize scope for submission: keep 'NULL' literal, empty string for none, numeric id otherwise
-    if (scopeVal === 'NULL') {
-      form.elements['scope_account_id'].value = 'NULL';
-    } else if (scopeVal === '') {
-      form.elements['scope_account_id'].value = '';
-    } else {
-      var n = parseInt(scopeVal,10);
-      form.elements['scope_account_id'].value = isNaN(n) ? '' : String(n);
-    }
-
-    form.elements['pattern'].value = patternVal;
-    form.elements['category_level'].value = lvlVal;
-    form.elements['valeur_a_affecter'].value = valeurVal;
-    form.elements['priority'].value = prioVal;
-    form.elements['is_regex'].value = isRegexChecked;
-    form.elements['active'].value = activeChecked;
-    form.submit();
+    var data = collectRuleData(id);
+    if(!data) return;
+    // POST via fetch, then reload
+    var body = new URLSearchParams(data);
+    fetch('rules.php', { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: body.toString() })
+      .then(function(r){ location.reload(); })
+      .catch(function(e){ console.error(e); alert('Erreur réseau'); });
   }catch(e){ console.error(e); alert('Erreur soumission'); }
 }
 
 function showRuleSql(id){
   try{
-    function byName(n){ var els = document.getElementsByName(n+'['+id+']'); return (els && els.length>0)?els[0]:null; }
-    var patternEl = byName('pattern');
-    var pattern = patternEl ? patternEl.value.replace(/'/g, "''") : '';
-    var isRegexEl = document.getElementsByName('is_regex['+id+']')[0] || document.querySelector('[name="is_regex['+id+']"]');
-    var is_regex = (isRegexEl && isRegexEl.checked) ? 1 : 0;
-    var lvlEl = byName('category_level');
-    var category_level = lvlEl ? lvlEl.value : 0;
-    var valEl = document.getElementsByName('valeur_a_affecter['+id+']')[0] || document.querySelector('select[name="valeur_a_affecter['+id+']"]');
-    var valeur = valEl ? valEl.value : 0;
-    var scopeEl = document.getElementsByName('scope_account_id['+id+']')[0] || document.querySelector('select[name="scope_account_id['+id+']"]');
-    var scope = scopeEl ? scopeEl.value : '';
-    var prioEl = byName('priority');
-    var priority = prioEl ? prioEl.value : 0;
-    var activeEl = document.getElementsByName('active['+id+']')[0] || document.querySelector('[name="active['+id+']"]');
-    var active = (activeEl && activeEl.checked) ? 1 : 0;
+    var data = collectRuleData(id);
+    if(!data) return;
 
-    // normalize scope for SQL: empty -> NULL, 'NULL' -> NULL, numeric -> number
     var scope_sql = 'NULL';
-    if (scope && scope !== 'NULL') {
-      var n = parseInt(scope,10);
+    if(data.scope_account_id && data.scope_account_id !== 'NULL' && data.scope_account_id !== ''){
+      var n = parseInt(data.scope_account_id,10);
       scope_sql = isNaN(n) ? 'NULL' : n;
     }
+    var pattern_esc = (data.pattern||'').replace(/'/g, "''");
 
-    var sql = "UPDATE auto_category_rules SET pattern = '" + pattern + "', is_regex = " + is_regex + ", category_id = " + (valeur || 0) + ", scope_account_id = " + scope_sql + ", priority = " + (priority || 0) + ", active = " + active + ", valeur_a_affecter = " + (valeur || 0) + ", category_level = " + (category_level || 0) + " WHERE id = " + id + ";";
+    var sql = "UPDATE auto_category_rules SET"
+      + " pattern = '" + pattern_esc + "'"
+      + ", is_regex = " + (data.is_regex || 0)
+      + ", category_id = " + (data.valeur_a_affecter || 0)
+      + ", scope_account_id = " + scope_sql
+      + ", priority = " + (data.priority || 0)
+      + ", active = " + (data.active || 0)
+      + ", valeur_a_affecter = " + (data.valeur_a_affecter || 0)
+      + ", category_level = " + (data.category_level || 0)
+      + " WHERE id = " + id + ";";
 
-    if (confirm('SQL généré:\n\n' + sql + '\n\nExécuter cette mise à jour ?')){
+    if(confirm('SQL généré:\n\n' + sql + '\n\nExécuter cette mise à jour ?')){
       submitRuleUpdate(id);
     }
   }catch(e){ console.error(e); alert('Erreur génération SQL'); }
