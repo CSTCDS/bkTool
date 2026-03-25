@@ -309,50 +309,44 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </script>
 <script>
 function collectRuleData(id){
-  // find the two TRs for this rule: the first TR has data-r-level attribute
-  var firstRow = document.querySelector('tr[data-r-level][data-r-valeur]');
-  // search all TRs with data-r-level, find the one for this id
-  var allRows = document.querySelectorAll('tr[data-r-level]');
-  var targetRow = null;
-  allRows.forEach(function(tr){
-    var td = tr.querySelector('td[rowspan]');
-    if(td && td.textContent.trim() === String(id)) targetRow = tr;
-  });
-  if(!targetRow) { console.error('Row not found for rule', id); return null; }
-  var secondRow = targetRow.nextElementSibling;
-
-  // collect all named inputs/selects from both rows
-  var nodes = Array.from(targetRow.querySelectorAll('input[name],select[name],textarea[name]'));
-  if(secondRow) nodes = nodes.concat(Array.from(secondRow.querySelectorAll('input[name],select[name],textarea[name]')));
-
-  var map = {};
-  nodes.forEach(function(n){
-    var nm = n.getAttribute('name');
-    if(!nm) return;
-    var m = nm.match(/^(.*)\[\d+\]$/);
-    var key = m ? m[1] : nm;
-    if(!(key in map)) map[key] = n;
-  });
-
+  // Direct lookup by exact name attribute — most reliable method
+  function getEl(base){ return document.querySelector('[name="'+base+'['+id+']"]'); }
   function readVal(el){
     if(!el) return '';
     if(el.type === 'checkbox') return el.checked ? '1' : '0';
     return el.value;
   }
 
+  var els = {
+    pattern:            getEl('pattern'),
+    is_regex:           getEl('is_regex'),
+    category_level:     getEl('category_level'),
+    valeur_a_affecter:  getEl('valeur_a_affecter'),
+    scope_account_id:   getEl('scope_account_id'),
+    priority:           getEl('priority'),
+    active:             getEl('active')
+  };
+
+  // Debug: show which elements were found
+  var debug = {};
+  for(var k in els){ debug[k] = els[k] ? (els[k].tagName+' → "'+readVal(els[k])+'"') : 'NOT FOUND'; }
+  console.log('collectRuleData id='+id, debug);
+
   var data = {
     action: 'update',
     id: String(id),
-    pattern: readVal(map['pattern']),
-    is_regex: readVal(map['is_regex']),
-    category_level: readVal(map['category_level']) || '0',
-    valeur_a_affecter: readVal(map['valeur_a_affecter']) || '0',
-    scope_account_id: readVal(map['scope_account_id']),
-    priority: readVal(map['priority']) || '0',
-    active: readVal(map['active'])
+    pattern:            readVal(els.pattern),
+    is_regex:           readVal(els.is_regex),
+    category_level:     readVal(els.category_level) || '0',
+    valeur_a_affecter:  readVal(els.valeur_a_affecter) || '0',
+    scope_account_id:   readVal(els.scope_account_id),
+    priority:           readVal(els.priority) || '0',
+    active:             readVal(els.active)
   };
 
-  console.log('collectRuleData', id, map, data);
+  // Show collected data as alert for verification
+  alert('Données collectées (règle '+id+'):\n\n'+JSON.stringify(data, null, 2));
+
   return data;
 }
 
