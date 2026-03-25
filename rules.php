@@ -154,14 +154,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'categories' && isset($_GET['crite
   $out = [];
   // Build grouped output suitable for optgroup rendering: each parent becomes a group
   foreach ($parents as $p) {
+    // skip parents that have no children — do not show them at all
+    if (empty($p['children'])) continue;
     $group = ['label' => $p['label'], 'items' => []];
-    if (empty($p['children'])) {
-      // no children: present a single disabled placeholder option pointing to the parent id
-      $group['items'][] = ['id' => (int)$p['id'], 'label' => $p['label'], 'disabled' => true];
-    } else {
-      foreach ($p['children'] as $ch) {
-        $group['items'][] = ['id' => (int)$ch['id'], 'label' => $ch['label'], 'disabled' => false];
-      }
+    foreach ($p['children'] as $ch) {
+      $group['items'][] = ['id' => (int)$ch['id'], 'label' => $ch['label'], 'disabled' => false];
     }
     $out[] = $group;
   }
@@ -178,9 +175,9 @@ if ($accountFilter === 'global') {
 } elseif ($accountFilter === 'any') {
   // no account filtering: include both global and account-specific rules
 } elseif ($accountFilter !== '') {
-  // specific account selected
+  // specific account selected (account ids are strings)
   $where[] = 'scope_account_id = :acct';
-  $params[':acct'] = (int)$accountFilter;
+  $params[':acct'] = $accountFilter;
 }
 if ($categoryFilter > 0) {
   $where[] = 'category_id = :cid';
