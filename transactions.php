@@ -209,6 +209,25 @@ if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
  $stmt->execute();
  $txs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Build map NumImport => import datetime (use earliest created_at for the batch)
+$importDates = [];
+$numImports = [];
+foreach ($txs as $t) {
+  $ni = isset($t['NumImport']) ? (int)$t['NumImport'] : 0;
+  if ($ni > 0) $numImports[$ni] = $ni;
+}
+if (!empty($numImports)) {
+  $placeholders = implode(',', array_fill(0, count($numImports), '?'));
+  $q = $pdo->prepare('SELECT NumImport, MIN(created_at) AS import_dt FROM transactions WHERE NumImport IN (' . $placeholders . ') GROUP BY NumImport');
+  $i = 1;
+  foreach ($numImports as $val) { $q->bindValue($i++, $val); }
+  $q->execute();
+  while ($row = $q->fetch(PDO::FETCH_ASSOC)) {
+    $imp = (int)$row['NumImport'];
+    $importDates[$imp] = $row['import_dt'];
+  }
+}
+
 // Determine whether to show the "Solde" column.
 // Hide the Solde column only when the 'from' date is provided and is earlier than today.
 $toParam = $_GET['to'] ?? ($_COOKIE['selected_to'] ?? '');
@@ -406,8 +425,19 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       <tr<?php echo $trClass ? ' class="' . $trClass . '"' : ''; ?> data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-status="<?php echo htmlspecialchars($t['status'] ?? ''); ?>" data-numimport="<?php echo htmlspecialchars($t['NumImport'] ?? 0); ?>">
         <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; ">
           <?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?>
-          <?php if (!empty($t['NumImport']) && (int)$t['NumImport'] > 0): ?>
-            <span class="badge-numimport">#<?php echo htmlspecialchars((string)$t['NumImport']); ?></span>
+          <?php if (!empty($t['NumImport']) && (int)$t['NumImport'] > 0):
+            $imp = (int)$t['NumImport'];
+            // prefer import batch datetime if available, else use transaction created_at or booking_date
+            $title = '';
+            if (!empty($importDates[$imp])) {
+              $title = $importDates[$imp];
+            } elseif (!empty($t['created_at'])) {
+              $title = $t['created_at'];
+            } elseif (!empty($t['booking_date'])) {
+              $title = (string)$t['booking_date'] . ' 00:00:00';
+            }
+          ?>
+            <span class="badge-numimport"<?php echo $title ? ' title="' . htmlspecialchars($title) . '"' : ''; ?>>#<?php echo htmlspecialchars((string)$t['NumImport']); ?></span>
           <?php endif; ?>
         </td>
         <td class="col-date">
