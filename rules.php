@@ -134,6 +134,33 @@ for ($ci = 1; $ci <= 4; $ci++) {
   }
 }
 
+// AJAX endpoint: return categories for a given criterion (parent then children)
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'categories' && isset($_GET['criterion'])) {
+  $crit = (int)$_GET['criterion'];
+  $stmt = $pdo->prepare('SELECT * FROM categories WHERE criterion = :c ORDER BY parent_id IS NULL DESC, parent_id, sort_order, label');
+  $stmt->execute([':c' => $crit]);
+  $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  $parents = [];
+  foreach ($rows as $r) {
+    if ($r['parent_id'] === null) {
+      $parents[$r['id']] = ['id' => (int)$r['id'], 'label' => $r['label'], 'children' => []];
+    }
+  }
+  foreach ($rows as $r) {
+    if ($r['parent_id'] !== null && isset($parents[$r['parent_id']])) {
+      $parents[$r['parent_id']]['children'][] = ['id' => (int)$r['id'], 'label' => $r['label']];
+    }
+  }
+  $out = [];
+  foreach ($parents as $p) {
+    $out[] = ['id' => $p['id'], 'label' => $p['label']];
+    foreach ($p['children'] as $ch) $out[] = ['id' => $ch['id'], 'label' => '  ' . $ch['label']];
+  }
+  header('Content-Type: application/json');
+  echo json_encode($out);
+  exit;
+}
+
 // Build WHERE (account filter: 'global' => scope_account_id IS NULL, 'any' => no account filter)
 $where = [];
 $params = [];
@@ -325,8 +352,6 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <script>
 // Populate per-row "valeur_a_affecter" when the category select changes
 (function(){
-  var catsByCriterion = <?php echo json_encode($catsByCriterion); ?>;
-
   function populateVal(selectEl, items, selectedVal) {
     if (!selectEl) return;
     while (selectEl.firstChild) selectEl.removeChild(selectEl.firstChild);
@@ -335,19 +360,24 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     items.forEach(function(it){ var o = document.createElement('option'); o.value = String(it.id); o.textContent = it.label; if (String(it.id) === String(selectedVal)) o.selected = true; selectEl.appendChild(o); });
   }
 
+  function fetchAndPopulate(crit, selectEl, selectedVal){
+    if (!crit) { populateVal(selectEl, [], selectedVal); return; }
+    fetch('rules.php?ajax=categories&criterion=' + encodeURIComponent(crit))
+      .then(function(r){ return r.json(); })
+      .then(function(json){ populateVal(selectEl, json || [], selectedVal); })
+      .catch(function(e){ console.error('fetch categories failed', e); populateVal(selectEl, [], selectedVal); });
+  }
+
   // create form: hook criterion -> valeur population
   var createLevel = document.querySelector('select.select-category-level');
   var createVal = document.querySelector('select.select-valeur');
   if (createLevel && createVal) {
     createLevel.addEventListener('change', function(){
       var crit = parseInt(this.value,10) || 0;
-      populateVal(createVal, catsByCriterion[crit] || [], 0);
+      fetchAndPopulate(crit, createVal, 0);
     });
     // initialize create form valeur if a criterion is pre-selected
-    (function(){
-      var crit0 = parseInt(createLevel.value,10) || 0;
-      if (crit0) populateVal(createVal, catsByCriterion[crit0] || [], 0);
-    })();
+    (function(){ var crit0 = parseInt(createLevel.value,10) || 0; fetchAndPopulate(crit0, createVal, 0); })();
   }
 
   // per-row: when criterion changes, populate the valeur select for that row
@@ -357,7 +387,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     var initSelected = row && row.dataset && row.dataset.rValeur ? row.dataset.rValeur : 0;
     function refresh(){
       var crit = parseInt(critSel.value,10) || 0;
-      populateVal(vsel, catsByCriterion[crit] || [], initSelected);
+      fetchAndPopulate(crit, vsel, initSelected);
     }
     critSel.addEventListener('change', function(){ refresh(); });
     refresh();
