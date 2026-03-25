@@ -152,9 +152,18 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'categories' && isset($_GET['crite
     }
   }
   $out = [];
+  // Build grouped output suitable for optgroup rendering: each parent becomes a group
   foreach ($parents as $p) {
-    $out[] = ['id' => $p['id'], 'label' => $p['label'], 'is_parent' => true];
-    foreach ($p['children'] as $ch) $out[] = ['id' => $ch['id'], 'label' => '  ' . $ch['label'], 'is_parent' => false];
+    $group = ['label' => $p['label'], 'items' => []];
+    if (empty($p['children'])) {
+      // no children: present a single disabled placeholder option pointing to the parent id
+      $group['items'][] = ['id' => (int)$p['id'], 'label' => $p['label'], 'disabled' => true];
+    } else {
+      foreach ($p['children'] as $ch) {
+        $group['items'][] = ['id' => (int)$ch['id'], 'label' => $ch['label'], 'disabled' => false];
+      }
+    }
+    $out[] = $group;
   }
   header('Content-Type: application/json');
   echo json_encode($out);
@@ -194,7 +203,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
   table{width:100%;border-collapse:collapse;table-layout:fixed}
   th,td{padding:8px;border:1px solid #eee;vertical-align:top}
   td{overflow:hidden}
-  .col-motif input{width:100%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .col-motif input{width:90%;box-sizing:border-box;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .col-valeur select{width:100%;box-sizing:border-box;overflow:hidden}
   select.select-valeur, select.select-valeur-row{width:100%;box-sizing:border-box}
   option.parent-option{font-weight:700;color:#000}
@@ -286,9 +295,9 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
           <?php endfor; ?>
         </select>
       </td>
-      <td colspan="2">
+      <td colspan="2" class="col-motif">
         Motif<br>
-        <input name="pattern[<?php echo $r['id']; ?>]" value="<?php echo htmlspecialchars($r['pattern']); ?>" style="width:100%;padding:6px">
+        <input name="pattern[<?php echo $r['id']; ?>]" value="<?php echo htmlspecialchars($r['pattern']); ?>" style="padding:6px">
       </td>
       <td>
         Regexp<br>
@@ -362,14 +371,20 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     while (selectEl.firstChild) selectEl.removeChild(selectEl.firstChild);
     var opt0 = document.createElement('option'); opt0.value = '0'; opt0.textContent = 'Choisir valeur'; selectEl.appendChild(opt0);
     if (!items || items.length === 0) return;
-    items.forEach(function(it){
-      var o = document.createElement('option');
-      o.value = String(it.id);
-      o.textContent = it.label;
-      // disable parent entries and style them bold + black
-      if (it.is_parent) { o.disabled = true; o.style.fontWeight = '700'; o.style.color = '#000'; o.className = 'parent-option'; }
-      if (String(it.id) === String(selectedVal)) o.selected = true;
-      selectEl.appendChild(o);
+    // items is expected to be an array of groups: {label, items:[{id,label,disabled}]}
+    items.forEach(function(group){
+      var og = document.createElement('optgroup');
+      og.label = group.label || '';
+      if (!group.items || group.items.length === 0) return; // skip empty
+      group.items.forEach(function(it){
+        var o = document.createElement('option');
+        o.value = String(it.id);
+        o.textContent = it.label;
+        if (it.disabled) { o.disabled = true; o.className = 'parent-option'; o.style.fontWeight = '700'; o.style.color = '#000'; }
+        if (String(it.id) === String(selectedVal)) o.selected = true;
+        og.appendChild(o);
+      });
+      selectEl.appendChild(og);
     });
   }
 
