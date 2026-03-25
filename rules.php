@@ -383,10 +383,13 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
   // per-row: when criterion changes, populate the valeur select for that row
   document.querySelectorAll('select.select-category-level-row').forEach(function(critSel){
     var row = critSel.closest('tr');
-    var vsel = row.querySelector('select.select-valeur-row');
+    // valeur select is in the next TR (two-row layout), prefer that
+    var next = row && row.nextElementSibling ? row.nextElementSibling : null;
+    var vsel = (next && next.querySelector) ? next.querySelector('select.select-valeur-row') : row.querySelector('select.select-valeur-row');
     var initSelected = row && row.dataset && row.dataset.rValeur ? row.dataset.rValeur : 0;
     function refresh(){
       var crit = parseInt(critSel.value,10) || 0;
+      console.log('refresh valeur for rule', critSel, 'criterion=', crit, 'target select=', vsel);
       fetchAndPopulate(crit, vsel, initSelected);
     }
     critSel.addEventListener('change', function(){ refresh(); });
