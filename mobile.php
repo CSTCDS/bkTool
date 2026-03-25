@@ -159,6 +159,7 @@ if ($tx) {
 <body>
 <?php include __DIR__ . '/header.php'; ?>
 
+  <div class="mobile-page">
   <div id="toast"></div>
 
   <div class="m-account">
@@ -407,6 +408,7 @@ if ($tx) {
       });
     })();
     </script>
+</div>
 <?php endif; ?>
 </body>
 </html>
