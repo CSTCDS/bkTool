@@ -414,7 +414,6 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     var initSelected = row && row.dataset && row.dataset.rValeur ? row.dataset.rValeur : 0;
     function refresh(){
       var crit = parseInt(critSel.value,10) || 0;
-      console.log('refresh valeur for rule', critSel, 'criterion=', crit, 'target select=', vsel);
       fetchAndPopulate(crit, vsel, initSelected);
     }
     critSel.addEventListener('change', function(){ refresh(); });
@@ -442,10 +441,9 @@ function collectRuleData(id){
     active:             getEl('active')
   };
 
-  // Debug: show which elements were found
+  // Debug: collect which elements were found (no user dialog)
   var debug = {};
   for(var k in els){ debug[k] = els[k] ? (els[k].tagName+' → "'+readVal(els[k])+'"') : 'NOT FOUND'; }
-  console.log('collectRuleData id='+id, debug);
 
   var data = {
     action: 'update',
@@ -459,8 +457,8 @@ function collectRuleData(id){
     active:             readVal(els.active)
   };
 
-  // Show collected data as alert for verification
-  alert('Données collectées (règle '+id+'):\n\n'+JSON.stringify(data, null, 2));
+  // debug: collected data available in console when needed
+  // console.debug('collectRuleData', data);
 
   return data;
 }
