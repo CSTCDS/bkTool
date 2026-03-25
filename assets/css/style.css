@@ -129,6 +129,14 @@ th{background:#f2f2f2}
 .mobile-page .m-account, .mobile-page .mobile-nav, .mobile-page .m-cats { width:100%; }
 .mobile-page .m-account select{width:100%;box-sizing:border-box}
 
+/* Ensure suggestion boxes respect the same max-width and are centered */
+.mobile-page .suggestion-box, .mobile-page .suggestions-placeholder {
+  max-width: 800px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 8px auto;
+}
+
 @media (max-width:640px){
   /* Hamburger menu */
   .hamburger{display:block}
