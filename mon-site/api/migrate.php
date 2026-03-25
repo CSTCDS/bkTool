@@ -210,6 +210,19 @@ function bkt_migrate(PDO $pdo): void
                 $pdo->exec('UPDATE auto_category_rules ar JOIN categories c ON ar.category_id = c.id SET ar.category_level = c.criterion WHERE (ar.category_level IS NULL OR ar.category_level = 0) AND ar.category_id IS NOT NULL');
             } catch (Throwable $e) { /* ignore errors during backfill */ }
         },
+        // Version 12 : make scope_account_id a VARCHAR(191) to allow non-numeric scopes
+        12 => function (PDO $pdo) {
+            $cols = $pdo->query('SHOW COLUMNS FROM auto_category_rules LIKE "scope_account_id"')->fetchAll();
+            if (empty($cols)) {
+                // add as varchar if column missing
+                $pdo->exec('ALTER TABLE auto_category_rules ADD COLUMN scope_account_id VARCHAR(191) DEFAULT NULL AFTER category_id');
+            } else {
+                // ensure type is varchar(191)
+                try {
+                    $pdo->exec('ALTER TABLE auto_category_rules MODIFY scope_account_id VARCHAR(191) DEFAULT NULL');
+                } catch (Throwable $e) { /* ignore if cannot modify */ }
+            }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées
