@@ -405,8 +405,8 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
             </div>
           </div>
         </th>
-        <?php if ($groupSelected): ?><th class="col-solde-virtuel" style="width:8%">Solde virtuel</th><?php endif; ?>
         <?php if ($showSolde): ?><th class="col-solde" style="width:8%">Solde</th><?php endif; ?>
+        <?php if ($groupSelected): ?><th class="col-solde-virtuel" style="width:8%">Solde virtuel</th><?php endif; ?>
       </tr>
     </thead>
     <tbody>
@@ -495,11 +495,11 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
             </div>
           </div>
         </td>
+        <?php if ($showSolde): ?><td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td><?php endif; ?>
         <?php if ($groupSelected): ?>
           <?php // compute virtual group balance before applying this row's amount ?>
           <td class="col-solde-virtuel"><?php echo htmlspecialchars(number_format($groupStartBalance - ($groupRunning ?? 0.0), 2, ',', ' ')); ?></td>
         <?php endif; ?>
-        <?php if ($showSolde): ?><td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td><?php endif; ?>
       </tr>
     <?php
         // mettre à jour cumul pour ce compte (après affichage)
