@@ -343,6 +343,11 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
       var crit = parseInt(this.value,10) || 0;
       populateVal(createVal, catsByCriterion[crit] || [], 0);
     });
+    // initialize create form valeur if a criterion is pre-selected
+    (function(){
+      var crit0 = parseInt(createLevel.value,10) || 0;
+      if (crit0) populateVal(createVal, catsByCriterion[crit0] || [], 0);
+    })();
   }
 
   // per-row: when criterion changes, populate the valeur select for that row
