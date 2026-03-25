@@ -207,8 +207,7 @@ if ($tx) {
     <div class="mobile-card-row"><span class="mobile-card-label">Solde virtuel</span><span class="m-value" style="color:#5c6bc0"><?php echo htmlspecialchars(number_format($groupVirtualBalance, 2, ',', ' ')); ?></span></div>
     <?php endif; ?>
   </div>
-  </div>
-
+  
   <div class="m-cats">
     <?php for ($ci = 1; $ci <= 4; $ci++):
       $field = "cat{$ci}_id";
