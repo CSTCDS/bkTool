@@ -109,8 +109,20 @@ th{background:#f2f2f2}
   border-bottom:2px solid #fff;font-weight:700;z-index:1
 }
 
-/* Mobile card view — hidden on desktop */
-.mobile-card-view{display:none}
+/* Mobile card view — show on all widths (apply operation details styling everywhere) */
+.mobile-card-view{display:block}
+
+/* Mobile card styling applied at all widths so operation details keep the mobile layout */
+.mobile-card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:8px 0;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.mobile-card-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0}
+.mobile-card-row:last-child{border-bottom:none}
+.mobile-card-label{font-weight:600;color:#666;font-size:.85rem}
+.mobile-card-row span:last-child{text-align:right;font-size:.9rem}
+.mc-desc{flex-direction:column}
+.mc-desc span:last-child{text-align:left;margin-top:4px;font-size:.85rem;color:#444}
+.mobile-nav{display:flex;justify-content:space-between;align-items:center;padding:12px 0}
+.mobile-nav .btn{padding:10px 20px;font-size:.9rem;border-radius:6px}
+#mcCounter{font-size:.85rem;color:#666}
 
 @media (max-width:640px){
   /* Hamburger menu */
