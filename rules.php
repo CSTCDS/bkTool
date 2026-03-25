@@ -153,8 +153,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'categories' && isset($_GET['crite
   }
   $out = [];
   foreach ($parents as $p) {
-    $out[] = ['id' => $p['id'], 'label' => $p['label']];
-    foreach ($p['children'] as $ch) $out[] = ['id' => $ch['id'], 'label' => '  ' . $ch['label']];
+    $out[] = ['id' => $p['id'], 'label' => $p['label'], 'is_parent' => true];
+    foreach ($p['children'] as $ch) $out[] = ['id' => $ch['id'], 'label' => '  ' . $ch['label'], 'is_parent' => false];
   }
   header('Content-Type: application/json');
   echo json_encode($out);
@@ -357,7 +357,15 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     while (selectEl.firstChild) selectEl.removeChild(selectEl.firstChild);
     var opt0 = document.createElement('option'); opt0.value = '0'; opt0.textContent = 'Choisir valeur'; selectEl.appendChild(opt0);
     if (!items || items.length === 0) return;
-    items.forEach(function(it){ var o = document.createElement('option'); o.value = String(it.id); o.textContent = it.label; if (String(it.id) === String(selectedVal)) o.selected = true; selectEl.appendChild(o); });
+    items.forEach(function(it){
+      var o = document.createElement('option');
+      o.value = String(it.id);
+      o.textContent = it.label;
+      // disable parent entries and style them bold
+      if (it.is_parent) { o.disabled = true; o.style.fontWeight = '700'; }
+      if (String(it.id) === String(selectedVal)) o.selected = true;
+      selectEl.appendChild(o);
+    });
   }
 
   function fetchAndPopulate(crit, selectEl, selectedVal){
