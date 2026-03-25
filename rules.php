@@ -368,22 +368,34 @@ function showRuleSql(id){
     if(!data) return;
 
     var scope_sql = 'NULL';
-    if(data.scope_account_id && data.scope_account_id !== 'NULL' && data.scope_account_id !== ''){
-      var n = parseInt(data.scope_account_id,10);
-      scope_sql = isNaN(n) ? 'NULL' : n;
+    var raw_scope = data.scope_account_id || '';
+    if (raw_scope === 'NULL' || raw_scope === '') {
+      scope_sql = raw_scope === '' ? "''" : 'NULL';
+    } else {
+      var n = parseInt(raw_scope,10);
+      if (!isNaN(n) && String(n) === String(raw_scope)) {
+        scope_sql = n;
+      } else {
+        // non-numeric scope -> show as quoted string in preview
+        scope_sql = "'" + String(raw_scope).replace(/'/g, "''") + "'";
+      }
     }
     var pattern_esc = (data.pattern||'').replace(/'/g, "''");
 
+    var catId = (parseInt(data.valeur_a_affecter,10) || 0);
     var sql = "UPDATE auto_category_rules SET"
       + " pattern = '" + pattern_esc + "'"
-      + ", is_regex = " + (data.is_regex || 0)
-      + ", category_id = " + (data.valeur_a_affecter || 0)
+      + ", is_regex = " + (parseInt(data.is_regex,10) || 0)
+      + ", category_id = " + catId
       + ", scope_account_id = " + scope_sql
-      + ", priority = " + (data.priority || 0)
-      + ", active = " + (data.active || 0)
-      + ", valeur_a_affecter = " + (data.valeur_a_affecter || 0)
-      + ", category_level = " + (data.category_level || 0)
-      + " WHERE id = " + id + ";";
+      + ", priority = " + (parseInt(data.priority,10) || 0)
+      + ", active = " + (parseInt(data.active,10) || 0)
+      + ", valeur_a_affecter = " + (parseInt(data.valeur_a_affecter,10) || 0)
+      + ", category_level = " + (parseInt(data.category_level,10) || 0);
+    if (catId === 0) {
+      sql += " -- NOTE: category_id is 0; category_level=" + (parseInt(data.category_level,10) || 0);
+    }
+    sql += " WHERE id = " + id + ";";
 
     if(confirm('SQL généré:\n\n' + sql + '\n\nExécuter cette mise à jour ?')){
       submitRuleUpdate(id);
