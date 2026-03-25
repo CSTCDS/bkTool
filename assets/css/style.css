@@ -128,23 +128,7 @@ th{background:#f2f2f2}
 .mobile-page{max-width:800px;margin:12px auto;padding:8px;box-sizing:border-box}
 .mobile-page .m-account, .mobile-page .mobile-nav, .mobile-page .m-cats { width:100%; }
 
-/* Ensure suggestion boxes respect the same max-width and are centered */
-.mobile-page .suggestion-box, .mobile-page .suggestions-placeholder {
-  max-width: 800px;
-  width: 100%;
-  box-sizing: border-box;
-  margin: 8px auto;
-}
-
-/* Category selects inside the mobile page: constrain and center (do not affect account selector) */
-.mobile-page .m-cats form select,
-.mobile-page .m-cats select {
-  max-width: 800px;
-  width: 100%;
-  box-sizing: border-box;
-  margin: 0 auto 8px auto;
-  display: block;
-}
+/* suggestion boxes and category selects: keep default sizing to avoid layout regressions */
 
 @media (max-width:640px){
   /* Hamburger menu */
