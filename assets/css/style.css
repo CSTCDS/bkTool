@@ -136,6 +136,16 @@ th{background:#f2f2f2}
   margin: 8px auto;
 }
 
+/* Category selects inside the mobile page: constrain and center (do not affect account selector) */
+.mobile-page .m-cats form select,
+.mobile-page .m-cats select {
+  max-width: 800px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto 8px auto;
+  display: block;
+}
+
 @media (max-width:640px){
   /* Hamburger menu */
   .hamburger{display:block}
