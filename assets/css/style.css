@@ -113,7 +113,7 @@ th{background:#f2f2f2}
 .mobile-card-view{display:block}
 
 /* Mobile card styling applied at all widths so operation details keep the mobile layout */
-.mobile-card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:8px 0;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.mobile-card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:8px auto;box-shadow:0 2px 6px rgba(0,0,0,.08);max-width:800px;width:100%;box-sizing:border-box}
 .mobile-card-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0}
 .mobile-card-row:last-child{border-bottom:none}
 .mobile-card-label{font-weight:600;color:#666;font-size:.85rem}
