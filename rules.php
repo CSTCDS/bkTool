@@ -510,9 +510,9 @@ function showRuleSql(id){
     }
     sql += " WHERE id = " + id + ";";
 
-    if(confirm('SQL généré:\n\n' + sql + '\n\nExécuter cette mise à jour ?')){
-      submitRuleUpdate(id);
-    }
+    // auto-submit without blocking confirmation
+    console.debug('SQL généré:', sql);
+    submitRuleUpdate(id);
   }catch(e){ console.error(e); alert('Erreur génération SQL'); }
 }
 </script>
