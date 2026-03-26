@@ -4,14 +4,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Auto-redirect smartphones to dedicated mobile page
-if (!isset($_GET['desktop']) && isset($_SERVER['HTTP_USER_AGENT'])) {
-  $ua = $_SERVER['HTTP_USER_AGENT'];
-  if (preg_match('/Mobile|Android|iPhone|iPod|webOS|BlackBerry|Opera Mini|IEMobile/i', $ua)) {
-    header('Location: mobile.php');
-    exit;
-  }
-}
+// NOTE: server-side user-agent based redirect removed — prefer client-side viewport handling
 
 try {
   $pdo = require __DIR__ . '/mon-site/api/db.php';
@@ -569,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function(){
   try {
     var width = window.innerWidth || document.documentElement.clientWidth || window.screen.width;
     var qs = location.search || '';
-    if (width <= 600 && qs.indexOf('desktop=1') === -1) {
+    if (width <= 800 && qs.indexOf('desktop=1') === -1) {
       location.href = 'mobile.php' + qs;
       return;
     }
