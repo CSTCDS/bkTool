@@ -57,6 +57,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
     <div id="loader" style="margin-top:12px">🔄 <strong>Synchronisation en cours...</strong></div>
     <div id="alerts" style="margin-top:12px"></div>
   </div>
+  <div id="pendingWrites" style="margin-top:12px;background:#fff8e1;padding:10px;border:1px solid #ffe58f;display:none">
+    <h3 style="margin:0 0 8px 0">Écritures en attente</h3>
+    <div id="pendingCount" style="font-weight:600;margin-bottom:6px"></div>
+    <pre id="pendingJson" style="white-space:pre-wrap;font-size:.9rem;margin:0"></pre>
+  </div>
 
   <script>
   (function(){
@@ -171,7 +176,22 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
           loader.style.display = 'none';
           if (!j) { alerts.innerHTML = '<div style="color:#c62828">Erreur: réponse vide</div>'; return; }
           if (j.status === 'ok') {
-            var imp = (j.result && typeof j.result.import_num !== 'undefined') ? j.result.import_num : null;
+            // Display skipped transactions (not stored) if any
+            var pendingEl = document.getElementById('pendingWrites');
+            var pendingJson = document.getElementById('pendingJson');
+            var pendingCount = document.getElementById('pendingCount');
+            var res = j.result || {};
+            if (res.transactions_skipped && Array.isArray(res.skipped_transactions) && res.skipped_transactions.length > 0) {
+              pendingCount.textContent = res.transactions_skipped + ' écriture(s) en attente (non enregistrées)';
+              pendingJson.textContent = JSON.stringify(res.skipped_transactions, null, 2);
+              pendingEl.style.display = 'block';
+            } else {
+              pendingEl.style.display = 'none';
+              if (pendingJson) pendingJson.textContent = '';
+              if (pendingCount) pendingCount.textContent = '';
+            }
+
+            var imp = (res && typeof res.import_num !== 'undefined') ? res.import_num : null;
             if (imp === null) {
               return fetch('synchsmart.php?ajax=1').then(function(r){ return r.json(); }).then(function(data){ renderAccounts(data.accounts); notifyIfNeeded(); });
             } else {
