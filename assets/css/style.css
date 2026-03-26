@@ -65,6 +65,23 @@ th{background:#f2f2f2}
   .acc-name, .acc-currency, .acc-alert { width:100%; box-sizing:border-box }
 }
 
+/* Stack columns 6-9 under 1-5 for medium-small screens up to 1000px */
+@media (max-width:1000px) and (min-width:641px) {
+  table{display:block;overflow-x:auto}
+  table thead { display:none }
+  table tbody tr { margin-bottom:12px; border:1px solid #e6e6e6; padding:8px; border-radius:6px; background:#fff; display:flex; flex-wrap:wrap; align-items:center }
+  table tbody td { display:block; padding:6px 8px; border:none; box-sizing:border-box }
+  /* First five columns: occupy ~20% each on the first line */
+  table tbody td:nth-child(1), table tbody td:nth-child(2), table tbody td:nth-child(3), table tbody td:nth-child(4), table tbody td:nth-child(5) {
+    flex: 0 0 20%; max-width:20%; min-width:120px; box-sizing:border-box;
+  }
+  /* Columns 6 and onwards: place under as full-width blocks */
+  table tbody td:nth-child(n+6) {
+    flex: 0 0 100%; max-width:100%;
+    border-top:1px dashed #eee; margin-top:6px; padding-top:8px;
+  }
+}
+
 /* Dashboard/transactions title row */
 .page-title-row { text-align: center; margin-bottom: 8px }
 
