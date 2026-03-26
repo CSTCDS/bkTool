@@ -387,9 +387,10 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
   function fetchAndPopulate(crit, selectEl, selectedVal){
     if (!crit) { populateVal(selectEl, [], selectedVal); return; }
+    console.debug('rules: fetching categories for criterion', crit);
     fetch('rules.php?ajax=categories&criterion=' + encodeURIComponent(crit))
-      .then(function(r){ return r.json(); })
-      .then(function(json){ populateVal(selectEl, json || [], selectedVal); })
+      .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(json){ console.debug('rules: categories fetched', json); populateVal(selectEl, json || [], selectedVal); })
       .catch(function(e){ console.error('fetch categories failed', e); populateVal(selectEl, [], selectedVal); });
   }
 
@@ -397,12 +398,14 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
   var createLevel = document.querySelector('select.select-category-level');
   var createVal = document.querySelector('select.select-valeur');
   if (createLevel && createVal) {
+    console.debug('rules: create form init, current criterion=', createLevel.value);
     createLevel.addEventListener('change', function(){
       var crit = parseInt(this.value,10) || 0;
+      console.debug('rules: createLevel change ->', crit);
       fetchAndPopulate(crit, createVal, 0);
     });
     // initialize create form valeur if a criterion is pre-selected
-    (function(){ var crit0 = parseInt(createLevel.value,10) || 0; fetchAndPopulate(crit0, createVal, 0); })();
+    (function(){ var crit0 = parseInt(createLevel.value,10) || 0; console.debug('rules: init create fetch for', crit0); fetchAndPopulate(crit0, createVal, 0); })();
   }
 
   // per-row: when criterion changes, populate the valeur select for that row
@@ -414,6 +417,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
     var initSelected = row && row.dataset && row.dataset.rValeur ? row.dataset.rValeur : 0;
     function refresh(){
       var crit = parseInt(critSel.value,10) || 0;
+      console.debug('rules: row', row && row.dataset && row.dataset.rLevel, 'change ->', crit, 'vsel=', vsel);
       fetchAndPopulate(crit, vsel, initSelected);
     }
     critSel.addEventListener('change', function(){ refresh(); });
