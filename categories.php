@@ -413,7 +413,7 @@ foreach ($allCats as $c) {
 
     <?php if (!empty($tree[$crit])): ?>
     <table style="width:100%;margin-bottom:6px">
-      <thead><tr><th style="width:45%">Niveau 1</th><th style="width:35%">Niveau 2</th><th style="width:20%">Actions</th></tr></thead>
+      <thead><tr><th style="width:30%">Niveau 1</th><th style="width:40%">Niveau 2</th><th style="width:30%">Actions</th></tr></thead>
       <tbody>
       <?php foreach ($tree[$crit] as $parentId => $node):
         if (!$node['info']) continue;
@@ -466,7 +466,7 @@ foreach ($allCats as $c) {
                 $concatLabel = $parent['label'] . '/' . $child['label'];
               }
             ?>
-            <div style="display:inline-block;margin-left:8px;vertical-align:middle;min-width:220px;color:#333">
+            <div style="display:inline-block;margin-left:8px;vertical-align:middle;color:#333;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
               <?php echo htmlspecialchars($concatLabel); ?>
             </div>
           </td>
