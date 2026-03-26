@@ -102,9 +102,27 @@ $idx = isset($_GET['idx']) ? (int)$_GET['idx'] : 0;
 $showPending = isset($_GET['show_pending']) ? ($_GET['show_pending'] === '1') : true;
 $where = [];
 $params = [];
-if (!empty($acctSel) && strpos((string)$acctSel, 'g:') !== 0) {
-  $where[] = 't.account_id = :account';
-  $params[':account'] = $acctSel;
+if (!empty($acctSel)) {
+  if (strpos((string)$acctSel, 'g:') === 0) {
+    // group selection: restrict to accounts belonging to the group
+    $gid = (int)substr((string)$acctSel, 2);
+    $acctIds = $groupChildren[$gid] ?? [];
+    if (!empty($acctIds)) {
+      $placeholders = [];
+      foreach ($acctIds as $i => $aid) {
+        $ph = ':g' . $i;
+        $placeholders[] = $ph;
+        $params[$ph] = $aid;
+      }
+      $where[] = 't.account_id IN (' . implode(',', $placeholders) . ')';
+    } else {
+      // empty group -> match nothing
+      $where[] = '1=0';
+    }
+  } else {
+    $where[] = 't.account_id = :account';
+    $params[':account'] = $acctSel;
+  }
 }
 if (!$showPending) {
   $where[] = "UPPER(t.status) = 'BOOK'";
