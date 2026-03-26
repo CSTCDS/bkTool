@@ -160,6 +160,8 @@ function run_sync($pdo, $config)
         'transactions' => 0,
         'transactions_insert' => 0,
         'transactions_update' => 0,
+        'transactions_skipped' => 0,
+        'skipped_transactions' => [],
         'errors' => []
     ];
 
@@ -244,6 +246,13 @@ function run_sync($pdo, $config)
         if ($txRes['status'] >= 200 && $txRes['status'] < 300 && !empty($txRes['body']['transactions'])) {
             foreach ($txRes['body']['transactions'] as $tx) {
                 $tx['_account_id'] = $uid;
+                // If transaction_date is missing or null, skip storing and collect JSON for reporting
+                if (!isset($tx['transaction_date']) || $tx['transaction_date'] === null || $tx['transaction_date'] === '') {
+                    $result['transactions_skipped']++;
+                    // store raw tx for display (keep as array/object)
+                    $result['skipped_transactions'][] = $tx;
+                    continue;
+                }
                 $r2 = insertTransaction($pdo, $tx, $importNum);
                 $result['transactions']++;
                 if (!empty($r2['action']) && $r2['action'] === 'insert') $result['transactions_insert']++;
