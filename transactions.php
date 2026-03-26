@@ -311,7 +311,10 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         <div>
           <select name="fcat1" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[1]); ?></option>
-            <?php if (!empty($catTree[1])): foreach ($catTree[1] as $pid => $node): if (!$node['info']) continue; ?>
+        <div style="text-align:center;margin:12px 0">
+          <button id="loadMoreBottom" class="btn" style="padding:8px 14px;font-size:18px;border-radius:6px">+</button>
+        </div>
+        <script>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
                 <?php foreach ($node['children'] as $child): ?>
                   <option value="<?php echo $child['id']; ?>" <?php echo ((int)($_GET['fcat1'] ?? '') === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
@@ -436,7 +439,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       $displayBalance = $startBal - $runningAcc[$acctId];
     ?>
       <?php $trClass = $isPending ? 'row-pending' : ''; ?>
-      <tr<?php echo $trClass ? ' class="' . $trClass . '"' : ''; ?> data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-status="<?php echo htmlspecialchars($t['status'] ?? ''); ?>" data-numimport="<?php echo htmlspecialchars($t['NumImport'] ?? 0); ?>">
+      <tr id="tx_<?php echo htmlspecialchars($t['id']); ?>"<?php echo $trClass ? ' class="' . $trClass . '"' : ''; ?> data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-status="<?php echo htmlspecialchars($t['status'] ?? ''); ?>" data-numimport="<?php echo htmlspecialchars($t['NumImport'] ?? 0); ?>">
         <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; ">
           <?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?>
           <?php if (!empty($t['NumImport']) && (int)$t['NumImport'] > 0):
@@ -663,6 +666,27 @@ document.addEventListener('DOMContentLoaded', function(){
       sp.set('limit', String(cur + 30));
       sp.set('page', '0');
       location.search = sp.toString();
+    });
+  }
+
+  // bottom '+' to load 30 more while preserving current visible line
+  var loadMoreBottom = document.getElementById('loadMoreBottom');
+  if (loadMoreBottom) {
+    loadMoreBottom.addEventListener('click', function(){
+      var rows = Array.from(document.querySelectorAll('table.tx-table tbody tr'));
+      if (!rows.length) { // fallback: just increase limit
+        var spf = new URLSearchParams(location.search);
+        var curf = parseInt(spf.get('limit') || '<?php echo (int)$limit; ?>', 10) || <?php echo (int)$limit; ?>;
+        spf.set('limit', String(curf + 30)); spf.set('page','0'); location.search = spf.toString(); return;
+      }
+      var firstVisible = rows.find(function(r){ var rect = r.getBoundingClientRect(); return rect.top >= 0 && rect.bottom > 0; }) || rows[0];
+      var txid = firstVisible ? (firstVisible.dataset.txid || firstVisible.id.replace(/^tx_/, '')) : '';
+      var sp = new URLSearchParams(location.search);
+      var cur = parseInt(sp.get('limit') || '<?php echo (int)$limit; ?>', 10) || <?php echo (int)$limit; ?>;
+      sp.set('limit', String(cur + 30));
+      sp.set('page', '0');
+      var hash = txid ? ('#tx_' + encodeURIComponent(txid)) : '';
+      location.href = location.pathname + '?' + sp.toString() + hash;
     });
   }
 });
