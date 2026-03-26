@@ -312,20 +312,26 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
               <select name="fcat1" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[1]); ?></option>
         
+      <script>
       (function(){
-        // simple toast container and helper
-        var tc = document.createElement('div'); tc.id = 'toastContainer'; tc.style.position = 'fixed'; tc.style.right = '16px'; tc.style.top = '16px'; tc.style.zIndex = '3200'; tc.style.display = 'flex'; tc.style.flexDirection = 'column'; tc.style.gap = '8px'; document.body.appendChild(tc);
-        window.showToast = function(msg, timeout){
+        function initToast(){
           try {
-            timeout = (typeof timeout === 'number') ? timeout : 3000;
-            var el = document.createElement('div');
-            el.textContent = msg || '';
-            el.style.background = 'rgba(32,32,32,0.9)'; el.style.color = '#fff'; el.style.padding = '8px 12px'; el.style.borderRadius = '6px'; el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.2)'; el.style.opacity = '1'; el.style.transition = 'opacity 0.35s ease'; el.style.maxWidth = '320px'; el.style.fontSize = '0.95rem';
-            tc.appendChild(el);
-            setTimeout(function(){ el.style.opacity = '0'; setTimeout(function(){ try{ el.remove(); }catch(e){} }, 360); }, timeout);
-          } catch(e){ console.log('toast', msg); }
-        };
+            var tc = document.createElement('div'); tc.id = 'toastContainer'; tc.style.position = 'fixed'; tc.style.right = '16px'; tc.style.top = '16px'; tc.style.zIndex = '3200'; tc.style.display = 'flex'; tc.style.flexDirection = 'column'; tc.style.gap = '8px'; document.body.appendChild(tc);
+            window.showToast = function(msg, timeout){
+              try {
+                timeout = (typeof timeout === 'number') ? timeout : 3000;
+                var el = document.createElement('div');
+                el.textContent = msg || '';
+                el.style.background = 'rgba(32,32,32,0.9)'; el.style.color = '#fff'; el.style.padding = '8px 12px'; el.style.borderRadius = '6px'; el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.2)'; el.style.opacity = '1'; el.style.transition = 'opacity 0.35s ease'; el.style.maxWidth = '320px'; el.style.fontSize = '0.95rem';
+                tc.appendChild(el);
+                setTimeout(function(){ el.style.opacity = '0'; setTimeout(function(){ try{ el.remove(); }catch(e){} }, 360); }, timeout);
+              } catch(e){ console.log('toast', msg); }
+            };
+          } catch(e) { /* ignore */ }
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initToast); else initToast();
       })();
+      </script>
               <?php if (!empty($catTree[1])): foreach ($catTree[1] as $pid => $node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
                 <?php foreach ($node['children'] as $child): ?>
