@@ -464,19 +464,11 @@ foreach ($allCats as $c) {
               <button type="submit" title="Supprimer" onclick="return confirm('Supprimer ?')">🗑️</button>
             </form>
             <?php
-              // Afficher le libellé concaténé Parent/Enfant pour les niveaux 1..4 (si parent label disponible)
-              $concatLabel = '';
-              if (isset($parent['label']) && $parent['label'] !== null) {
-                // Avoid duplicating parent prefix if child label already includes it
-                if (strpos($child['label'], $parent['label'] . '/') === 0) {
-                  $concatLabel = $child['label'];
-                } else {
-                  $concatLabel = $parent['label'] . '/' . $child['label'];
-                }
-              }
+              // Display the raw stored value from DB (do not pre-concatenate here)
+              $storedLabel = isset($child['label']) ? $child['label'] : '';
             ?>
             <div style="display:inline-block;margin-left:8px;vertical-align:middle;color:#333;max-width:320px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-              <?php echo htmlspecialchars($concatLabel); ?>
+              <?php echo htmlspecialchars($storedLabel); ?>
             </div>
           </td>
           <?php endforeach; endif; ?>
