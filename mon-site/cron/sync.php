@@ -6,6 +6,14 @@ $pdo = require __DIR__ . '/../api/db.php';
 $config = require __DIR__ . '/../config/database.php';
 require __DIR__ . '/../api/sync.php';
 
+// Purge logs older than 1 month to avoid table growth
+try {
+    $purge = $pdo->prepare("DELETE FROM logs WHERE log_date < DATE_SUB(CURDATE(), INTERVAL 1 MONTH)");
+    $purge->execute();
+} catch (Throwable $e) {
+    // ignore purge errors
+}
+
 // Log start of cron
 try {
     $stmt = $pdo->prepare('INSERT INTO logs (log_date, log_time, code_programme, libelle, payload, created_at) VALUES (CURDATE(), CURTIME(), :code, :lib, :payload, NOW())');
