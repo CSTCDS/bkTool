@@ -192,6 +192,9 @@ $country = $config['enable_country'] ?? 'FR';
         <h2>Logs</h2>
         <p>Derniers enregistrements système (triés par date/heure décroissante)</p>
         <div style="margin-top:12px;background:#fff;padding:10px;border:1px solid #eee;overflow:auto">
+          <div style="margin-bottom:8px">
+            <button id="logsReload" class="btn">Reload</button>
+          </div>
           <?php
             try {
               $db = require __DIR__ . '/mon-site/api/db.php';
@@ -220,12 +223,45 @@ $country = $config['enable_country'] ?? 'FR';
                 <td style="border:1px solid #eee;padding:6px;vertical-align:top"><?php echo htmlspecialchars($r['log_time']); ?></td>
                 <td style="border:1px solid #eee;padding:6px;vertical-align:top"><?php echo htmlspecialchars($r['code_programme']); ?></td>
                 <td style="border:1px solid #eee;padding:6px;vertical-align:top"><?php echo htmlspecialchars($r['libelle']); ?></td>
-                <td style="border:1px solid #eee;padding:6px;vertical-align:top;font-family:monospace;white-space:pre-wrap;max-width:520px;overflow:auto"><?php echo htmlspecialchars((string)$r['payload']); ?></td>
+                <td style="border:1px solid #eee;padding:6px;vertical-align:top;text-align:center">
+                  <button class="showPayloadBtn" data-payload="<?php echo htmlspecialchars((string)$r['payload']); ?>">+</button>
+                </td>
               </tr>
             <?php endforeach; ?>
             </tbody>
           </table>
         </div>
+        <!-- Payload popup -->
+        <div id="payloadPopup" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.45);z-index:4000;align-items:center;justify-content:center">
+          <div style="background:#fff;padding:12px;border-radius:8px;max-width:90%;max-height:90%;overflow:auto;box-sizing:border-box">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <strong>Détails payload</strong>
+              <button id="payloadClose" class="btn">Fermer</button>
+            </div>
+            <pre id="payloadContent" style="white-space:pre-wrap;font-family:monospace;font-size:0.9rem;margin:0"></pre>
+          </div>
+        </div>
+
+        <script>
+          (function(){
+            var reload = document.getElementById('logsReload');
+            if (reload) reload.addEventListener('click', function(){ location.reload(); });
+            var popup = document.getElementById('payloadPopup');
+            var content = document.getElementById('payloadContent');
+            var closeBtn = document.getElementById('payloadClose');
+            document.querySelectorAll('.showPayloadBtn').forEach(function(b){
+              b.addEventListener('click', function(){
+                var p = this.getAttribute('data-payload') || '';
+                // set as text to preserve JSON formatting
+                if (content) content.textContent = p;
+                if (popup) popup.style.display = 'flex';
+              });
+            });
+            if (closeBtn) closeBtn.addEventListener('click', function(){ if (popup) popup.style.display = 'none'; });
+            // close when clicking outside
+            if (popup) popup.addEventListener('click', function(e){ if (e.target === popup) popup.style.display = 'none'; });
+          })();
+        </script>
       <?php endif; ?>
     </div>
   </div>
