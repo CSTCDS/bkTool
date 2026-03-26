@@ -119,6 +119,9 @@ foreach ($allCats as $c) {
 
 $catMap = [];
 foreach ($allCats as $c) $catMap[$c['id']] = $c['label'];
+// map category id => criterion (1..4 or 0) for fallback when category_level is not set
+$catCriteria = [];
+foreach ($allCats as $c) { $catCriteria[$c['id']] = (int)$c['criterion']; }
 
 // Build linked categories map: for a parent category include parent+children; for a child include its parent+siblings+parent
 // Build categories grouped by criterion for populate lists
@@ -279,6 +282,10 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $i++;
         $r_level = isset($r['category_level']) ? (int)$r['category_level'] : 0;
         $r_valeur = isset($r['valeur_a_affecter']) ? (int)$r['valeur_a_affecter'] : ((isset($r['category_id']) ? (int)$r['category_id'] : 0));
+        // fallback: if category_level is not set but a target category exists, infer its criterion
+        if (($r_level === 0 || $r_level === null) && $r_valeur > 0 && isset($catCriteria[$r_valeur])) {
+          $r_level = (int)$catCriteria[$r_valeur];
+        }
         $bg = ($i % 2 === 0) ? 'silver' : 'gray';
   ?>
     <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>" style="background:<?php echo $bg; ?>">
