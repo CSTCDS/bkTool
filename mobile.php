@@ -253,14 +253,14 @@ if ($tx) {
 <body>
 <?php include __DIR__ . '/header.php'; ?>
 
-<!-- Redirect to desktop transactions view when viewport is wide (>1000px) -->
+<!-- Redirect to desktop transactions view when viewport is wide (>832px) -->
 <script>
   (function(){
     try {
       // If opened as popup, do not auto-redirect back to transactions even on wide screens
       var sp = new URLSearchParams(location.search);
       var isPopup = sp.get('popup') === '1' || sp.get('popup') === 'true';
-      if (typeof window !== 'undefined' && window.innerWidth > 1000 && !isPopup) {
+      if (typeof window !== 'undefined' && window.innerWidth > 832 && !isPopup) {
         var params = new URLSearchParams();
         <?php if ($acctSel !== ''): ?>params.set('account', <?php echo json_encode((string)$acctSel); ?>);<?php endif; ?>
         params.set('show_pending', <?php echo $showPending ? '1' : '0'; ?>);
@@ -273,20 +273,8 @@ if ($tx) {
 </script>
 
 <script>
-  // Display screen width in header
-  (function(){
-    try {
-      var el = document.createElement('div');
-      el.id = 'screenWidthDisplay';
-      el.style.cssText = 'font-size:0.9rem;color:#666;margin:6px 0';
-      el.textContent = 'Largeur écran: ' + (window.innerWidth || document.documentElement.clientWidth) + 'px';
-      // Prefer inserting into the mobile navigation for better visibility
-      var target = document.querySelector('.mobile-nav') || document.querySelector('.m-account') || document.body;
-      try { target.insertBefore(el, target.firstChild); } catch(e) { if (target && target.appendChild) target.appendChild(el); }
-      window.addEventListener('resize', function(){ if (el) el.textContent = 'Largeur écran: ' + (window.innerWidth || document.documentElement.clientWidth) + 'px'; });
-    } catch(e) { /* ignore */ }
-  })();
-</script>
+  // screen width display removed
+  </script>
 
   <div class="mobile-page">
   <div id="toast"></div>
@@ -295,7 +283,7 @@ if ($tx) {
     <!-- selection du compte: déplacée dans la barre de navigation pour gagner de la place -->
   </div>
 
-  <div class="mobile-nav" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
+  <div class="mobile-nav" style="display:flex;align-items:center;justify-content:space-between;margin:0">
     <div style="display:flex;align-items:center;gap:8px">
       <button class="arrow-btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=0<?php echo ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : '0'; ?>)">&lt;&lt;</button>
       <button class="arrow-btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo max(0,$idx-1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : 0; ?>)">&lt;</button>
