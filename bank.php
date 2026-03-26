@@ -115,18 +115,52 @@ $country = $config['enable_country'] ?? 'FR';
         </div>
 
       <?php elseif ($pane === 'testsync'): ?>
-        <h2>Test synchronisation (raw)</h2>
-        <p>Le JSON renvoyé par `sync.php` sera affiché brut sans mise en forme.</p>
+        <h2>Test synchronisation (API raw)</h2>
+        <p>Affiche les réponses brutes renvoyées par l'API Enable Banking (session, soldes, écritures).</p>
         <div style="margin-top:12px;background:#fff;padding:10px;border:1px solid #eee;">
-          <pre id="testRaw" style="white-space:pre-wrap;font-family:monospace;">Chargement…</pre>
+          <pre id="testRaw" style="white-space:pre-wrap;font-family:monospace;"><?php
+            // Server-side: call EnableBanking API and print raw responses
+            try {
+              $pdo = require __DIR__ . '/mon-site/api/db.php';
+              require_once __DIR__ . '/mon-site/api/EnableBankingClient.php';
+              $client = new EnableBankingClient($config);
+
+              // retrieve stored session id
+              $sstmt = $pdo->prepare('SELECT `value` FROM settings WHERE `key` = :k');
+              $sstmt->execute([':k' => 'eb_session_id']);
+              $sessionId = $sstmt->fetchColumn();
+
+              if (!$sessionId) {
+                echo "No eb_session_id in settings (connect first via Connecter banque).";
+              } else {
+                $out = '';
+                $sessionRes = $client->getSession($sessionId);
+                $out .= "=== GET /sessions/" . $sessionId . " (status=" . ($sessionRes['status'] ?? '??') . ") ===\n";
+                $out .= ($sessionRes['raw'] ?? json_encode($sessionRes['body'] ?? null)) . "\n\n";
+
+                $accountsData = $sessionRes['body']['accounts_data'] ?? [];
+                if (!empty($accountsData)) {
+                  foreach ($accountsData as $acc) {
+                    $uid = $acc['uid'] ?? ($acc['id'] ?? null);
+                    if (!$uid) continue;
+                    $balRes = $client->getAccountBalances($uid);
+                    $out .= "=== GET /accounts/" . $uid . "/balances (status=" . ($balRes['status'] ?? '??') . ") ===\n";
+                    $out .= ($balRes['raw'] ?? json_encode($balRes['body'] ?? null)) . "\n\n";
+
+                    $txRes = $client->getAccountTransactions($uid);
+                    $out .= "=== GET /accounts/" . $uid . "/transactions (status=" . ($txRes['status'] ?? '??') . ") ===\n";
+                    $out .= ($txRes['raw'] ?? json_encode($txRes['body'] ?? null)) . "\n\n";
+                  }
+                } else {
+                  $out .= "No accounts_data found in session response.\n";
+                }
+                echo htmlspecialchars($out, ENT_QUOTES | ENT_SUBSTITUTE);
+              }
+            } catch (Throwable $e) {
+              echo 'Erreur côté serveur: ' . htmlspecialchars((string)$e);
+            }
+          ?></pre>
         </div>
-        <script>
-          (function(){
-            fetch('sync.php', { method: 'GET' }).then(function(r){ return r.text(); }).then(function(txt){
-              document.getElementById('testRaw').textContent = txt;
-            }).catch(function(e){ document.getElementById('testRaw').textContent = 'Erreur: ' + e; });
-          })();
-        </script>
 
       <?php elseif ($pane === 'connect'): ?>
         <h2>Connecter une banque</h2>

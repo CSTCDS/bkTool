@@ -71,10 +71,11 @@ class EnableBankingClient
         curl_close($ch);
 
         $data = json_decode($resp, true);
+        // Always include raw response body for inspection; keep parsed JSON in 'body' when possible
         if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
             return ['status' => $http, 'body' => null, 'raw' => $resp];
         }
-        return ['status' => $http, 'body' => $data];
+        return ['status' => $http, 'body' => $data, 'raw' => $resp];
     }
 
     /** POST /auth — start user authorization */
