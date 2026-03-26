@@ -338,23 +338,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
     </div>
 
     <div class="tx-header-row" style="display:flex;gap:12px;align-items:center">
-      <div class="tx-col tx-left" style="flex:1">
-        <label>Sélection de compte :
-          <select name="account" class="select-account" onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; this.form.submit()">
-            <option value="">— Tous —</option>
-            <?php foreach ($accs as $a): ?>
-              <option value="<?php echo htmlspecialchars($a['id']); ?>" <?php echo ($acctSel !== '' && (string)$acctSel === (string)$a['id']) ? 'selected' : ''; ?> >
-                <?php echo htmlspecialchars($a['name'] ?: $a['id']); ?>
-              </option>
-            <?php endforeach; ?>
-            <?php if (!empty($catTree[0])): foreach ($catTree[0] as $pid => $node): if (!$node['info']) continue; ?>
-              <option value="g:<?php echo (int)$node['info']['id']; ?>" <?php echo ($acctSel !== '' && (string)$acctSel === ('g:' . (int)$node['info']['id'])) ? 'selected' : ''; ?> style="background:#e0e0e0">
-                <?php echo 'G: ' . htmlspecialchars($node['info']['label']); ?>
-              </option>
-            <?php endforeach; endif; ?>
-          </select>
-        </label>
-      </div>
+      <div class="tx-col tx-left" style="flex:1"></div>
       <div class="tx-col tx-center" style="flex:1;text-align:center">
         <div id="dateRangeFields" style="<?php echo $dateFieldsVisible; ?>">
           <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ($_COOKIE['selected_from'] ?? '')); ?>"></label>
