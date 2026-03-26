@@ -461,7 +461,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         </td>
         <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
         <td class="col-devise"><?php echo htmlspecialchars((string)($t['currency'] ?? '')); ?></td>
-        <td class="col-desc"><?php echo htmlspecialchars((string)($t['description'] ?? '')); ?></td>
+        <td class="col-desc" data-label="Commentaire"><?php echo htmlspecialchars((string)($t['description'] ?? '')); ?></td>
         <td class="col-categories">
           <div style="display:flex;flex-direction:column;gap:6px">
             <div style="display:flex;gap:8px">
@@ -511,14 +511,14 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         </td>
         <?php if ($showSolde): ?>
           <?php if (isset($t['status']) && strtoupper((string)$t['status']) === 'OTHR'): ?>
-            <td class="col-solde"></td>
+            <td class="col-solde" data-label="Solde"></td>
           <?php else: ?>
-            <td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td>
+            <td class="col-solde" data-label="Solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td>
           <?php endif; ?>
         <?php endif; ?>
         <?php if ($groupSelected): ?>
           <?php // compute virtual group balance before applying this row's amount ?>
-          <td class="col-solde-virtuel"><?php echo htmlspecialchars(number_format($groupStartBalance - ($groupRunning ?? 0.0), 2, ',', ' ')); ?></td>
+          <td class="col-solde-virtuel" data-label="Solde virtuel"><?php echo htmlspecialchars(number_format($groupStartBalance - ($groupRunning ?? 0.0), 2, ',', ' ')); ?></td>
         <?php endif; ?>
       </tr>
         <?php

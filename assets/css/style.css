@@ -52,12 +52,12 @@ th{background:#f2f2f2}
   /* Use flex rows so we can position first 5 columns on the first line and the rest below */
   table tbody tr { display:flex; flex-wrap:wrap; align-items:center }
   table tbody td { display:block; padding:6px 8px; border:none; box-sizing:border-box }
-  /* First five columns: occupy ~20% each on the first row */
-  table tbody td:nth-child(1), table tbody td:nth-child(2), table tbody td:nth-child(3), table tbody td:nth-child(4), table tbody td:nth-child(5) {
-    flex: 0 0 20%; max-width:20%;
+  /* First four columns: occupy ~25% each on the first row (make column 5 responsive/stacked too) */
+  table tbody td:nth-child(1), table tbody td:nth-child(2), table tbody td:nth-child(3), table tbody td:nth-child(4) {
+    flex: 0 0 25%; max-width:25%; min-width:100px; box-sizing:border-box;
   }
-  /* Columns 6 and onwards: place under as full-width blocks */
-  table tbody td:nth-child(n+6) {
+  /* Columns 5 and onwards: place under as full-width blocks */
+  table tbody td:nth-child(n+5) {
     flex: 0 0 100%; max-width:100%;
     border-top:1px dashed #eee; margin-top:6px; padding-top:8px;
   }
@@ -71,14 +71,22 @@ th{background:#f2f2f2}
   table thead { display:none }
   table tbody tr { margin-bottom:12px; border:1px solid #e6e6e6; padding:8px; border-radius:6px; background:#fff; display:flex; flex-wrap:wrap; align-items:center }
   table tbody td { display:block; padding:6px 8px; border:none; box-sizing:border-box }
-  /* First five columns: occupy ~20% each on the first line */
-  table tbody td:nth-child(1), table tbody td:nth-child(2), table tbody td:nth-child(3), table tbody td:nth-child(4), table tbody td:nth-child(5) {
-    flex: 0 0 20%; max-width:20%; min-width:120px; box-sizing:border-box;
+  /* First four columns: occupy ~25% each on the first line; make column 5 stack under */
+  table tbody td:nth-child(1), table tbody td:nth-child(2), table tbody td:nth-child(3), table tbody td:nth-child(4) {
+    flex: 0 0 25%; max-width:25%; min-width:120px; box-sizing:border-box;
   }
-  /* Columns 6 and onwards: place under as full-width blocks */
-  table tbody td:nth-child(n+6) {
+  /* Columns 5 and onwards: place under as full-width blocks */
+  table tbody td:nth-child(n+5) {
     flex: 0 0 100%; max-width:100%;
     border-top:1px dashed #eee; margin-top:6px; padding-top:8px;
+  }
+}
+
+/* Show data-label before cell content in responsive stacked layouts */
+@media (max-width:1000px) {
+  table tbody td[data-label]::before {
+    content: attr(data-label) ":";
+    display:block; font-weight:700; color:#555; margin-bottom:6px; font-size:0.95rem;
   }
 }
 
