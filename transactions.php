@@ -278,7 +278,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         <h1 style="margin:0">Transactions</h1>
         <div style="margin-top:6px;font-size:0.95rem;color:#555">
           <span id="limitDisplay">Affichage: <?php echo htmlspecialchars((int)$limit); ?> opérations</span>
-          <button id="moreBtn" class="btn" style="margin-left:8px;padding:4px 8px;font-weight:700">+</button>
+          <button id="moreBtn" type="button" class="btn" style="margin-left:8px;padding:4px 8px;font-weight:700">+</button>
         </div>
       </div>
         <div class="tx-col tx-center" style="flex:1;text-align:center">
