@@ -220,7 +220,11 @@ if ($tx) {
     <div class="mobile-card-row"><span class="mobile-card-label">Devise</span><span class="m-value"><?php echo htmlspecialchars($tx['currency'] ?? ''); ?></span></div>
     <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Commentaire</span><span class="m-value"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>
     <?php if ($displayBalance !== null): ?>
-    <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span class="m-value"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></span></div>
+      <?php if (isset($tx['status']) && strtoupper((string)$tx['status']) === 'OTHR'): ?>
+        <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span class="m-value"></span></div>
+      <?php else: ?>
+        <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span class="m-value"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></span></div>
+      <?php endif; ?>
     <?php endif; ?>
     <?php if ($groupVirtualBalance !== null): ?>
     <div class="mobile-card-row"><span class="mobile-card-label">Solde virtuel</span><span class="m-value" style="color:#5c6bc0"><?php echo htmlspecialchars(number_format($groupVirtualBalance, 2, ',', ' ')); ?></span></div>

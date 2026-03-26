@@ -495,19 +495,27 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
             </div>
           </div>
         </td>
-        <?php if ($showSolde): ?><td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td><?php endif; ?>
+        <?php if ($showSolde): ?>
+          <?php if (isset($t['status']) && strtoupper((string)$t['status']) === 'OTHR'): ?>
+            <td class="col-solde"></td>
+          <?php else: ?>
+            <td class="col-solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td>
+          <?php endif; ?>
+        <?php endif; ?>
         <?php if ($groupSelected): ?>
           <?php // compute virtual group balance before applying this row's amount ?>
           <td class="col-solde-virtuel"><?php echo htmlspecialchars(number_format($groupStartBalance - ($groupRunning ?? 0.0), 2, ',', ' ')); ?></td>
         <?php endif; ?>
       </tr>
     <?php
-        // mettre à jour cumul pour ce compte (après affichage)
-        $runningAcc[$acctId] += (float)$t['amount'];
-        // mettre à jour cumul pour le groupe sélectionné si applicable
-        if ($groupSelected) {
-          if (!isset($groupRunning)) $groupRunning = 0.0;
-          $groupRunning += (float)$t['amount'];
+        // mettre à jour cumul pour ce compte (après affichage) — ignore OTHR
+        if (!isset($t['status']) || strtoupper((string)$t['status']) !== 'OTHR') {
+          $runningAcc[$acctId] += (float)$t['amount'];
+          // mettre à jour cumul pour le groupe sélectionné si applicable
+          if ($groupSelected) {
+            if (!isset($groupRunning)) $groupRunning = 0.0;
+            $groupRunning += (float)$t['amount'];
+          }
         }
     endforeach;
     ?>
