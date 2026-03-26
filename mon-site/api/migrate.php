@@ -20,6 +20,15 @@ function bkt_migrate(PDO $pdo): void
         $currentVersion = (int)$row['version'];
     }
 
+    // Debug output: show current schema version so we know migrations run
+    $debugMsg = 'bkt_migrate: currentVersion=' . $currentVersion;
+    if (php_sapi_name() === 'cli') {
+        error_log($debugMsg);
+    } else {
+        // Emit as an HTML comment so it's visible in page source during web requests
+        echo "<!-- {$debugMsg} -->\n";
+    }
+
     // 2. Créer les tables métier si elles n'existent pas (idempotent)
     $pdo->exec('CREATE TABLE IF NOT EXISTS accounts (
         id VARCHAR(191) PRIMARY KEY,
@@ -133,8 +142,8 @@ function bkt_migrate(PDO $pdo): void
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 pattern TEXT NOT NULL,
                 is_regex TINYINT(1) NOT NULL DEFAULT 0,
-                category_id INT NOT NULL,
-                scope_account_id INT DEFAULT NULL,
+                category_level TINYINT DEFAULT NULL,
+                scope_account_id VARCHAR(191) DEFAULT NULL,
                 priority INT NOT NULL DEFAULT 100,
                 active TINYINT(1) NOT NULL DEFAULT 1,
                 created_by VARCHAR(100) DEFAULT NULL,
@@ -161,8 +170,8 @@ function bkt_migrate(PDO $pdo): void
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 pattern TEXT NOT NULL,
                 is_regex TINYINT(1) NOT NULL DEFAULT 0,
-                category_id INT NOT NULL,
-                scope_account_id INT DEFAULT NULL,
+                category_level TINYINT DEFAULT NULL,
+                scope_account_id VARCHAR(191) DEFAULT NULL,
                 priority INT NOT NULL DEFAULT 100,
                 active TINYINT(1) NOT NULL DEFAULT 1,
                 created_by VARCHAR(100) DEFAULT NULL,
@@ -173,12 +182,12 @@ function bkt_migrate(PDO $pdo): void
             // add colonne valeur_a_affecter si absente
             $cols = $pdo->query('SHOW COLUMNS FROM auto_category_rules LIKE "valeur_a_affecter"')->fetchAll();
             if (empty($cols)) {
-                $pdo->exec('ALTER TABLE auto_category_rules ADD COLUMN valeur_a_affecter INT DEFAULT NULL AFTER category_id');
+                $pdo->exec('ALTER TABLE auto_category_rules ADD COLUMN valeur_a_affecter INT DEFAULT NULL');
             }
             // add colonne category_level si absente
             $cols2 = $pdo->query('SHOW COLUMNS FROM auto_category_rules LIKE "category_level"')->fetchAll();
             if (empty($cols2)) {
-                $pdo->exec('ALTER TABLE auto_category_rules ADD COLUMN category_level TINYINT DEFAULT NULL AFTER valeur_a_affecter');
+                $pdo->exec('ALTER TABLE auto_category_rules ADD COLUMN category_level TINYINT DEFAULT NULL');
             }
         },
         // Version 11 : backfill category_level using categories.criterion for existing rules
@@ -189,8 +198,8 @@ function bkt_migrate(PDO $pdo): void
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     pattern TEXT NOT NULL,
                     is_regex TINYINT(1) NOT NULL DEFAULT 0,
-                    category_id INT NOT NULL,
-                    scope_account_id INT DEFAULT NULL,
+                    category_level TINYINT DEFAULT NULL,
+                    scope_account_id VARCHAR(191) DEFAULT NULL,
                     priority INT NOT NULL DEFAULT 100,
                     active TINYINT(1) NOT NULL DEFAULT 1,
                     created_by VARCHAR(100) DEFAULT NULL,
@@ -201,7 +210,7 @@ function bkt_migrate(PDO $pdo): void
             $cols = $pdo->query('SHOW COLUMNS FROM auto_category_rules LIKE "category_level"')->fetchAll();
             if (empty($cols)) {
                 try {
-                    $pdo->exec('ALTER TABLE auto_category_rules ADD COLUMN category_level TINYINT DEFAULT NULL AFTER valeur_a_affecter');
+                        $pdo->exec('ALTER TABLE auto_category_rules ADD COLUMN category_level TINYINT DEFAULT NULL');
                 } catch (Throwable $e) { /* ignore if not possible */ }
             }
 
@@ -221,6 +230,15 @@ function bkt_migrate(PDO $pdo): void
                 try {
                     $pdo->exec('ALTER TABLE auto_category_rules MODIFY scope_account_id VARCHAR(191) DEFAULT NULL');
                 } catch (Throwable $e) { /* ignore if cannot modify */ }
+            }
+        },
+        // Version 13 : drop duplicated column category_id from auto_category_rules
+        13 => function (PDO $pdo) {
+            // Version 13: drop duplicated column category_id from auto_category_rules
+            $cols = $pdo->query('SHOW COLUMNS FROM auto_category_rules LIKE "category_id"')->fetchAll();
+            if (!empty($cols)) {
+                // If the column exists, drop it (no try/catch so errors surface)
+                $pdo->exec('ALTER TABLE auto_category_rules DROP COLUMN category_id');
             }
         },
     ];
