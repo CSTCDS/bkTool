@@ -107,8 +107,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           } else {
             $label = trim((string)($_POST['label'] ?? ''));
             if ($label !== '') {
+              // If this is a level 2 (child) entry, concat parent label + '/' + child label for storage
+              if ($row['parent_id'] !== null) {
+                $pstmt = $pdo->prepare('SELECT label FROM categories WHERE id = :pid');
+                $pstmt->execute([':pid' => $row['parent_id']]);
+                $parentLabel = $pstmt->fetchColumn();
+                if ($parentLabel !== false && $parentLabel !== null && $parentLabel !== '') {
+                  $labelToStore = $parentLabel . '/' . $label;
+                } else {
+                  $labelToStore = $label;
+                }
+              } else {
+                $labelToStore = $label;
+              }
               $stmt = $pdo->prepare('UPDATE categories SET label = :l WHERE id = :id');
-              $stmt->execute([':l' => $label, ':id' => $id]);
+              $stmt->execute([':l' => $labelToStore, ':id' => $id]);
               $notice = 'Libellé modifié.';
             }
           }
@@ -439,6 +452,16 @@ foreach ($allCats as $c) {
               <input type="hidden" name="cat_id" value="<?php echo $child['id']; ?>">
               <button type="submit" title="Supprimer" onclick="return confirm('Supprimer ?')">🗑️</button>
             </form>
+            <?php
+              // Afficher le libellé concaténé Parent/Enfant pour les niveaux 1..4 (si parent label disponible)
+              $concatLabel = '';
+              if (isset($parent['label']) && $parent['label'] !== null) {
+                $concatLabel = $parent['label'] . '/' . $child['label'];
+              }
+            ?>
+            <div style="display:inline-block;margin-left:8px;vertical-align:middle">
+              <input type="text" readonly value="<?php echo htmlspecialchars($concatLabel); ?>" style="width:220px" title="Libellé concaténé Parent/Enfant">
+            </div>
           </td>
           <?php endforeach; endif; ?>
         </tr>
