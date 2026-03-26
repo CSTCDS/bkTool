@@ -374,9 +374,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
     </div>
   </form>
 
-  <!-- Bottom load more button (fixed, centered) -->
-  <button id="loadMoreBottom" class="btn" style="position:fixed;left:50%;transform:translateX(-50%);bottom:120px;z-index:9999;padding:10px 18px;font-size:15px;border-radius:8px;background:#1976d2;color:#fff;border:none;cursor:pointer;display:block">Lignes suivantes</button>
-
+        
     <div style="height:8px;margin:8px 0"></div>
 
   <table class="tx-table">
@@ -902,5 +900,9 @@ document.addEventListener('DOMContentLoaded', function(){
   document.addEventListener('click', function(e){ if (popup.style.display === 'block' && !popup.contains(e.target)) hidePopup(); });
 })();
 </script>
+  <!-- Static load-more button placed at end of document (normal flow) -->
+  <div style="text-align:center;margin:18px 0">
+    <button id="loadMoreBottom" class="btn" style="padding:10px 18px;font-size:15px;border-radius:8px;background:#1976d2;color:#fff;border:none;cursor:pointer">Plus de lignes</button>
+  </div>
 </body>
 </html>
