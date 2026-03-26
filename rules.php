@@ -43,8 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $pattern = '/' . $joined . '/i';
     }
     // prefer to update new columns if present (valeur_a_affecter, category_level)
-    $cols = ['pattern = :p', 'is_regex = :ir', 'category_id = :cid', 'scope_account_id = :scope', 'priority = :prio', 'active = :act'];
-    $params = [':p'=>$pattern,':ir'=>$is_regex,':cid'=>$category_id,':scope'=>$scope_account_id,':prio'=>$priority,':act'=>$active,':id'=>$id];
+    $cols = ['pattern = :p', 'is_regex = :ir', 'scope_account_id = :scope', 'priority = :prio', 'active = :act'];
+    $params = [':p'=>$pattern,':ir'=>$is_regex,':scope'=>$scope_account_id,':prio'=>$priority,':act'=>$active,':id'=>$id];
     // detect additional columns
     $hasVal = false; $hasLevel = false;
     try {
@@ -52,8 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $hasVal = in_array('valeur_a_affecter', $desc, true);
       $hasLevel = in_array('category_level', $desc, true);
     } catch (Throwable $e) { /* ignore - older schema */ }
-    if ($hasVal) { $cols[] = 'valeur_a_affecter = :val'; $params[':val'] = $valeur_a_affecter; }
     if ($hasLevel) { $cols[] = 'category_level = :clevel'; $params[':clevel'] = $category_level; }
+    if ($hasVal) { $cols[] = 'valeur_a_affecter = :val'; $params[':val'] = $valeur_a_affecter; }
     $sql = 'UPDATE auto_category_rules SET ' . implode(', ', $cols) . ' WHERE id = :id';
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
@@ -77,15 +77,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $joined = implode('.*', $escaped);
       $pattern = '/' . $joined . '/i';
     }
-    if ($pattern !== '' && $category_id > 0) {
+    if ($pattern !== '') {
       // insert, prefer to include new columns when present
-      $cols = ['pattern','is_regex','category_id','scope_account_id','priority','active','created_by'];
-      $placeholders = [':p',':ir',':cid',':scope',':prio',':act',':cb'];
-      $params = [':p'=>$pattern,':ir'=>$is_regex,':cid'=>$category_id,':scope'=>$scope_account_id,':prio'=>$priority,':act'=>1,':cb'=>($_SERVER['REMOTE_USER'] ?? null)];
+      $cols = ['pattern','is_regex','scope_account_id','priority','active','created_by'];
+      $placeholders = [':p',':ir',':scope',':prio',':act',':cb'];
+      $params = [':p'=>$pattern,':ir'=>$is_regex,':scope'=>$scope_account_id,':prio'=>$priority,':act'=>1,':cb'=>($_SERVER['REMOTE_USER'] ?? null)];
       try {
         $desc = $pdo->query("DESCRIBE auto_category_rules")->fetchAll(PDO::FETCH_COLUMN);
-        if (in_array('valeur_a_affecter',$desc,true)) { $cols[]='valeur_a_affecter'; $placeholders[]=':val'; $params[':val']=$valeur_a_affecter; }
-        if (in_array('category_level',$desc,true)) { $cols[]='category_level'; $placeholders[]=':clevel'; $params[':clevel'] = $category_level; }
+        if (in_array('valeur_a_affecter',$desc,true) && $valeur_a_affecter > 0) { $cols[]='valeur_a_affecter'; $placeholders[]=':val'; $params[':val']=$valeur_a_affecter; }
+        if (in_array('category_level',$desc,true) && $category_level > 0) { $cols[]='category_level'; $placeholders[]=':clevel'; $params[':clevel'] = $category_level; }
       } catch (Throwable $e) { /* ignore */ }
       $sql = 'INSERT INTO auto_category_rules (' . implode(',',$cols) . ') VALUES (' . implode(',',$placeholders) . ')';
       $stmt = $pdo->prepare($sql);
@@ -180,7 +180,7 @@ if ($accountFilter === 'global') {
   $params[':acct'] = $accountFilter;
 }
 if ($categoryFilter > 0) {
-  $where[] = 'category_id = :cid';
+  $where[] = 'category_level = :cid';
   $params[':cid'] = $categoryFilter;
 }
 
@@ -278,7 +278,7 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <?php $i = 0; foreach ($rules as $r): 
         $i++;
         $r_level = isset($r['category_level']) ? (int)$r['category_level'] : 0;
-        $r_valeur = isset($r['valeur_a_affecter']) ? (int)$r['valeur_a_affecter'] : ((isset($r['category_id']) ? (int)$r['category_id'] : 0));
+        $r_valeur = isset($r['valeur_a_affecter']) ? (int)$r['valeur_a_affecter'] : ((isset($r['category_level']) ? (int)$r['category_level'] : 0));
         $bg = ($i % 2 === 0) ? 'silver' : 'gray';
   ?>
     <tr data-r-level="<?php echo $r_level; ?>" data-r-valeur="<?php echo $r_valeur; ?>" style="background:<?php echo $bg; ?>">
@@ -495,18 +495,18 @@ function showRuleSql(id){
     }
     var pattern_esc = (data.pattern||'').replace(/'/g, "''");
 
-    var catId = (parseInt(data.valeur_a_affecter,10) || 0);
+    var valeurId = (parseInt(data.valeur_a_affecter,10) || 0);
+    var clevel = (parseInt(data.category_level,10) || 0);
     var sql = "UPDATE auto_category_rules SET"
       + " pattern = '" + pattern_esc + "'"
       + ", is_regex = " + (parseInt(data.is_regex,10) || 0)
-      + ", category_id = " + catId
+      + ", category_level = " + clevel
       + ", scope_account_id = " + scope_sql
       + ", priority = " + (parseInt(data.priority,10) || 0)
       + ", active = " + (parseInt(data.active,10) || 0)
-      + ", valeur_a_affecter = " + (parseInt(data.valeur_a_affecter,10) || 0);
-    sql += ", category_level = " + (parseInt(data.category_level,10) || 0);
-    if (catId === 0) {
-      sql += " -- NOTE: category_id is 0";
+      + ", valeur_a_affecter = " + valeurId;
+    if (clevel === 0) {
+      sql += " -- NOTE: category_level is 0";
     }
     sql += " WHERE id = " + id + ";";
 
