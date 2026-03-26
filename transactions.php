@@ -309,12 +309,10 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
         <!-- Critères 1 & 2 (ligne 1, droite) -->
         <div>
-          <select name="fcat1" onchange="this.form.submit()">
+              <select name="fcat1" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[1]); ?></option>
-        <div style="text-align:center;margin:12px 0">
-          <button id="loadMoreBottom" class="btn" style="padding:8px 14px;font-size:18px;border-radius:6px">+</button>
-        </div>
-        <script>
+        
+              <?php if (!empty($catTree[1])): foreach ($catTree[1] as $pid => $node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
                 <?php foreach ($node['children'] as $child): ?>
                   <option value="<?php echo $child['id']; ?>" <?php echo ((int)($_GET['fcat1'] ?? '') === (int)$child['id']) ? 'selected' : ''; ?>>&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
