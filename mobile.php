@@ -280,8 +280,9 @@ if ($tx) {
       el.id = 'screenWidthDisplay';
       el.style.cssText = 'font-size:0.9rem;color:#666;margin:6px 0';
       el.textContent = 'Largeur écran: ' + (window.innerWidth || document.documentElement.clientWidth) + 'px';
-      var target = document.querySelector('.m-account');
-      if (target) target.parentNode.insertBefore(el, target);
+      // Prefer inserting into the mobile navigation for better visibility
+      var target = document.querySelector('.mobile-nav') || document.querySelector('.m-account') || document.body;
+      try { target.insertBefore(el, target.firstChild); } catch(e) { if (target && target.appendChild) target.appendChild(el); }
       window.addEventListener('resize', function(){ if (el) el.textContent = 'Largeur écran: ' + (window.innerWidth || document.documentElement.clientWidth) + 'px'; });
     } catch(e) { /* ignore */ }
   })();
