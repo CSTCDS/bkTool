@@ -136,14 +136,20 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
         try {
           var pend = (window.pendingByAccount && window.pendingByAccount[a.id]) ? window.pendingByAccount[a.id] : [];
           if (pend && pend.length > 0) {
-            var h2b = document.createElement('div'); h2b.style.marginTop = '8px'; h2b.innerHTML = '<strong>Écritures en attente</strong>'; body.appendChild(h2b);
+            var h2b = document.createElement('strong'); h2b.style.marginTop = '8px'; h2b.textContent = 'Écritures en attente'; body.appendChild(h2b);
             var pulb = document.createElement('ul');
             pend.forEach(function(t){
               var pli = document.createElement('li');
-              var pamt = parseFloat((t.transaction_amount && t.transaction_amount.amount) ? t.transaction_amount.amount : (t.amount || 0)) || 0;
+              var pamt = parseFloat((t.transaction_amount && (t.transaction_amount.amount || t.transaction_amount.amount === 0)) ? t.transaction_amount.amount : (t.amount || 0)) || 0;
               var pfmt = pamt.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
               var pamtHtml = (pamt >= 0) ? '<strong style="color:#2e7d32">' + pfmt + '</strong>' : '<strong style="color:#000">' + pfmt + '</strong>';
-              pli.innerHTML = escapeHtml(t.transaction_date || t.booking_date || '') + ' — ' + pamtHtml + ' — ' + escapeHtml(JSON.stringify(t).substring(0,200));
+              var desc = '';
+              if (t.remittance_information) {
+                if (Array.isArray(t.remittance_information)) desc = t.remittance_information.join(' ');
+                else desc = t.remittance_information;
+              } else if (t.description) desc = t.description;
+              else desc = JSON.stringify(t);
+              pli.innerHTML = escapeHtml(t.transaction_date || t.booking_date || '') + ' — ' + pamtHtml + ' — ' + escapeHtml((desc||'').toString().substring(0,80));
               pulb.appendChild(pli);
             });
             body.appendChild(pulb);
