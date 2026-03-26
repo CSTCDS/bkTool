@@ -157,9 +157,9 @@ if (!$showPending) {
   $where[] = "UPPER(t.status) = 'BOOK'";
 }
 
-// Pagination (prev/next) support: page param (0-based), limit per page
+// Pagination (page param 0-based). Default limit 30; can be increased by user via 'limit' GET param
 $page = max(0, (int)($_GET['page'] ?? 0));
-$limit = 100;
+$limit = max(1, (int)($_GET['limit'] ?? 30));
 
 // Paramètre: type sélectionné (group ou crit 1..4)
 $paramType = $_GET['param_type'] ?? '';
@@ -276,6 +276,10 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
     <div class="tx-header-row" style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
       <div class="tx-col tx-left" style="flex:1">
         <h1 style="margin:0">Transactions</h1>
+        <div style="margin-top:6px;font-size:0.95rem;color:#555">
+          <span id="limitDisplay">Affichage: <?php echo htmlspecialchars((int)$limit); ?> opérations</span>
+          <button id="moreBtn" class="btn" style="margin-left:8px;padding:4px 8px;font-weight:700">+</button>
+        </div>
       </div>
         <div class="tx-col tx-center" style="flex:1;text-align:center">
         <div style="display:flex;flex-direction:column;align-items:center">
@@ -583,11 +587,24 @@ document.addEventListener('DOMContentLoaded', function(){
     if (ev.target.closest('select') || ev.target.closest('button') || ev.target.closest('a')) return;
     var txid = tr.dataset.txid;
     if (!txid) return;
-    var url = 'mobile.php?tx_id=' + encodeURIComponent(txid);
+    var url = 'mobile.php?tx_id=' + encodeURIComponent(txid) + '&popup=1';
     if (accountSel) url += '&account=' + encodeURIComponent(accountSel);
     url += '&show_pending=' + encodeURIComponent(showPendingFlag);
-    location.href = url;
+    // open details in a popup window to avoid full redirect
+    window.open(url, 'txpopup', 'width=640,height=760,menubar=no,toolbar=no,location=no,status=no');
   });
+
+  // '+' button to increase limit by 30
+  var moreBtn = document.getElementById('moreBtn');
+  if (moreBtn) {
+    moreBtn.addEventListener('click', function(){
+      var sp = new URLSearchParams(location.search);
+      var cur = parseInt(sp.get('limit') || '<?php echo (int)$limit; ?>', 10) || <?php echo (int)$limit; ?>;
+      sp.set('limit', String(cur + 30));
+      sp.set('page', '0');
+      location.search = sp.toString();
+    });
+  }
 });
 </script>
 <script>

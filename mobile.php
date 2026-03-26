@@ -218,7 +218,10 @@ if ($tx) {
 <script>
   (function(){
     try {
-      if (typeof window !== 'undefined' && window.innerWidth > 1000) {
+      // If opened as popup, do not auto-redirect back to transactions even on wide screens
+      var sp = new URLSearchParams(location.search);
+      var isPopup = sp.get('popup') === '1' || sp.get('popup') === 'true';
+      if (typeof window !== 'undefined' && window.innerWidth > 1000 && !isPopup) {
         var params = new URLSearchParams();
         <?php if ($acctSel !== ''): ?>params.set('account', <?php echo json_encode((string)$acctSel); ?>);<?php endif; ?>
         params.set('show_pending', <?php echo $showPending ? '1' : '0'; ?>);
@@ -226,6 +229,21 @@ if ($tx) {
         // Use replace to avoid polluting history
         window.location.replace('transactions.php?' + params.toString());
       }
+    } catch(e) { /* ignore */ }
+  })();
+</script>
+
+<script>
+  // Display screen width in header
+  (function(){
+    try {
+      var el = document.createElement('div');
+      el.id = 'screenWidthDisplay';
+      el.style.cssText = 'font-size:0.9rem;color:#666;margin:6px 0';
+      el.textContent = 'Largeur écran: ' + (window.innerWidth || document.documentElement.clientWidth) + 'px';
+      var target = document.querySelector('.m-account');
+      if (target) target.parentNode.insertBefore(el, target);
+      window.addEventListener('resize', function(){ if (el) el.textContent = 'Largeur écran: ' + (window.innerWidth || document.documentElement.clientWidth) + 'px'; });
     } catch(e) { /* ignore */ }
   })();
 </script>
