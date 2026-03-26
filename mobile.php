@@ -38,6 +38,13 @@ $acctSel = $_GET['account'] ?? ($_COOKIE['selected_account'] ?? '');
 $accBalances = [];
 foreach ($accs as $a) { $accBalances[$a['id']] = (float)($a['balance'] ?? 0.0); }
 
+// Check if transactions.accounting_date column exists (migration may not have been run yet)
+$hasAccountingDate = false;
+try {
+  $cols = $pdo->query("SHOW COLUMNS FROM transactions LIKE 'accounting_date'")->fetchAll();
+  $hasAccountingDate = !empty($cols);
+} catch (Throwable $e) { $hasAccountingDate = false; }
+
 // Build group children map from categories criterion=0 (label expected to contain account id)
 // groupChildren will be built after we load categories into $allCats
 // initialize to avoid undefined variable notices in older PHP setups
@@ -137,17 +144,46 @@ if ($tx) {
       $placeholders = [];
       $bindings = [];
       foreach ($acctIds as $i => $aid) { $ph = ':g' . $i; $placeholders[] = $ph; $bindings[$ph] = $aid; }
-      $q = 'SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (' . implode(',', $placeholders) . ') AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND UPPER(status) = "BOOK"';
+      if ($hasAccountingDate) {
+        $q = 'SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (' . implode(',', $placeholders) . ') AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND (UPPER(status) = "BOOK" OR (UPPER(status) = "OTHR" AND accounting_date > :today))';
+      } else {
+        $q = 'SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (' . implode(',', $placeholders) . ') AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND UPPER(status) = "BOOK"';
+      }
       $stmtg = $pdo->prepare($q);
       $stmtg->bindValue(':bdate', $tx['booking_date']); $stmtg->bindValue(':id', $tx['id']);
+      if ($hasAccountingDate) $stmtg->bindValue(':today', date('Y-m-d'));
       foreach ($bindings as $k => $v) $stmtg->bindValue($k, $v);
       $stmtg->execute();
       $groupNewer = (float)$stmtg->fetchColumn();
       $groupVirtualBalance = $groupStart - $groupNewer;
     }
   }
+
+  // Determine badge and virtual counting for the single displayed transaction (OTHR rules)
+  $today = date('Y-m-d');
+  $statusUpper = strtoupper((string)($tx['status'] ?? ''));
+  $badgeHtml = '';
+  $countInVirtualRow = false;
+  if ($statusUpper === 'OTHR') {
+    $acctDate = isset($tx['accounting_date']) && $tx['accounting_date'] !== null && $tx['accounting_date'] !== '' ? (string)$tx['accounting_date'] : null;
+    if ($acctDate) {
+      if ($today === $acctDate) {
+        $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>';
+        $countInVirtualRow = false;
+      } elseif ($today < $acctDate) {
+        $badgeHtml = '<span class="badge-pending">P. Différé</span>';
+        $countInVirtualRow = true;
+      } else {
+        $badgeHtml = '<span class="badge-paid">Payé</span>';
+        $countInVirtualRow = false;
+      }
+    } else {
+      $badgeHtml = '<span class="badge-pending">P. Différé</span>';
+      $countInVirtualRow = false;
+    }
+  }
+
 }
-?>
 <!doctype html>
 <html>
 <head>
@@ -212,10 +248,10 @@ if ($tx) {
 <?php else: ?>
   <div class="mobile-card">
     <div class="mobile-card-row"><span class="mobile-card-label">Compte</span><span class="m-value"><?php echo htmlspecialchars($tx['account_name'] ?? $tx['account_id']); ?></span></div>
-    <div class="mobile-card-row"><span class="mobile-card-label">Date</span><span class="m-value"><?php if ($isPending) echo '<span class="badge-pending">P. Différé</span><br>'; ?><?php echo htmlspecialchars($tx['booking_date'] ?? ''); ?></span></div>
+    <div class="mobile-card-row"><span class="mobile-card-label">Date</span><span class="m-value"><?php if (!empty($badgeHtml)) { echo $badgeHtml . '<br>'; } elseif ($isPending) { echo '<span class="badge-pending">P. Différé</span><br>'; } ?><?php echo htmlspecialchars($tx['booking_date'] ?? ''); ?></span></div>
     <div class="mobile-card-row"><span class="mobile-card-label">Montant</span><span class="m-value" style="color:<?php echo ($tx['amount'] < 0) ? '#c62828' : '#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$tx['amount'], 2, ',', ' ')); ?></span></div>
     <?php if (isset($tx['status']) && strtoupper((string)$tx['status']) === 'OTHR'): ?>
-      <div class="mobile-card-row"><span class="mobile-card-label">Statut</span><span class="m-value"><span class="badge-pending">P. différé</span></span></div>
+      <div class="mobile-card-row"><span class="mobile-card-label">Statut</span><span class="m-value"><?php if (!empty($badgeHtml)) { echo $badgeHtml; } else { echo '<span class="badge-pending">P. différé</span>'; } ?></span></div>
     <?php endif; ?>
     <div class="mobile-card-row"><span class="mobile-card-label">Devise</span><span class="m-value"><?php echo htmlspecialchars($tx['currency'] ?? ''); ?></span></div>
     <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Commentaire</span><span class="m-value"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>

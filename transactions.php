@@ -414,7 +414,31 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       $runningAcc = [];
       foreach ($txs as $t):
       // Consider BOOK as booked/current; any other status treated as pending
-      $isPending = (strtoupper((string)($t['status'] ?? '')) !== 'BOOK');
+      $statusUpper = strtoupper((string)($t['status'] ?? ''));
+      $isPending = ($statusUpper !== 'BOOK');
+      $today = date('Y-m-d');
+      // Determine OTHR badge and whether OTHR should count in virtual balance
+      $countInVirtual = false;
+      $badgeHtml = '';
+      if ($statusUpper === 'OTHR') {
+        $acctDate = isset($t['accounting_date']) && $t['accounting_date'] !== null && $t['accounting_date'] !== '' ? (string)$t['accounting_date'] : null;
+        if ($acctDate) {
+          if ($today === $acctDate) {
+            $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>';
+            $countInVirtual = false;
+          } elseif ($today < $acctDate) {
+            $badgeHtml = '<span class="badge-pending">P. Différé</span>';
+            $countInVirtual = true;
+          } else {
+            $badgeHtml = '<span class="badge-paid">Payé</span>';
+            $countInVirtual = false;
+          }
+        } else {
+          // fallback: treat as pending but do not count in virtual without accounting_date
+          $badgeHtml = '<span class="badge-pending">P. Différé</span>';
+          $countInVirtual = false;
+        }
+      }
       $acctId = $t['account_id'];
       if (!isset($runningAcc[$acctId])) $runningAcc[$acctId] = 0.0; // cumul des montants déjà vus (newest->oldest)
       $startBal = $accBalances[$acctId] ?? 0.0;
@@ -441,7 +465,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           <?php endif; ?>
         </td>
         <td class="col-date">
-          <?php if ($isPending) echo '<span class="badge-pending">P. Différé</span><br>'; ?>
+          <?php if ($badgeHtml) { echo $badgeHtml . '<br>'; } else if ($isPending) { echo '<span class="badge-pending">P. Différé</span><br>'; } ?>
           <?php if (isset($t['status']) && strtoupper((string)$t['status']) === 'TODEL') echo '<span class="badge-todel">à supprimer ?</span><br>'; ?>
           <?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); ?>
         </td>
@@ -507,9 +531,13 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           <td class="col-solde-virtuel"><?php echo htmlspecialchars(number_format($groupStartBalance - ($groupRunning ?? 0.0), 2, ',', ' ')); ?></td>
         <?php endif; ?>
       </tr>
-    <?php
-        // mettre à jour cumul pour ce compte (après affichage) — ignore OTHR
-        if (!isset($t['status']) || strtoupper((string)$t['status']) !== 'OTHR') {
+        <?php
+        // mettre à jour cumul pour ce compte (après affichage)
+        $shouldCount = true;
+        if ($statusUpper === 'OTHR') {
+          $shouldCount = $countInVirtual;
+        }
+        if ($shouldCount) {
           $runningAcc[$acctId] += (float)$t['amount'];
           // mettre à jour cumul pour le groupe sélectionné si applicable
           if ($groupSelected) {
