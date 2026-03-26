@@ -184,6 +184,7 @@ if ($tx) {
   }
 
 }
+?>
 <!doctype html>
 <html>
 <head>
