@@ -108,6 +108,11 @@ $country = $config['enable_country'] ?? 'FR';
         <div id="syncStats" style="margin-top:12px;background:#fafafa;padding:10px;border:1px solid #eee;display:none">
           <pre id="syncJson" style="white-space:pre-wrap;font-size:.95rem"></pre>
         </div>
+        <div id="pendingWrites" style="margin-top:12px;background:#fff8e1;padding:10px;border:1px solid #ffe58f;display:none">
+          <h3 style="margin:0 0 8px 0">Écritures en attente</h3>
+          <div id="pendingCount" style="font-weight:600;margin-bottom:6px"></div>
+          <pre id="pendingJson" style="white-space:pre-wrap;font-size:.9rem;margin:0"></pre>
+        </div>
 
       <?php elseif ($pane === 'connect'): ?>
         <h2>Connecter une banque</h2>
@@ -179,6 +184,19 @@ if (syncBtn) {
           resultEl.textContent = msg;
           jsonEl.textContent = JSON.stringify(res, null, 2);
           statsEl.style.display = 'block';
+          // show skipped transactions if any
+          var pendingEl = document.getElementById('pendingWrites');
+          var pendingJson = document.getElementById('pendingJson');
+          var pendingCount = document.getElementById('pendingCount');
+          if (res.transactions_skipped && Array.isArray(res.skipped_transactions) && res.skipped_transactions.length > 0) {
+            pendingCount.textContent = res.transactions_skipped + ' écriture(s) en attente (non enregistrées)';
+            pendingJson.textContent = JSON.stringify(res.skipped_transactions, null, 2);
+            pendingEl.style.display = 'block';
+          } else {
+            pendingEl.style.display = 'none';
+            if (pendingJson) pendingJson.textContent = '';
+            if (pendingCount) pendingCount.textContent = '';
+          }
         } else {
           resultEl.textContent = 'Erreur: ' + (j.message || JSON.stringify(j));
           if (j.result) { jsonEl.textContent = JSON.stringify(j.result, null, 2); statsEl.style.display = 'block'; }
