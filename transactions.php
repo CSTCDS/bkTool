@@ -272,6 +272,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         <div style="margin-top:6px;font-size:0.95rem;color:#555">
           <span id="limitDisplay">Affichage: <?php echo htmlspecialchars((int)$limit); ?> opérations</span>
           <button id="moreBtn" type="button" class="btn" style="margin-left:8px;padding:4px 8px;font-weight:700">+</button>
+          <div id="screenWidthDisplay" style="font-size:0.85rem;color:#666;margin-top:6px">Largeur écran: -- px</div>
         </div>
       </div>
         <div class="tx-col tx-center" style="flex:1;text-align:center">
@@ -561,6 +562,14 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
 document.addEventListener('DOMContentLoaded', function(){
   try {
     var width = window.innerWidth || document.documentElement.clientWidth || window.screen.width;
+    // update screen width display under the '+' button
+    var _swEl = document.getElementById('screenWidthDisplay');
+    function _updateScreenWidth() {
+      var w2 = window.innerWidth || document.documentElement.clientWidth || window.screen.width;
+      if (_swEl) _swEl.textContent = 'Largeur écran: ' + w2 + ' px';
+    }
+    _updateScreenWidth();
+    window.addEventListener('resize', _updateScreenWidth);
     var qs = location.search || '';
     if (width <= 800 && qs.indexOf('desktop=1') === -1) {
       location.href = 'mobile.php' + qs;
