@@ -100,6 +100,8 @@ foreach ($allCats as $c) {
 // Load the transaction at index $idx (mobile card navigation)
 $idx = isset($_GET['idx']) ? (int)$_GET['idx'] : 0;
 $showPending = isset($_GET['show_pending']) ? ($_GET['show_pending'] === '1') : true;
+
+
 $where = [];
 $params = [];
 if (!empty($acctSel)) {
@@ -126,6 +128,43 @@ if (!empty($acctSel)) {
 }
 if (!$showPending) {
   $where[] = "UPPER(t.status) = 'BOOK'";
+}
+// If a specific transaction id is provided, compute its index within the current filter
+if (isset($_GET['tx_id']) && $_GET['tx_id'] !== '') {
+  $txIdParam = $_GET['tx_id'];
+  try {
+    $txInfoStmt = $pdo->prepare('SELECT booking_date, amount, id, account_id FROM transactions WHERE id = :id LIMIT 1');
+    $txInfoStmt->execute([':id' => $txIdParam]);
+    $txInfo = $txInfoStmt->fetch(PDO::FETCH_ASSOC);
+    if ($txInfo) {
+      // Compute how many rows come before this transaction according to ORDER BY booking_date DESC, amount DESC, id DESC
+      $beforeConds = [];
+      $beforeParams = $params; // start with existing filter bindings (account/group, show_pending)
+      // condition for rows with booking_date greater than tx's date
+      $beforeConds[] = '(t.booking_date > :bdate)';
+      $beforeParams[':bdate'] = $txInfo['booking_date'];
+      // same booking_date but amount greater
+      $beforeConds[] = '(t.booking_date = :bdate AND t.amount > :amount)';
+      $beforeParams[':amount'] = $txInfo['amount'];
+      // same booking_date and amount but id greater
+      $beforeConds[] = '(t.booking_date = :bdate AND t.amount = :amount AND t.id > :id)';
+      $condSql = '(' . implode(' OR ', $beforeConds) . ')';
+      $fullWhere = $where ? (' WHERE ' . implode(' AND ', $where) . ' AND ' . $condSql) : (' WHERE ' . $condSql);
+      $countSqlForIdx = 'SELECT COUNT(*) FROM transactions t' . $fullWhere;
+      $countStmtForIdx = $pdo->prepare($countSqlForIdx);
+      // bind existing filter params
+      foreach ($beforeParams as $k => $v) {
+        $countStmtForIdx->bindValue($k, $v);
+      }
+      if (!array_key_exists(':id', $beforeParams)) $countStmtForIdx->bindValue(':id', $txInfo['id']);
+      $countStmtForIdx->execute();
+      $computedIdx = (int)$countStmtForIdx->fetchColumn();
+      if ($computedIdx < 0) $computedIdx = 0;
+      $idx = $computedIdx;
+    }
+  } catch (Throwable $e) {
+    // on error, keep provided idx
+  }
 }
 $countSql = 'SELECT COUNT(*) FROM transactions t' . ($where ? ' WHERE ' . implode(' AND ', $where) : '');
 $cntStmt = $pdo->prepare($countSql);
@@ -252,21 +291,7 @@ if ($tx) {
   <div id="toast"></div>
 
   <div class="m-account">
-    <select onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; location.href='mobile.php?account='+encodeURIComponent(this.value)">
-      <option value="">— Tous les comptes —</option>
-      <?php foreach ($accs as $a): ?>
-        <option value="<?php echo htmlspecialchars($a['id']); ?>"<?php echo ((string)$acctSel === (string)$a['id']) ? ' selected' : ''; ?>>
-          <?php echo htmlspecialchars($a['name'] ?: $a['id']); ?>
-        </option>
-      <?php endforeach; ?>
-      <?php if (!empty($catTree[0])): foreach ($catTree[0] as $pid => $node): if (!$node['info']) continue; ?>
-        <option value="g:<?php echo (int)$node['info']['id']; ?>"<?php echo ($acctSel !== '' && (string)$acctSel === ('g:' . (int)$node['info']['id'])) ? ' selected' : ''; ?> style="background:#e0e0e0">
-          <?php echo 'G: ' . htmlspecialchars($node['info']['label']); ?>
-        </option>
-      <?php endforeach; endif; ?>
-    </select>
-
-      <!-- balances moved into the transaction card below; keep this area compact -->
+    <!-- selection du compte: déplacée dans la barre de navigation pour gagner de la place -->
   </div>
 
   <div class="mobile-nav" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
@@ -275,10 +300,44 @@ if ($tx) {
       <button class="arrow-btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo max(0,$idx-1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : 0; ?>)">&lt;</button>
       <span id="mcCounter" style="margin:0 8px"><?php echo ($idx + 1) . ' / ' . $total; ?></span>
     </div>
-    <div style="display:flex;align-items:center">
+    <div style="display:flex;align-items:center;gap:8px">
+      <select class="m-account-select" onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; location.href='mobile.php?idx=' + encodeURIComponent(<?php echo (int)$idx; ?>) + '&account=' + encodeURIComponent(this.value) + '&show_pending=' + (<?php echo $showPending ? '1' : '0'; ?>)" style="min-width:180px">
+        <option value="">— Tous les comptes —</option>
+        <?php foreach ($accs as $a): ?>
+          <option value="<?php echo htmlspecialchars($a['id']); ?>"<?php echo ((string)$acctSel === (string)$a['id']) ? ' selected' : ''; ?>><?php echo htmlspecialchars($a['name'] ?: $a['id']); ?></option>
+        <?php endforeach; ?>
+        <?php if (!empty($catTree[0])): foreach ($catTree[0] as $pid => $node): if (!$node['info']) continue; ?>
+          <option value="g:<?php echo (int)$node['info']['id']; ?>"<?php echo ($acctSel !== '' && (string)$acctSel === ('g:' . (int)$node['info']['id'])) ? ' selected' : ''; ?> style="background:#e0e0e0"><?php echo 'G: ' . htmlspecialchars($node['info']['label']); ?></option>
+        <?php endforeach; endif; ?>
+      </select>
       <button class="arrow-btn" <?php echo ($idx >= $total - 1) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo min($total - 1,$idx+1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : 0; ?>)">&gt;</button>
     </div>
   </div>
+
+  <script>
+    // Keyboard navigation: ArrowLeft / ArrowRight and '<' '>' characters
+    (function(){
+      try {
+        var idx = <?php echo (int)$idx; ?>;
+        var total = <?php echo (int)$total; ?>;
+        var acct = <?php echo json_encode((string)$acctSel); ?>;
+        var showPending = <?php echo $showPending ? '1' : '0'; ?>;
+        document.addEventListener('keydown', function(e){
+          // ignore when focus in an input/select/textarea
+          var tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toLowerCase() : '';
+          if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+          var k = e.key;
+          var go = null;
+          if (k === 'ArrowLeft' || k === '<') go = Math.max(0, idx - 1);
+          else if (k === 'ArrowRight' || k === '>') go = Math.min(total - 1, idx + 1);
+          if (go === null) return;
+          var url = 'mobile.php?idx=' + encodeURIComponent(go) + '&show_pending=' + encodeURIComponent(showPending);
+          if (acct && acct !== '') url += '&account=' + encodeURIComponent(acct);
+          location.href = url;
+        });
+      } catch(e) { /* ignore */ }
+    })();
+  </script>
 
 <?php if (!$tx): ?>
   <div class="m-empty">Aucune écriture trouvée.</div>
