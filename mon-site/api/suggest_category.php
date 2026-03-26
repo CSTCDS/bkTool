@@ -72,7 +72,7 @@ if ($debug) {
 if ($matched) {
     echo json_encode(['suggestion' => [
         'rule_id' => $matched['id'],
-        'category_id' => $matched['category_id'],
+        'category_level' => $matched['category_level'],
         'pattern' => $matched['pattern'],
         'is_regex' => (bool)$matched['is_regex'],
         'priority' => (int)$matched['priority']

@@ -15,7 +15,7 @@ class AutoCategoryRule
      */
     public function fetchActiveRules(): array
     {
-        $stmt = $this->pdo->query('SELECT id, pattern, is_regex, category_id, scope_account_id, priority, active FROM auto_category_rules WHERE active = 1 ORDER BY priority ASC, created_at ASC');
+        $stmt = $this->pdo->query('SELECT id, pattern, is_regex, category_level, scope_account_id, priority, active FROM auto_category_rules WHERE active = 1 ORDER BY priority ASC, created_at ASC');
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 

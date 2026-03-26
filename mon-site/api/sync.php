@@ -122,27 +122,29 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
         $id = sha1($acctPart . '|' . $datePart . '|' . $amtPart . '|' . $descForId);
     }
     $raw = json_encode($tx);
+    $accountingDate = isset($tx['accounting_date']) && $tx['accounting_date'] !== '' ? $tx['accounting_date'] : null;
 
     // Check existence to differentiate insert vs update; fetch full row if exists
     $q = $pdo->prepare('SELECT amount, booking_date, status, COALESCE(description,"") AS description FROM transactions WHERE id = :id LIMIT 1');
     $q->execute([':id' => $id]);
     $existing = $q->fetch(PDO::FETCH_ASSOC);
     if (!$existing) {
-        $stmt = $pdo->prepare(
-            'INSERT INTO transactions (id, account_id, amount, currency, NumImport, description, booking_date, status, raw, created_at) '
-          . 'VALUES (:id, :account_id, :amount, :currency, :num_import, :description, :booking_date, :status, :raw, NOW())'
-        );
-        $stmt->execute([
-            ':id' => $id,
-            ':account_id' => $accountId,
-            ':amount' => $amount,
-            ':currency' => $currency,
-            ':num_import' => $importNum,
-            ':description' => $description,
-            ':booking_date' => $bookingDate,
-            ':status' => $status,
-            ':raw' => $raw
-        ]);
+                $stmt = $pdo->prepare(
+                        'INSERT INTO transactions (id, account_id, amount, currency, NumImport, description, booking_date, status, accounting_date, raw, created_at) '
+                    . 'VALUES (:id, :account_id, :amount, :currency, :num_import, :description, :booking_date, :status, :accounting_date, :raw, NOW())'
+                );
+                $stmt->execute([
+                        ':id' => $id,
+                        ':account_id' => $accountId,
+                        ':amount' => $amount,
+                        ':currency' => $currency,
+                        ':num_import' => $importNum,
+                        ':description' => $description,
+                        ':booking_date' => $bookingDate,
+                        ':status' => $status,
+                        ':accounting_date' => $accountingDate,
+                        ':raw' => $raw
+                ]);
         // After inserting a new transaction, check for older rows matching same account/date/description/amount with status 'OTHR'
         try {
             // also consider rows dated 31 December of the current year as potential matches
@@ -173,7 +175,7 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
 
             // On updates, ne pas modifier NumImport (conserver la valeur existante)
             $stmt = $pdo->prepare(
-                'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, description = :description, booking_date = :booking_date, status = :status, raw = :raw WHERE id = :id'
+                'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, description = :description, booking_date = :booking_date, status = :status, accounting_date = :accounting_date, raw = :raw WHERE id = :id'
             );
             $stmt->execute([
                 ':id' => $id,
@@ -183,6 +185,7 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
                 ':description' => $description,
                 ':booking_date' => $bookingDate,
                 ':status' => $status,
+                ':accounting_date' => $accountingDate,
                 ':raw' => $raw
             ]);
         return ['action' => 'update'];
@@ -245,6 +248,9 @@ function run_sync($pdo, $config)
     $accounts = $sessionRes['body']['accounts'] ?? [];
     $accountsData = $sessionRes['body']['accounts_data'] ?? [];
 
+    // prepared map of accounting ranges for card accounts: account_id => [ ['date_du'=>'Y-m-d','date_au'=>'Y-m-d','date_ref'=>'Y-m-d'], ... ]
+    $accountAccountingRanges = [];
+
     // Process each account
         foreach ($accountsData as $accData) {
         $uid = $accData['uid'] ?? null;
@@ -266,6 +272,25 @@ function run_sync($pdo, $config)
                 $account_type = 'card';
                 $first = $balances[0];
                 $balance = $first['balance_amount']['amount'] ?? 0;
+                // extract accounting ranges (date_du/date_au from name, and reference_date)
+                $ranges = [];
+                foreach ($balances as $bline) {
+                    $name = $bline['name'] ?? '';
+                    $date_ref = $bline['reference_date'] ?? null;
+                    // attempt to parse 'du DD/MM/YYYY au DD/MM/YYYY'
+                    if (preg_match('/du\s+(\d{2}[\/\-]\d{2}[\/\-]\d{4})\s+au\s+(\d{2}[\/\-]\d{2}[\/\-]\d{4})/i', $name, $m)) {
+                        $d_du = DateTime::createFromFormat('d/m/Y', str_replace('-', '/', $m[1]));
+                        if (!$d_du) $d_du = DateTime::createFromFormat('d/m/Y', $m[1]);
+                        $d_au = DateTime::createFromFormat('d/m/Y', str_replace('-', '/', $m[2]));
+                        if (!$d_au) $d_au = DateTime::createFromFormat('d/m/Y', $m[2]);
+                        if ($d_du && $d_au) {
+                            $ranges[] = ['date_du' => $d_du->format('Y-m-d'), 'date_au' => $d_au->format('Y-m-d'), 'date_ref' => $date_ref];
+                        }
+                    }
+                }
+                if (!empty($ranges)) {
+                    $accountAccountingRanges[$uid] = $ranges;
+                }
             } else {
                 // Current account: prefer CLBD if present, else fall back to first recognised type
                 $account_type = 'current';
@@ -312,6 +337,24 @@ function run_sync($pdo, $config)
                     // store raw tx for display (keep as array/object)
                     $result['skipped_transactions'][] = $tx;
                     continue;
+                }
+
+                // Assign accounting_date based on accountAccountingRanges if present (for card accounts)
+                if (isset($accountAccountingRanges[$uid]) && !empty($accountAccountingRanges[$uid])) {
+                    try {
+                        $txDateStr = $tx['transaction_date'];
+                        $txDate = new DateTime($txDateStr);
+                        foreach ($accountAccountingRanges[$uid] as $rng) {
+                            if (empty($rng['date_du']) || empty($rng['date_au']) || empty($rng['date_ref'])) continue;
+                            $du = new DateTime($rng['date_du']);
+                            $au = new DateTime($rng['date_au']);
+                            // inclusive range
+                            if ($txDate >= $du && $txDate <= $au) {
+                                $tx['accounting_date'] = $rng['date_ref'];
+                                break;
+                            }
+                        }
+                    } catch (Throwable $e) { /* ignore parse errors */ }
                 }
                 $r2 = insertTransaction($pdo, $tx, $importNum);
                 $result['transactions']++;

@@ -25,10 +25,10 @@ if (!$rule) {
     exit;
 }
 
-$categoryId = (int)$rule['category_id'];
+$categoryLevel = (int)$rule['category_level'];
 // find criterion for category
 $cstmt = $pdo->prepare('SELECT criterion FROM categories WHERE id = :id');
-$cstmt->execute([':id' => $categoryId]);
+$cstmt->execute([':id' => $categoryLevel]);
 $crit = $cstmt->fetchColumn();
 if ($crit === false) {
     http_response_code(400);
@@ -51,10 +51,10 @@ $old = $tstmt->fetchColumn();
 
 // update transaction
 $ustmt = $pdo->prepare("UPDATE transactions SET {$field} = :cid WHERE id = :txid");
-$ok = $ustmt->execute([':cid' => $categoryId, ':txid' => $txId]);
+$ok = $ustmt->execute([':cid' => $categoryLevel, ':txid' => $txId]);
 
 // log the change
 $log = $pdo->prepare('INSERT INTO transaction_changes_log (tx_id, old_category_id, new_category_id, rule_id, user_id) VALUES (:tx, :old, :new, :rule, :user)');
-$log->execute([':tx' => $txId, ':old' => $old ?: null, ':new' => $categoryId, ':rule' => $ruleId, ':user' => ($_SERVER['REMOTE_USER'] ?? null)]);
+    $log->execute([':tx' => $txId, ':old' => $old ?: null, ':new' => $categoryLevel, ':rule' => $ruleId, ':user' => ($_SERVER['REMOTE_USER'] ?? null)]);
 
-echo json_encode(['ok' => (bool)$ok, 'field' => $field, 'old' => $old, 'new' => $categoryId, 'criterion' => $crit]);
+echo json_encode(['ok' => (bool)$ok, 'field' => $field, 'old' => $old, 'new' => $categoryLevel, 'criterion' => $crit]);

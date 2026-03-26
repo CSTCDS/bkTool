@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS auto_category_rules (
   id INT AUTO_INCREMENT PRIMARY KEY,
   pattern TEXT NOT NULL,
   is_regex TINYINT(1) NOT NULL DEFAULT 0,
-  category_id INT NOT NULL,
+  category_level TINYINT DEFAULT NULL,
   scope_account_id INT DEFAULT NULL,
   priority INT NOT NULL DEFAULT 100,
   active TINYINT(1) NOT NULL DEFAULT 1,

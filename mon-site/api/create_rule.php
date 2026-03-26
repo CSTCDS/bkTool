@@ -1,5 +1,5 @@
 <?php
-// create_rule.php - minimal endpoint to insert a rule
+// create_rule.php - minimal endpoint to insert a rule using category_level
 header('Content-Type: application/json; charset=utf-8');
 try {
     $pdo = require __DIR__ . '/db.php';
@@ -11,21 +11,21 @@ try {
 
 $pattern = $_POST['pattern'] ?? '';
 $is_regex = !empty($_POST['is_regex']) ? 1 : 0;
-$category_id = isset($_POST['category_id']) ? (int)$_POST['category_id'] : 0;
+$category_level = isset($_POST['category_level']) ? (int)$_POST['category_level'] : 0;
 $scope_account_id = $_POST['scope_account_id'] ?? null;
 $priority = isset($_POST['priority']) ? (int)$_POST['priority'] : 100;
 
-if ($pattern === '' || $category_id <= 0) {
+if ($pattern === '' || $category_level <= 0) {
     http_response_code(400);
-    echo json_encode(['ok' => false, 'error' => 'pattern & category_id required']);
+    echo json_encode(['ok' => false, 'error' => 'pattern & category_level required']);
     exit;
 }
 
-$stmt = $pdo->prepare('INSERT INTO auto_category_rules (pattern, is_regex, category_id, scope_account_id, priority, active, created_by) VALUES (:p, :ir, :cid, :scope, :prio, 1, :cb)');
+$stmt = $pdo->prepare('INSERT INTO auto_category_rules (pattern, is_regex, category_level, scope_account_id, priority, active, created_by) VALUES (:p, :ir, :clevel, :scope, :prio, 1, :cb)');
 $ok = $stmt->execute([
     ':p' => $pattern,
     ':ir' => $is_regex,
-    ':cid' => $category_id,
+    ':clevel' => $category_level,
     ':scope' => $scope_account_id,
     ':prio' => $priority,
     ':cb' => ($_SERVER['REMOTE_USER'] ?? null)

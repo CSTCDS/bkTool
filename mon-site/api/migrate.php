@@ -244,6 +244,17 @@ function bkt_migrate(PDO $pdo): void
                 $pdo->exec("ALTER TABLE accounts ADD COLUMN account_type VARCHAR(20) DEFAULT NULL AFTER raw");
             }
         },
+        // Version 15 : add accounting_date to transactions (date when transaction is accounted/collected)
+        15 => function (PDO $pdo) {
+            $cols = $pdo->query('SHOW COLUMNS FROM transactions LIKE "accounting_date"')->fetchAll();
+            if (empty($cols)) {
+                try {
+                    $pdo->exec("ALTER TABLE transactions ADD COLUMN accounting_date DATE DEFAULT NULL AFTER booking_date");
+                } catch (Throwable $e) {
+                    // ignore if cannot add
+                }
+            }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées

@@ -5,7 +5,7 @@ Objectif
 
 Principes
 - Les règles sont évaluées côté serveur.
-- Chaque règle contient un `pattern` (chaîne ou regex), un flag `is_regex`, une `category_id`, un scope optionnel `scope_account_id` (null = global), et une `priority` (plus faible = priorité haute).
+- Chaque règle contient un `pattern` (chaîne ou regex), un flag `is_regex`, une `category_level`, un scope optionnel `scope_account_id` (null = global), et une `priority` (plus faible = priorité haute).
 - Matching : on trie les règles actives par `priority` asc puis par `created_at` asc ; première règle qui match s'applique.
 - Matching non-regex : recherche `stripos(pattern, libelle) !== false` (case-insensitive substring).
 
