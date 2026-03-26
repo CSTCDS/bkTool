@@ -79,7 +79,7 @@ $country = $config['enable_country'] ?? 'FR';
 
   <?php
   $pane = $_GET['pane'] ?? '';
-  if (!in_array($pane, ['', 'sync', 'connect', 'testsync'], true)) {
+  if (!in_array($pane, ['', 'sync', 'connect', 'testsync', 'logs'], true)) {
     $pane = '';
   }
   ?>
@@ -92,6 +92,7 @@ $country = $config['enable_country'] ?? 'FR';
             <option value="sync" <?php echo ($pane === 'sync') ? 'selected' : ''; ?>>Synchroniser banque</option>
             <option value="testsync" <?php echo ($pane === 'testsync') ? 'selected' : ''; ?>>Test synchro</option>
             <option value="connect" <?php echo ($pane === 'connect') ? 'selected' : ''; ?>>Connecter banque</option>
+            <option value="logs" <?php echo ($pane === 'logs') ? 'selected' : ''; ?>>Voir les logs</option>
           </select>
         </label>
       </form>
@@ -186,6 +187,45 @@ $country = $config['enable_country'] ?? 'FR';
 
       <?php else: ?>
         <!-- Empty placeholder when '---' selected: intentionally show nothing -->
+      <?php endif; ?>
+      <?php if ($pane === 'logs'): ?>
+        <h2>Logs</h2>
+        <p>Derniers enregistrements système (triés par date/heure décroissante)</p>
+        <div style="margin-top:12px;background:#fff;padding:10px;border:1px solid #eee;overflow:auto">
+          <?php
+            try {
+              $db = require __DIR__ . '/mon-site/api/db.php';
+              $q = $db->prepare('SELECT id, log_date, log_time, code_programme, libelle, payload, created_at FROM logs ORDER BY log_date DESC, log_time DESC, id DESC LIMIT 500');
+              $q->execute();
+              $rows = $q->fetchAll(PDO::FETCH_ASSOC);
+            } catch (Throwable $e) {
+              echo '<p style="color:red">Erreur lecture logs: ' . htmlspecialchars((string)$e) . '</p>';
+              $rows = [];
+            }
+          ?>
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr>
+                <th style="border:1px solid #ddd;padding:6px">Date</th>
+                <th style="border:1px solid #ddd;padding:6px">Heure</th>
+                <th style="border:1px solid #ddd;padding:6px">Code</th>
+                <th style="border:1px solid #ddd;padding:6px">Libellé</th>
+                <th style="border:1px solid #ddd;padding:6px">Payload</th>
+              </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($rows as $r): ?>
+              <tr>
+                <td style="border:1px solid #eee;padding:6px;vertical-align:top"><?php echo htmlspecialchars($r['log_date']); ?></td>
+                <td style="border:1px solid #eee;padding:6px;vertical-align:top"><?php echo htmlspecialchars($r['log_time']); ?></td>
+                <td style="border:1px solid #eee;padding:6px;vertical-align:top"><?php echo htmlspecialchars($r['code_programme']); ?></td>
+                <td style="border:1px solid #eee;padding:6px;vertical-align:top"><?php echo htmlspecialchars($r['libelle']); ?></td>
+                <td style="border:1px solid #eee;padding:6px;vertical-align:top;font-family:monospace;white-space:pre-wrap;max-width:520px;overflow:auto"><?php echo htmlspecialchars((string)$r['payload']); ?></td>
+              </tr>
+            <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
       <?php endif; ?>
     </div>
   </div>
