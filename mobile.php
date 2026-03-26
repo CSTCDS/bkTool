@@ -242,6 +242,36 @@ if ($tx) {
     <?php endfor; ?>
   </div>
 
+  <!-- Modal: New Rule (hidden) -->
+  <div id="newRuleModal" style="display:none;position:fixed;z-index:3000;left:0;right:0;top:50px;margin:0 auto;max-width:800px;padding:12px;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.16)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong>Nouvelle règle</strong>
+      <button id="closeNewRuleModal" class="btn">X</button>
+    </div>
+    <div style="margin-bottom:8px">Catégorie cible: <span id="modalCatLabel" style="font-weight:700"></span></div>
+    <form id="newRuleForm">
+      <input type="hidden" name="category_id" value="">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input name="pattern" placeholder="Motif / libellé" style="flex:1;padding:8px">
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" name="is_regex" value="1"> regexp</label>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select name="scope_account_id">
+          <option value="">-- pas de sélection --</option>
+          <option value="NULL">Global (tous les comptes)</option>
+          <?php foreach ($accs as $a): ?>
+            <option value="<?php echo htmlspecialchars($a['id']); ?>"><?php echo htmlspecialchars($a['name']); ?></option>
+          <?php endforeach; ?>
+        </select>
+        <input name="priority" value="100" style="width:70px;padding:6px">
+        <div style="margin-left:auto">
+          <button id="createRuleSubmit" class="btn" type="button">Créer</button>
+          <button id="createRuleCancel" class="btn" type="button">Annuler</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
     <script>
     (function(){
       let txId = <?php echo json_encode($tx['id'] ?? ''); ?>;
@@ -346,28 +376,25 @@ if ($tx) {
                   sel.value = catId; form.submit();
                 };
 
-                // Create rule handler: prompt for target category when no suggestion available
+                // Create rule handler: open modal using the suggested category
                 bx.querySelector('.createRule').onclick = function(){
-                  let targetCat = null;
-                  // If there is an applied suggestion, reuse its category id
                   const applyBtn = bx.querySelector('.applySuggestion');
-                  if (applyBtn && applyBtn.dataset && applyBtn.dataset.cat) targetCat = applyBtn.dataset.cat;
-                  if (!targetCat) {
-                    targetCat = prompt('ID de la catégorie cible pour la nouvelle règle (numéro) :');
-                    if (!targetCat) return;
+                  const suggestedCat = (applyBtn && applyBtn.dataset && applyBtn.dataset.cat) ? applyBtn.dataset.cat : null;
+                  const lbl = document.getElementById('suggestLabel_' + crit);
+                  const catLabelText = lbl ? lbl.textContent : '';
+                  if (!suggestedCat) { showToast('Aucune catégorie suggérée', 'error'); return; }
+                  const modal = document.getElementById('newRuleModal');
+                  if (!modal) { alert('Modal création règle introuvable'); return; }
+                  modal.querySelector('[name="category_id"]').value = suggestedCat;
+                  modal.querySelector('#modalCatLabel').textContent = catLabelText || ('#'+suggestedCat);
+                  modal.querySelector('[name="pattern"]').value = txDescription || '';
+                  modal.querySelector('[name="is_regex"]').checked = false;
+                  const scopeSel = modal.querySelector('[name="scope_account_id"]');
+                  if (scopeSel && (txAccount !== null && txAccount !== '')) {
+                    for (const o of scopeSel.options) { if (o.value === String(txAccount)) { o.selected = true; break; } }
                   }
-                  const fd = new FormData();
-                  fd.append('pattern', txDescription || '');
-                  fd.append('is_regex', '0');
-                  fd.append('category_id', targetCat);
-                  fd.append('scope_account_id', txAccount);
-                  fd.append('priority', '100');
-                  fetch('./mon-site/api/create_rule.php', { method: 'POST', body: fd })
-                    .then(r=>r.json()).then(resp=>{
-                      if (resp && resp.ok && resp.rule_id) {
-                        showToast('Règle créée', 'success');
-                      } else throw new Error('create failed');
-                    }).catch(e=>{ console.error(e); alert('Erreur création règle'); });
+                  modal.querySelector('[name="priority"]').value = '100';
+                  modal.style.display = 'block';
                 };
 
                 bx.querySelector('.ignoreSuggestion').onclick = function(){ bx.style.display='none'; };
@@ -375,6 +402,30 @@ if ($tx) {
             }).catch(e => { console.debug('suggest debug fetch error', e); logDebug('suggest debug fetch error', String(e)); });
         })
         .catch(err=>{ console.error('suggest fetch error', err); });
+    })();
+    
+    // Modal handlers for new rule form
+    (function(){
+      var modal = document.getElementById('newRuleModal');
+      if (!modal) return;
+      document.getElementById('closeNewRuleModal').addEventListener('click', function(){ modal.style.display='none'; });
+      document.getElementById('createRuleCancel').addEventListener('click', function(){ modal.style.display='none'; });
+      document.getElementById('createRuleSubmit').addEventListener('click', function(){
+        var f = document.getElementById('newRuleForm');
+        var fd = new FormData(f);
+        // map field names to API expectations
+        var payload = new URLSearchParams();
+        payload.append('pattern', fd.get('pattern') || '');
+        payload.append('is_regex', fd.get('is_regex') ? '1' : '0');
+        payload.append('category_id', fd.get('category_id') || '0');
+        payload.append('scope_account_id', fd.get('scope_account_id') || '');
+        payload.append('priority', fd.get('priority') || '100');
+        fetch('./mon-site/api/create_rule.php', { method: 'POST', body: payload })
+          .then(r=>r.json()).then(function(resp){
+            if (resp && resp.ok) { showToast('Règle créée', 'success'); modal.style.display='none'; }
+            else { console.error(resp); alert('Erreur création règle'); }
+          }).catch(function(e){ console.error(e); alert('Erreur réseau'); });
+      });
     })();
     </script>
     <script>
