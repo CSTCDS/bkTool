@@ -441,7 +441,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           <?php endif; ?>
         </td>
         <td class="col-date">
-          <?php if ($isPending) echo '<span class="badge-pending">en attente</span><br>'; ?>
+          <?php if ($isPending) echo '<span class="badge-pending">P. Différé</span><br>'; ?>
           <?php if (isset($t['status']) && strtoupper((string)$t['status']) === 'TODEL') echo '<span class="badge-todel">à supprimer ?</span><br>'; ?>
           <?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); ?>
         </td>

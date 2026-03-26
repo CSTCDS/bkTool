@@ -196,8 +196,11 @@ if ($tx) {
 <?php else: ?>
   <div class="mobile-card">
     <div class="mobile-card-row"><span class="mobile-card-label">Compte</span><span class="m-value"><?php echo htmlspecialchars($tx['account_name'] ?? $tx['account_id']); ?></span></div>
-    <div class="mobile-card-row"><span class="mobile-card-label">Date</span><span class="m-value"><?php if ($isPending) echo '<span class="badge-pending">en attente</span><br>'; ?><?php echo htmlspecialchars($tx['booking_date'] ?? ''); ?></span></div>
+    <div class="mobile-card-row"><span class="mobile-card-label">Date</span><span class="m-value"><?php if ($isPending) echo '<span class="badge-pending">P. Différé</span><br>'; ?><?php echo htmlspecialchars($tx['booking_date'] ?? ''); ?></span></div>
     <div class="mobile-card-row"><span class="mobile-card-label">Montant</span><span class="m-value" style="color:<?php echo ($tx['amount'] < 0) ? '#c62828' : '#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$tx['amount'], 2, ',', ' ')); ?></span></div>
+    <?php if (isset($tx['status']) && strtoupper((string)$tx['status']) === 'OTHR'): ?>
+      <div class="mobile-card-row"><span class="mobile-card-label">Statut</span><span class="m-value"><span class="badge-pending">P. différé</span></span></div>
+    <?php endif; ?>
     <div class="mobile-card-row"><span class="mobile-card-label">Devise</span><span class="m-value"><?php echo htmlspecialchars($tx['currency'] ?? ''); ?></span></div>
     <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Commentaire</span><span class="m-value"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>
     <?php if ($displayBalance !== null): ?>
@@ -250,7 +253,7 @@ if ($tx) {
     </div>
     <div style="margin-bottom:8px">Catégorie cible: <span id="modalCatLabel" style="font-weight:700"></span></div>
     <form id="newRuleForm">
-      <input type="hidden" name="category_id" value="">
+      <input type="hidden" name="category_level" value="">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <input name="pattern" placeholder="Motif / libellé" style="flex:1;padding:8px">
         <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" name="is_regex" value="1"> regexp</label>
@@ -324,7 +327,7 @@ if ($tx) {
               // populate per-criterion debug areas
               if (dd && dd.rules && Array.isArray(dd.rules)) {
                 dd.rules.forEach(function(r){
-                  var crit = (<?php echo json_encode($catCriteria); ?>[r.category_id] || 0);
+                  var crit = (<?php echo json_encode($catCriteria); ?>[r.category_level] || 0);
                   var el = document.getElementById('suggestDebug_' + (crit || 1));
                   if (el) el.textContent = JSON.stringify(r, null, 2);
                 });
@@ -339,13 +342,13 @@ if ($tx) {
                 // If server returned a suggestion for this criterion, render it
                 if (data && data.suggestion) {
                   const s = data.suggestion;
-                  const sugCrit = parseInt(catCriteria[s.category_id] || 0, 10);
+                  const sugCrit = parseInt(catCriteria[s.category_level] || 0, 10);
                   if (sugCrit === crit) {
-                    const catLabel = catLabels[s.category_id] || ('#' + s.category_id);
+                    const catLabel = catLabels[s.category_level] || ('#' + s.category_level);
                     if (lbl) lbl.textContent = catLabel + (s.is_regex ? ' (regex)' : '');
                     if (dbg) { dbg.style.display = 'block'; dbg.textContent = JSON.stringify(data, null, 2); }
                     // enable apply
-                    const applyBtn = bx.querySelector('.applySuggestion'); if (applyBtn) { applyBtn.disabled = false; applyBtn.dataset.cat = s.category_id; }
+                    const applyBtn = bx.querySelector('.applySuggestion'); if (applyBtn) { applyBtn.disabled = false; applyBtn.dataset.cat = s.category_level; }
                   } else {
                     if (lbl) lbl.textContent = 'Aucune suggestion';
                     if (dbg) { dbg.style.display = 'none'; dbg.textContent = ''; }
@@ -385,7 +388,7 @@ if ($tx) {
                   if (!suggestedCat) { showToast('Aucune catégorie suggérée', 'error'); return; }
                   const modal = document.getElementById('newRuleModal');
                   if (!modal) { alert('Modal création règle introuvable'); return; }
-                  modal.querySelector('[name="category_id"]').value = suggestedCat;
+                  modal.querySelector('[name="category_level"]').value = suggestedCat;
                   modal.querySelector('#modalCatLabel').textContent = catLabelText || ('#'+suggestedCat);
                   modal.querySelector('[name="pattern"]').value = txDescription || '';
                   modal.querySelector('[name="is_regex"]').checked = false;
@@ -417,7 +420,7 @@ if ($tx) {
         var payload = new URLSearchParams();
         payload.append('pattern', fd.get('pattern') || '');
         payload.append('is_regex', fd.get('is_regex') ? '1' : '0');
-        payload.append('category_id', fd.get('category_id') || '0');
+        payload.append('category_level', fd.get('category_level') || '0');
         payload.append('scope_account_id', fd.get('scope_account_id') || '');
         payload.append('priority', fd.get('priority') || '100');
         fetch('./mon-site/api/create_rule.php', { method: 'POST', body: payload })
