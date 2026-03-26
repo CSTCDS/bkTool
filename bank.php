@@ -222,7 +222,7 @@ $country = $config['enable_country'] ?? 'FR';
                 <td style="border:1px solid #eee;padding:6px;vertical-align:top"><?php echo htmlspecialchars($r['log_date']); ?></td>
                 <td style="border:1px solid #eee;padding:6px;vertical-align:top"><?php echo htmlspecialchars($r['log_time']); ?></td>
                 <td style="border:1px solid #eee;padding:6px;vertical-align:top"><?php echo htmlspecialchars($r['code_programme']); ?></td>
-                <td style="border:1px solid #eee;padding:6px;vertical-align:top"><?php echo htmlspecialchars($r['libelle']); ?></td>
+                <td style="border:1px solid #eee;padding:6px;vertical-align:top;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px"><?php echo htmlspecialchars($r['libelle']); ?></td>
                 <td style="border:1px solid #eee;padding:6px;vertical-align:top;text-align:center">
                   <button class="showPayloadBtn" data-payload="<?php echo htmlspecialchars((string)$r['payload']); ?>">+</button>
                 </td>
