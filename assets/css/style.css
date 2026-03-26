@@ -48,10 +48,10 @@ th{background:#f2f2f2}
   table{display:block;overflow-x:auto}
   table thead, table tbody, table tr, table th, table td { display:block; }
   table thead { display:none }
-  table tbody tr { margin-bottom:12px; border:1px solid #e6e6e6; padding:8px; border-radius:6px; background:#fff }
+  table tbody tr { margin-bottom:10px; border:1px solid #e6e6e6; padding:6px; border-radius:6px; background:#fff }
   /* Use flex rows so we can position first 5 columns on the first line and the rest below */
   table tbody tr { display:flex; flex-wrap:wrap; align-items:center }
-  table tbody td { display:block; padding:6px 8px; border:none; box-sizing:border-box }
+  table tbody td { display:block; padding:4px 6px; border:none; box-sizing:border-box }
   /* First four columns: occupy ~25% each on the first row (make column 5 responsive/stacked too) */
   table tbody td:nth-child(1), table tbody td:nth-child(2), table tbody td:nth-child(3), table tbody td:nth-child(4) {
     flex: 0 0 25%; max-width:25%; min-width:100px; box-sizing:border-box;
@@ -59,7 +59,7 @@ th{background:#f2f2f2}
   /* Columns 5 and onwards: place under as full-width blocks */
   table tbody td:nth-child(n+5) {
     flex: 0 0 100%; max-width:100%;
-    border-top:1px dashed #eee; margin-top:6px; padding-top:8px;
+    border-top:1px dashed #eee; margin-top:6px; padding-top:6px;
   }
   table tbody td input, table tbody td select { width:60%; }
   .acc-name, .acc-currency, .acc-alert { width:100%; box-sizing:border-box }
@@ -69,8 +69,8 @@ th{background:#f2f2f2}
 @media (max-width:1000px) and (min-width:641px) {
   table{display:block;overflow-x:auto}
   table thead { display:none }
-  table tbody tr { margin-bottom:12px; border:1px solid #e6e6e6; padding:8px; border-radius:6px; background:#fff; display:flex; flex-wrap:wrap; align-items:center }
-  table tbody td { display:block; padding:6px 8px; border:none; box-sizing:border-box }
+  table tbody tr { margin-bottom:10px; border:1px solid #e6e6e6; padding:6px; border-radius:6px; background:#fff; display:flex; flex-wrap:wrap; align-items:center }
+  table tbody td { display:block; padding:4px 6px; border:none; box-sizing:border-box }
   /* First four columns: occupy ~25% each on the first line; make column 5 stack under */
   table tbody td:nth-child(1), table tbody td:nth-child(2), table tbody td:nth-child(3), table tbody td:nth-child(4) {
     flex: 0 0 25%; max-width:25%; min-width:120px; box-sizing:border-box;
@@ -78,7 +78,7 @@ th{background:#f2f2f2}
   /* Columns 5 and onwards: place under as full-width blocks */
   table tbody td:nth-child(n+5) {
     flex: 0 0 100%; max-width:100%;
-    border-top:1px dashed #eee; margin-top:6px; padding-top:8px;
+    border-top:1px dashed #eee; margin-top:6px; padding-top:6px;
   }
 }
 
@@ -167,7 +167,7 @@ th{background:#f2f2f2}
 .mobile-card-view{display:block}
 
 /* Mobile card styling applied at all widths so operation details keep the mobile layout */
-.mobile-card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:8px auto;box-shadow:0 2px 6px rgba(0,0,0,.08);max-width:800px;width:100%;box-sizing:border-box}
+.mobile-card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;margin:8px auto;box-shadow:0 2px 6px rgba(0,0,0,.08);max-width:800px;width:100%;box-sizing:border-box}
 .mobile-card-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0}
 .mobile-card-row:last-child{border-bottom:none}
 .mobile-card-label{font-weight:600;color:#666;font-size:.85rem}
@@ -207,8 +207,8 @@ th{background:#f2f2f2}
   .mobile-card-view{display:block}
 
   /* Mobile card styling */
-  .mobile-card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin:8px 0;box-shadow:0 2px 6px rgba(0,0,0,.08)}
-  .mobile-card-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0}
+  .mobile-card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;margin:8px 0;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+  .mobile-card-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f0f0f0}
   .mobile-card-row:last-child{border-bottom:none}
   .mobile-card-label{font-weight:600;color:#666;font-size:.85rem}
   .mobile-card-row span:last-child{text-align:right;font-size:.9rem}
