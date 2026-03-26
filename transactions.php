@@ -673,7 +673,8 @@ document.addEventListener('DOMContentLoaded', function(){
     var fd = new FormData(form);
     fetch('mon-site/api/add_tx.php', { method: 'POST', body: fd })
       .then(function(r){ return r.json(); })
-      .then(function(j){
+        .then(function(j){
+          console.log('add_tx response debug:', j && j.debug ? j.debug : null);
           if (j && j.ok) {
             // close modal and reload transactions page to show the new operation
             modal.style.display = 'none';
