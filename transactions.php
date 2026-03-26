@@ -661,6 +661,23 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     } catch (e) { /* ignore */ }
     modal.style.display = 'flex';
+    // show initial debug info in modal
+    try {
+      var dbgDiv = document.getElementById('addDebug');
+      var dbgPre = document.getElementById('addDebugPre');
+      if (dbgDiv && dbgPre) {
+        var pageSel = document.querySelector('select[name=account]');
+        var cookieMatch = document.cookie.match('(?:^|; )selected_account=([^;]+)');
+        var cookieVal = cookieMatch && cookieMatch[1] ? decodeURIComponent(cookieMatch[1]) : '';
+        var init = {
+          pageAccountSelect: pageSel ? pageSel.value : null,
+          cookie_selected_account: cookieVal,
+          prefill_attempt: sel ? sel.value : null
+        };
+        dbgPre.textContent = JSON.stringify(init, null, 2);
+        dbgDiv.style.display = 'block';
+      }
+    } catch (e) { /* ignore */ }
   });
 
   // If the page account selector changes while modal is open, update modal account field
@@ -697,6 +714,16 @@ document.addEventListener('DOMContentLoaded', function(){
           var dbg = j.debug ? '\n\nDEBUG:\n' + JSON.stringify(j.debug, null, 2) : '';
           if (pre) pre.textContent = (j.sql_debug || '') + dbg;
           var dlg = document.getElementById('sqlPreview'); if (dlg) dlg.style.display = 'block';
+          // also populate the modal debug area with detailed debug info
+          try {
+            var dbgDiv = document.getElementById('addDebug');
+            var dbgPre = document.getElementById('addDebugPre');
+            if (dbgDiv && dbgPre) {
+              var combined = { sql_debug: j.sql_debug || null, debug: j.debug || null };
+              dbgPre.textContent = JSON.stringify(combined, null, 2);
+              dbgDiv.style.display = 'block';
+            }
+          } catch (e) { /* ignore */ }
 
           // wire confirm/cancel
           var cancelBtn = document.getElementById('sqlCancel');
