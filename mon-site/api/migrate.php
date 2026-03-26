@@ -22,19 +22,8 @@ function bkt_migrate(PDO $pdo): void
 
     // Debug output: show current schema version so we know migrations run
     $debugMsg = 'bkt_migrate: currentVersion=' . $currentVersion;
-    if (php_sapi_name() === 'cli') {
-        error_log($debugMsg);
-    } else {
-        // Avoid emitting the debug HTML comment during AJAX requests
-        // which expect JSON responses (e.g. rules.php?ajax=categories).
-        if (empty($_GET['ajax'])) {
-            // Emit as an HTML comment so it's visible in page source during web requests
-            echo "<!-- {$debugMsg} -->\n";
-        } else {
-            // For AJAX requests, log to error log instead to keep response clean
-            error_log('bkt_migrate: (ajax) ' . $debugMsg);
-        }
-    }
+    // Always log migration debug to error log only (avoid echoing into responses)
+    error_log($debugMsg);
 
     // 2. Créer les tables métier si elles n'existent pas (idempotent)
     $pdo->exec('CREATE TABLE IF NOT EXISTS accounts (
