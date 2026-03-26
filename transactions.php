@@ -382,7 +382,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         <th class="col-date" style="width:8%">Date</th>
         <th class="col-montant" style="width:8%">Montant</th>
         <th class="col-devise" style="width:5%">Devise</th>
-        <th class="col-desc" style="width:35%">Commentaire</th>
+        <th class="col-desc" style="width:35%">Libellé</th>
         <th class="col-categories" style="width:28%">
           <div class="cat-headers">
             <div class="cat-row">
@@ -461,7 +461,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         </td>
         <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
         <td class="col-devise"><?php echo htmlspecialchars((string)($t['currency'] ?? '')); ?></td>
-        <td class="col-desc" data-label="Commentaire"><?php echo htmlspecialchars((string)($t['description'] ?? '')); ?></td>
+        <td class="col-desc" data-label="Libellé"><?php echo htmlspecialchars((string)($t['description'] ?? '')); ?></td>
         <td class="col-categories">
           <div style="display:flex;flex-direction:column;gap:6px">
             <div style="display:flex;gap:8px">
