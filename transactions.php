@@ -616,7 +616,28 @@ document.addEventListener('DOMContentLoaded', function(){
   var form = document.getElementById('addTxForm');
   var cancel = document.getElementById('addCancel');
   if (!bottom || !modal || !form) return;
-  bottom.addEventListener('click', function(){ modal.style.display = 'flex'; });
+  // Pre-fill account selection when opening modal
+  var accountSel = <?php echo json_encode($acctSel); ?>;
+  var groupAccountIds = <?php echo json_encode($groupAccountIds); ?>;
+  bottom.addEventListener('click', function(){
+    // attempt to set account select from current page selection
+    try {
+      var sel = form.querySelector('select[name=account_id]');
+      if (sel) {
+        if (accountSel && accountSel.indexOf('g:') !== 0) {
+          // normal account id
+          sel.value = accountSel;
+        } else if (accountSel && accountSel.indexOf('g:') === 0) {
+          // group selected: pick first account id if available
+          if (Array.isArray(groupAccountIds) && groupAccountIds.length > 0) {
+            sel.value = groupAccountIds[0];
+          }
+        }
+        sel.focus();
+      }
+    } catch (e) { /* ignore */ }
+    modal.style.display = 'flex';
+  });
   cancel.addEventListener('click', function(){ modal.style.display = 'none'; });
   form.addEventListener('submit', function(ev){
     ev.preventDefault();
