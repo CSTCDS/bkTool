@@ -277,9 +277,23 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       <div class="tx-col tx-left" style="flex:1">
         <h1 style="margin:0">Transactions</h1>
       </div>
-      <div class="tx-col tx-center" style="flex:1;text-align:center">
+        <div class="tx-col tx-center" style="flex:1;text-align:center">
         <div style="display:flex;flex-direction:column;align-items:center">
-          <select id="quickRange" name="quickRange">
+            <div style="display:flex;gap:8px;align-items:center">
+              <select name="account" class="select-account" onchange="document.cookie='selected_account='+encodeURIComponent(this.value)+';path=/;max-age=31536000'; this.form.submit()" style="min-width:220px">
+                <option value="">— Tous —</option>
+                <?php foreach ($accs as $a): ?>
+                  <option value="<?php echo htmlspecialchars($a['id']); ?>" <?php echo ($acctSel !== '' && (string)$acctSel === (string)$a['id']) ? 'selected' : ''; ?> >
+                    <?php echo htmlspecialchars($a['name'] ?: $a['id']); ?>
+                  </option>
+                <?php endforeach; ?>
+                <?php if (!empty($catTree[0])): foreach ($catTree[0] as $pid => $node): if (!$node['info']) continue; ?>
+                  <option value="g:<?php echo (int)$node['info']['id']; ?>" <?php echo ($acctSel !== '' && (string)$acctSel === ('g:' . (int)$node['info']['id'])) ? 'selected' : ''; ?> style="background:#e0e0e0">
+                    <?php echo 'G: ' . htmlspecialchars($node['info']['label']); ?>
+                  </option>
+                <?php endforeach; endif; ?>
+              </select>
+              <select id="quickRange" name="quickRange">
             <option value=""<?php echo ($selectedQuickRange === '') ? ' selected' : ''; ?>>Sélection Temporelle</option>
             <option value="10d"<?php echo ($selectedQuickRange === '10d') ? ' selected' : ''; ?>>10 derniers jours</option>
             <option value="20d"<?php echo ($selectedQuickRange === '20d') ? ' selected' : ''; ?>>20 derniers jours</option>
@@ -290,6 +304,8 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
             <option value="2y"<?php echo ($selectedQuickRange === '2y') ? ' selected' : ''; ?>>2 ans</option>
             <option value="custom"<?php echo ($selectedQuickRange === 'custom') ? ' selected' : ''; ?>>Choix de dates</option>
           </select>
+            <label style="margin-left:8px"><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?> onchange="(function(){ var q = new URLSearchParams(location.search); q.set('show_pending', this.checked ? '1' : '0'); q.set('page', '0'); location.search = q.toString(); }).call(this);"> Afficher les mouvements carte</label>
+          </div>
         </div>
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
@@ -375,15 +391,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
     </div>
   </form>
 
-  <div style="display:flex;align-items:center;gap:12px;margin:8px 0">
-    <div>
-      <button class="btn" onclick="location.href='transactions.php?<?php echo htmlentities(http_build_query(array_merge($_GET, ['page'=>max(0,$page-1)]))); ?>'" <?php echo $page<=0 ? 'disabled' : ''; ?>>&larr; Préc.</button>
-      <button class="btn" onclick="location.href='transactions.php?<?php echo htmlentities(http_build_query(array_merge($_GET, ['page'=>$page+1]))); ?>'" <?php echo (count($txs) < $limit) ? 'disabled' : ''; ?>>Suiv. &rarr;</button>
-    </div>
-    <div style="margin-left:8px">
-      <label><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?> onchange="(function(){ var q = new URLSearchParams(location.search); q.set('show_pending', this.checked ? '1' : '0'); q.set('page', '0'); location.search = q.toString(); }).call(this);"> Afficher les opérations en attente</label>
-    </div>
-  </div>
+    <div style="height:8px;margin:8px 0"></div>
 
   <table class="tx-table">
     <thead>
