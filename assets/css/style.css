@@ -49,7 +49,18 @@ th{background:#f2f2f2}
   table thead, table tbody, table tr, table th, table td { display:block; }
   table thead { display:none }
   table tbody tr { margin-bottom:12px; border:1px solid #e6e6e6; padding:8px; border-radius:6px; background:#fff }
-  table tbody td { display:flex; justify-content:space-between; padding:6px 8px; border:none }
+  /* Use flex rows so we can position first 5 columns on the first line and the rest below */
+  table tbody tr { display:flex; flex-wrap:wrap; align-items:center }
+  table tbody td { display:block; padding:6px 8px; border:none; box-sizing:border-box }
+  /* First five columns: occupy ~20% each on the first row */
+  table tbody td:nth-child(1), table tbody td:nth-child(2), table tbody td:nth-child(3), table tbody td:nth-child(4), table tbody td:nth-child(5) {
+    flex: 0 0 20%; max-width:20%;
+  }
+  /* Columns 6 and onwards: place under as full-width blocks */
+  table tbody td:nth-child(n+6) {
+    flex: 0 0 100%; max-width:100%;
+    border-top:1px dashed #eee; margin-top:6px; padding-top:8px;
+  }
   table tbody td input, table tbody td select { width:60%; }
   .acc-name, .acc-currency, .acc-alert { width:100%; box-sizing:border-box }
 }
