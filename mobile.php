@@ -94,7 +94,7 @@ foreach ($allCats as $c) { $catCriteria[$c['id']] = (int)$c['criterion']; }
 $groupChildren = [];
 foreach ($allCats as $c) {
   if ((int)$c['criterion'] === 0 && $c['parent_id'] !== null) {
-    $groupChildren[(int)$c['parent_id']][] = (int)$c['label'];
+    $groupChildren[(int)$c['parent_id']][] = $c['label'];
   }
 }
 // Load the transaction at index $idx (mobile card navigation)
@@ -253,13 +253,14 @@ if ($tx) {
   </div>
 
   <div class="mobile-nav" style="display:flex;align-items:center;justify-content:space-between;margin:12px 0">
-    <div>
+    <div style="display:flex;align-items:center;gap:8px">
       <button class="arrow-btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=0<?php echo ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : '0'; ?>)">&lt;&lt;</button>
       <button class="arrow-btn" <?php echo ($idx <= 0) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo max(0,$idx-1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : 0; ?>)">&lt;</button>
       <span id="mcCounter" style="margin:0 8px"><?php echo ($idx + 1) . ' / ' . $total; ?></span>
+    </div>
+    <div style="display:flex;align-items:center">
       <button class="arrow-btn" <?php echo ($idx >= $total - 1) ? 'disabled' : ''; ?> onclick="location.href='mobile.php?idx=<?php echo min($total - 1,$idx+1) . ($acctSel !== '' ? '&account=' . urlencode($acctSel) : ''); ?>&show_pending=' + (<?php echo $showPending ? '1' : 0; ?>)">&gt;</button>
     </div>
-    
   </div>
 
 <?php if (!$tx): ?>
@@ -269,9 +270,7 @@ if ($tx) {
     <div class="mobile-card-row"><span class="mobile-card-label">Compte</span><span class="m-value"><?php echo htmlspecialchars($tx['account_name'] ?? $tx['account_id']); ?></span></div>
     <div class="mobile-card-row"><span class="mobile-card-label">Date</span><span class="m-value"><?php if (!empty($badgeHtml)) { echo $badgeHtml . '<br>'; } elseif ($isPending) { echo '<span class="badge-pending">P. Différé</span><br>'; } ?><?php echo htmlspecialchars($tx['booking_date'] ?? ''); ?></span></div>
     <div class="mobile-card-row"><span class="mobile-card-label">Montant</span><span class="m-value" style="color:<?php echo ($tx['amount'] < 0) ? '#c62828' : '#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$tx['amount'], 2, ',', ' ')); ?></span></div>
-    <?php if (isset($tx['status']) && strtoupper((string)$tx['status']) === 'OTHR'): ?>
-      <div class="mobile-card-row"><span class="mobile-card-label">Statut</span><span class="m-value"><?php if (!empty($badgeHtml)) { echo $badgeHtml; } else { echo '<span class="badge-pending">P. différé</span>'; } ?></span></div>
-    <?php endif; ?>
+    <?php /* Statut row removed: badge is shown on the date line */ ?>
     <div class="mobile-card-row"><span class="mobile-card-label">Devise</span><span class="m-value"><?php echo htmlspecialchars($tx['currency'] ?? ''); ?></span></div>
     <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Commentaire</span><span class="m-value"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>
     <?php if ($displayBalance !== null): ?>
