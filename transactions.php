@@ -616,28 +616,57 @@ document.addEventListener('DOMContentLoaded', function(){
   var form = document.getElementById('addTxForm');
   var cancel = document.getElementById('addCancel');
   if (!bottom || !modal || !form) return;
-  // Pre-fill account selection when opening modal
-  var accountSel = <?php echo json_encode($acctSel); ?>;
-  var groupAccountIds = <?php echo json_encode($groupAccountIds); ?>;
+  // Pre-fill account selection when opening modal using current page selector
   bottom.addEventListener('click', function(){
-    // attempt to set account select from current page selection
     try {
       var sel = form.querySelector('select[name=account_id]');
+      var pageSel = document.querySelector('select[name=account]');
       if (sel) {
-        if (accountSel && accountSel.indexOf('g:') !== 0) {
-          // normal account id
-          sel.value = accountSel;
-        } else if (accountSel && accountSel.indexOf('g:') === 0) {
-          // group selected: pick first account id if available
-          if (Array.isArray(groupAccountIds) && groupAccountIds.length > 0) {
-            sel.value = groupAccountIds[0];
+        if (pageSel && pageSel.value) {
+          // If page selector is a group (g:...), pick first available option in modal
+          if (String(pageSel.value).indexOf('g:') === 0) {
+            // choose first non-empty option in modal
+            var opt = sel.querySelector('option[value]:not([value=""])');
+            if (opt) sel.value = opt.value;
+          } else {
+            // try to set exact value (matches modal account ids)
+            var tryVal = pageSel.value;
+            // if an option with that value exists, use it
+            if (sel.querySelector('option[value="' + tryVal + '"]')) {
+              sel.value = tryVal;
+            } else {
+              // fallback to first option
+              var opt2 = sel.querySelector('option[value]:not([value=""])'); if (opt2) sel.value = opt2.value;
+            }
           }
+        } else {
+          // fallback: pick first option
+          var opt3 = sel.querySelector('option[value]:not([value=""])'); if (opt3) sel.value = opt3.value;
         }
         sel.focus();
       }
     } catch (e) { /* ignore */ }
     modal.style.display = 'flex';
   });
+
+  // If the page account selector changes while modal is open, update modal account field
+  var pageAccountSelect = document.querySelector('select[name=account]');
+  if (pageAccountSelect) {
+    pageAccountSelect.addEventListener('change', function(){
+      try {
+        var sel = form.querySelector('select[name=account_id]');
+        if (!sel) return;
+        if (modal.style.display === 'flex' || modal.style.display === '') {
+          // same logic as above
+          if (String(this.value).indexOf('g:') === 0) {
+            var opt = sel.querySelector('option[value]:not([value=""])'); if (opt) sel.value = opt.value;
+          } else if (sel.querySelector('option[value="' + this.value + '"]')) {
+            sel.value = this.value;
+          }
+        }
+      } catch (e) { }
+    });
+  }
   cancel.addEventListener('click', function(){ modal.style.display = 'none'; });
   form.addEventListener('submit', function(ev){
     ev.preventDefault();
@@ -645,14 +674,18 @@ document.addEventListener('DOMContentLoaded', function(){
     fetch('mon-site/api/add_tx.php', { method: 'POST', body: fd })
       .then(function(r){ return r.json(); })
       .then(function(j){
-        if (j && j.ok) {
-          alert('Opération ajoutée (id=' + j.id + '). L affichage reste sur la ligne courante.');
-          modal.style.display = 'none';
-          form.reset();
-        } else {
-          alert('Erreur ajout: ' + (j && j.error ? j.error : 'erreur inconnue'));
-        }
-      }).catch(function(e){ alert('Erreur réseau: '+e); });
+          if (j && j.ok) {
+            // close modal and reload transactions page to show the new operation
+            modal.style.display = 'none';
+            form.reset();
+            try {
+              var anchor = j.id ? '#tx_' + encodeURIComponent(j.id) : '';
+              location.href = location.pathname + (location.search || '') + anchor;
+            } catch(e) { location.reload(); }
+          } else {
+            alert('Erreur ajout: ' + (j && j.error ? j.error : 'erreur inconnue'));
+          }
+        }).catch(function(e){ alert('Erreur réseau: '+e); });
   });
 });
 </script>
