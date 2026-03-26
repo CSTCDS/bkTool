@@ -25,8 +25,15 @@ function bkt_migrate(PDO $pdo): void
     if (php_sapi_name() === 'cli') {
         error_log($debugMsg);
     } else {
-        // Emit as an HTML comment so it's visible in page source during web requests
-        echo "<!-- {$debugMsg} -->\n";
+        // Avoid emitting the debug HTML comment during AJAX requests
+        // which expect JSON responses (e.g. rules.php?ajax=categories).
+        if (empty($_GET['ajax'])) {
+            // Emit as an HTML comment so it's visible in page source during web requests
+            echo "<!-- {$debugMsg} -->\n";
+        } else {
+            // For AJAX requests, log to error log instead to keep response clean
+            error_log('bkt_migrate: (ajax) ' . $debugMsg);
+        }
     }
 
     // 2. Créer les tables métier si elles n'existent pas (idempotent)
