@@ -95,6 +95,23 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
           ul.appendChild(li);
         });
         body.appendChild(ul);
+        // Per-account: show pending (skipped) transactions for this account if any
+        try {
+          var pend = (window.pendingByAccount && window.pendingByAccount[a.id]) ? window.pendingByAccount[a.id] : [];
+          if (pend && pend.length > 0) {
+            var h2 = document.createElement('div'); h2.style.marginTop = '8px'; h2.innerHTML = '<strong>Écritures en attente</strong>'; body.appendChild(h2);
+            var pul = document.createElement('ul');
+            pend.forEach(function(t){
+              var pli = document.createElement('li');
+              var pamt = parseFloat((t.transaction_amount && t.transaction_amount.amount) ? t.transaction_amount.amount : (t.amount || 0)) || 0;
+              var pfmt = pamt.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+              var pamtHtml = (pamt >= 0) ? '<strong style="color:#2e7d32">' + pfmt + '</strong>' : '<strong style="color:#000">' + pfmt + '</strong>';
+              pli.innerHTML = escapeHtml(t.transaction_date || t.booking_date || '') + ' — ' + pamtHtml + ' — ' + escapeHtml(JSON.stringify(t).substring(0,200));
+              pul.appendChild(pli);
+            });
+            body.appendChild(pul);
+          }
+        } catch(e) { /* ignore */ }
       } else {
         var no = document.createElement('div'); no.style.color = '#666'; no.innerHTML = '<strong>Aucune nouvelles écritures</strong>'; body.appendChild(no);
         // Replace 'Dernières écritures' block with a button that opens transactions.php filtered by account
