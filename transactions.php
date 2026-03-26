@@ -589,22 +589,9 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         <button type="submit" class="btn btn-primary">Ajouter</button>
       </div>
     </form>
-    <div id="addDebug" style="margin-top:10px;background:#f7f7f7;border:1px solid #e0e0e0;padding:8px;border-radius:6px;display:none">
-      <strong>Debug:</strong>
-      <pre id="addDebugPre" style="white-space:pre-wrap;margin:6px 0;font-size:0.9rem"></pre>
-    </div>
   </div>
 </div>
-
-<!-- SQL preview dialog (hidden) -->
-<div id="sqlPreview" style="display:none;position:fixed;left:50%;top:30%;transform:translate(-50%,0);background:#fff;border:1px solid #ddd;padding:12px;border-radius:6px;z-index:2500;max-width:90%;width:720px;box-shadow:0 10px 30px rgba(0,0,0,0.2)">
-  <div style="font-weight:700;margin-bottom:8px">Prévisualisation SQL</div>
-  <pre id="sqlPreviewPre" style="max-height:320px;overflow:auto;background:#f4f6fb;padding:8px;border-radius:4px"></pre>
-  <div style="margin-top:10px;text-align:right">
-    <button id="sqlCancel" class="btn" style="margin-right:8px">Annuler</button>
-    <button id="sqlConfirm" class="btn btn-primary">Valider et créer</button>
-  </div>
-</div>
+  
 <script>
 // Save category selection via AJAX
 document.querySelectorAll('.cat-select').forEach(function(sel) {
@@ -661,23 +648,6 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     } catch (e) { /* ignore */ }
     modal.style.display = 'flex';
-    // show initial debug info in modal
-    try {
-      var dbgDiv = document.getElementById('addDebug');
-      var dbgPre = document.getElementById('addDebugPre');
-      if (dbgDiv && dbgPre) {
-        var pageSel = document.querySelector('select[name=account]');
-        var cookieMatch = document.cookie.match('(?:^|; )selected_account=([^;]+)');
-        var cookieVal = cookieMatch && cookieMatch[1] ? decodeURIComponent(cookieMatch[1]) : '';
-        var init = {
-          pageAccountSelect: pageSel ? pageSel.value : null,
-          cookie_selected_account: cookieVal,
-          prefill_attempt: sel ? sel.value : null
-        };
-        dbgPre.textContent = JSON.stringify(init, null, 2);
-        dbgDiv.style.display = 'block';
-      }
-    } catch (e) { /* ignore */ }
   });
 
   // If the page account selector changes while modal is open, update modal account field
@@ -701,56 +671,19 @@ document.addEventListener('DOMContentLoaded', function(){
   cancel.addEventListener('click', function(){ modal.style.display = 'none'; });
   form.addEventListener('submit', function(ev){
     ev.preventDefault();
-    // first do a dry-run to get the constructed SQL
-    var fdDry = new FormData(form);
-    fdDry.append('dry','1');
-    fetch('mon-site/api/add_tx.php', { method: 'POST', body: fdDry })
+    var fd = new FormData(form);
+    fetch('mon-site/api/add_tx.php', { method: 'POST', body: fd })
       .then(function(r){ return r.json(); })
       .then(function(j){
-        console.log('add_tx dry response debug:', j && j.debug ? j.debug : null);
-        if (j && j.ok && j.dry) {
-          // show SQL preview dialog
-          var pre = document.getElementById('sqlPreviewPre');
-          var dbg = j.debug ? '\n\nDEBUG:\n' + JSON.stringify(j.debug, null, 2) : '';
-          if (pre) pre.textContent = (j.sql_debug || '') + dbg;
-          var dlg = document.getElementById('sqlPreview'); if (dlg) dlg.style.display = 'block';
-          // also populate the modal debug area with detailed debug info
+        if (j && j.ok) {
+          modal.style.display = 'none';
+          form.reset();
           try {
-            var dbgDiv = document.getElementById('addDebug');
-            var dbgPre = document.getElementById('addDebugPre');
-            if (dbgDiv && dbgPre) {
-              var combined = { sql_debug: j.sql_debug || null, debug: j.debug || null };
-              dbgPre.textContent = JSON.stringify(combined, null, 2);
-              dbgDiv.style.display = 'block';
-            }
-          } catch (e) { /* ignore */ }
-
-          // wire confirm/cancel
-          var cancelBtn = document.getElementById('sqlCancel');
-          var confirmBtn = document.getElementById('sqlConfirm');
-          var onCancel = function(){ if (dlg) dlg.style.display = 'none'; };
-          var onConfirm = function(){
-            // send real request
-            var fdReal = new FormData(form);
-            fetch('mon-site/api/add_tx.php', { method: 'POST', body: fdReal })
-              .then(function(r2){ return r2.json(); })
-              .then(function(res){
-                console.log('add_tx real response debug:', res && res.debug ? res.debug : null);
-                if (res && res.ok) {
-                  if (dlg) dlg.style.display = 'none';
-                  modal.style.display = 'none';
-                  form.reset();
-                  try { var anchor = res.id ? '#tx_' + encodeURIComponent(res.id) : ''; location.href = location.pathname + (location.search || '') + anchor; }
-                  catch(e) { location.reload(); }
-                } else {
-                  alert('Erreur ajout: ' + (res && res.error ? res.error : 'erreur inconnue'));
-                }
-              }).catch(function(e){ alert('Erreur réseau: '+e); });
-          };
-          if (cancelBtn) { cancelBtn.removeEventListener('click', onCancel); cancelBtn.addEventListener('click', onCancel); }
-          if (confirmBtn) { confirmBtn.removeEventListener('click', onConfirm); confirmBtn.addEventListener('click', onConfirm); }
+            var anchor = j.id ? '#tx_' + encodeURIComponent(j.id) : '';
+            location.href = location.pathname + (location.search || '') + anchor;
+          } catch(e) { location.reload(); }
         } else {
-          alert('Erreur dry-run: ' + (j && j.error ? j.error : 'erreur inconnue'));
+          alert('Erreur ajout: ' + (j && j.error ? j.error : 'erreur inconnue'));
         }
       }).catch(function(e){ alert('Erreur réseau: '+e); });
   });

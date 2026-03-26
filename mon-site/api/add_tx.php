@@ -21,10 +21,8 @@ $amount = isset($_POST['amount']) ? (float)str_replace(',', '.', $_POST['amount'
 $currency = isset($_POST['currency']) ? trim($_POST['currency']) : '';
 $description = isset($_POST['description']) ? trim($_POST['description']) : '';
 $booking_date = isset($_POST['booking_date']) ? trim($_POST['booking_date']) : null;
-$debug = ['POST' => $_POST];
+status:;
 $status = 'MANUAL'; // always create manual transactions with MANUAL status
-// dry run flag: if '1' then build SQL debug but do not persist
-$dry = isset($_POST['dry']) && $_POST['dry'] === '1';
 // categories
 $cat1 = isset($_POST['cat1']) && $_POST['cat1'] !== '' ? (int)$_POST['cat1'] : null;
 $cat2 = isset($_POST['cat2']) && $_POST['cat2'] !== '' ? (int)$_POST['cat2'] : null;
@@ -50,7 +48,7 @@ try {
     if ($account_id === '' && !empty($_COOKIE['selected_account'])) {
         $account_id = $_COOKIE['selected_account'];
     }
-    $debug['resolved_account_before'] = $account_id;
+    // resolved_account_before omitted in production
     if (strpos($account_id, 'g:') === 0) {
         $gid = (int)substr($account_id, 2);
         // find first child label under this group (labels contain account identifiers or names)
@@ -88,7 +86,7 @@ try {
 
     // invert amount for storage/update
     $storeAmount = -1 * $amount;
-    $debug['storeAmount'] = $storeAmount;
+    // storeAmount kept for computation
 
     // use base.NextNumber to compute id (but do not update on dry run)
     $row = $pdo->query('SELECT NextNumber FROM base WHERE id = 1')->fetch(PDO::FETCH_ASSOC);
@@ -99,34 +97,6 @@ try {
     }
     $newIdNum = $next + 1;
     $txId = (string)$newIdNum;
-
-    // Build SQL debug string by interpolating values (for debugging only)
-    // Use PDO::quote for strings
-    $v_id = $pdo->quote($txId);
-    $v_account = $pdo->quote($account_id);
-    $v_amount = is_null($storeAmount) ? 'NULL' : (string)$storeAmount;
-    $v_currency = $pdo->quote($currency);
-    $v_description = $pdo->quote($description);
-    $v_booking = $pdo->quote($booking_date);
-    $v_status = $pdo->quote($status);
-    $v_cat1 = is_null($cat1) ? 'NULL' : (int)$cat1;
-    $v_cat2 = is_null($cat2) ? 'NULL' : (int)$cat2;
-    $v_cat3 = is_null($cat3) ? 'NULL' : (int)$cat3;
-    $v_cat4 = is_null($cat4) ? 'NULL' : (int)$cat4;
-
-    $sql_debug = "INSERT INTO transactions (id, account_id, amount, currency, description, booking_date, status, cat1_id, cat2_id, cat3_id, cat4_id, created_at) VALUES (" .
-        $v_id . ", " . $v_account . ", " . $v_amount . ", " . $v_currency . ", " . $v_description . ", " . $v_booking . ", " . $v_status . ", " .
-        $v_cat1 . ", " . $v_cat2 . ", " . $v_cat3 . ", " . $v_cat4 . ", NOW())";
-
-    $debug['next_before'] = $next;
-    $debug['next_after'] = $newIdNum;
-    $debug['sql_debug'] = $sql_debug;
-
-    if ($dry) {
-        // Return constructed SQL without modifying DB
-        echo json_encode(['ok' => true, 'dry' => true, 'sql_debug' => $sql_debug, 'debug' => $debug]);
-        exit;
-    }
 
     // Persist: increment NextNumber and insert
     $pdo->beginTransaction();
@@ -148,29 +118,7 @@ try {
         ':cat4' => $cat4,
     ]);
     $pdo->commit();
-    $debug['txId'] = $txId;
-    error_log('add_tx debug: ' . json_encode($debug));
-    echo json_encode(['ok' => true, 'id' => $txId, 'debug' => $debug, 'sql_debug' => $sql_debug]);
-    exit;
-
-    $stmt = $pdo->prepare('INSERT INTO transactions (id, account_id, amount, currency, description, booking_date, status, cat1_id, cat2_id, cat3_id, cat4_id, created_at) VALUES (:id, :account_id, :amount, :currency, :description, :booking_date, :status, :cat1, :cat2, :cat3, :cat4, NOW())');
-    $stmt->execute([
-        ':id' => $txId,
-        ':account_id' => $account_id,
-        ':amount' => $storeAmount,
-        ':currency' => $currency,
-        ':description' => $description,
-        ':booking_date' => $booking_date,
-        ':status' => $status,
-        ':cat1' => $cat1,
-        ':cat2' => $cat2,
-        ':cat3' => $cat3,
-        ':cat4' => $cat4,
-    ]);
-    $pdo->commit();
-    $debug['txId'] = $txId;
-    error_log('add_tx debug: ' . json_encode($debug));
-    echo json_encode(['ok' => true, 'id' => $txId, 'debug' => $debug]);
+    echo json_encode(['ok' => true, 'id' => $txId]);
     exit;
 } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
