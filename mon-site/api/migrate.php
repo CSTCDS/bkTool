@@ -255,6 +255,19 @@ function bkt_migrate(PDO $pdo): void
                 }
             }
         },
+        // Version 16 : add NextNumber integer to base for manual transaction ids
+        16 => function (PDO $pdo) {
+            $cols = $pdo->query('SHOW COLUMNS FROM base LIKE "NextNumber"')->fetchAll();
+            if (empty($cols)) {
+                try {
+                    $pdo->exec('ALTER TABLE base ADD COLUMN NextNumber INT DEFAULT 0 AFTER version');
+                    // initialize NextNumber to 0 if null
+                    $pdo->exec('UPDATE base SET NextNumber = COALESCE(NextNumber, 0) WHERE id = 1');
+                } catch (Throwable $e) {
+                    // ignore if cannot add
+                }
+            }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées

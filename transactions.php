@@ -405,14 +405,17 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       <?php
       $runningAcc = [];
       foreach ($txs as $t):
-      // Consider BOOK as booked/current; any other status treated as pending
+      // Consider BOOK as booked/current; MANUAL will be shown as manual badge (not generic pending)
       $statusUpper = strtoupper((string)($t['status'] ?? ''));
-      $isPending = ($statusUpper !== 'BOOK');
+      $isPending = ($statusUpper !== 'BOOK' && $statusUpper !== 'MANUAL');
       $today = date('Y-m-d');
       // Determine OTHR badge and whether OTHR should count in virtual balance
       $countInVirtual = false;
       $badgeHtml = '';
-      if ($statusUpper === 'OTHR') {
+      if ($statusUpper === 'MANUAL') {
+        $badgeHtml = '<span class="badge-manual">Saisie manuelle</span>';
+        $countInVirtual = false;
+      } elseif ($statusUpper === 'OTHR') {
         $acctDate = isset($t['accounting_date']) && $t['accounting_date'] !== null && $t['accounting_date'] !== '' ? (string)$t['accounting_date'] : null;
         if ($acctDate) {
           if ($today === $acctDate) {
@@ -558,6 +561,21 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           <?php endforeach; ?>
         </select>
         <input name="currency" placeholder="Devise" style="width:80px" value="EUR">
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <?php for ($ci=1;$ci<=4;$ci++): ?>
+          <select name="cat<?php echo $ci; ?>" style="flex:1">
+            <option value=""><?php echo htmlspecialchars($criterionNames[$ci] ?? 'Cat'); ?></option>
+            <?php if (!empty($catTree[$ci])): foreach ($catTree[$ci] as $pid=>$node): if (!$node['info']) continue; ?>
+              <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
+                <option value="<?php echo (int)$node['info']['id']; ?>"><?php echo htmlspecialchars($node['info']['label']); ?></option>
+                <?php foreach ($node['children'] as $child): ?>
+                  <option value="<?php echo (int)$child['id']; ?>">&nbsp;&nbsp;<?php echo htmlspecialchars($child['label']); ?></option>
+                <?php endforeach; ?>
+              </optgroup>
+            <?php endforeach; endif; ?>
+          </select>
+        <?php endfor; ?>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <input name="booking_date" type="date" required style="flex:1" value="<?php echo date('Y-m-d'); ?>">

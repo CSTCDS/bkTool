@@ -123,6 +123,9 @@ th{background:#f2f2f2}
 /* Badge for paid (past accounting date) */
 .badge-paid{display:inline-block;font-size:.72rem;background:#2e7d32;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px;font-style:normal;vertical-align:middle}
 
+/* Badge for manual entries (light blue) */
+.badge-manual{display:inline-block;font-size:.72rem;background:#90caf9;color:#024a75;padding:1px 6px;border-radius:8px;margin-left:4px;font-style:normal;vertical-align:middle}
+
 /* Badge showing import number */
 .badge-numimport{display:inline-block;font-size:.72rem;background:#607d8b;color:#fff;padding:1px 6px;border-radius:6px;margin-left:8px;font-style:normal;vertical-align:middle}
 
