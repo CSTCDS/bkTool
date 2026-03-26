@@ -1,5 +1,5 @@
 <?php
-// choix.php — Enable Banking: ASPSP selection + start authorization
+// bank.php — Enable Banking: ASPSP selection + start authorization (renamed from choix.php)
 session_start();
 
 $cfgPath = __DIR__ . '/mon-site/config/database.php';
@@ -12,7 +12,7 @@ if (!$base) {
     $base = $isSandbox ? 'https://api.sandbox.enablebanking.com' : 'https://api.enablebanking.com';
 }
 
-// Build callback URL
+// Build callback URL (callback endpoint kept as choix_callback.php)
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $dir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
@@ -60,7 +60,7 @@ $country = $config['enable_country'] ?? 'FR';
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Choix de banque — bkTool</title>
+  <title>Banque — bkTool</title>
   <link rel="stylesheet" href="assets/css/style.css">
   <script src="https://tilisy.enablebanking.com/lib/widgets.umd.min.js"></script>
   <link href="https://tilisy.enablebanking.com/lib/widgets.css" rel="stylesheet">
@@ -79,18 +79,18 @@ $country = $config['enable_country'] ?? 'FR';
 
   <?php
   $pane = $_GET['pane'] ?? '';
-  // Allow empty default ('---') and only accept known panes
-  if (!in_array($pane, ['', 'sync', 'connect'], true)) {
+  if (!in_array($pane, ['', 'sync', 'connect', 'testsync'], true)) {
     $pane = '';
   }
   ?>
   <div style="display:flex;gap:18px;align-items:flex-start">
     <div style="min-width:220px">
       <form method="get">
-        <label><strong>Choix :</strong>
+        <label><strong>Action :</strong>
           <select name="pane" onchange="this.form.submit()">
             <option value="" <?php echo ($pane === '') ? 'selected' : ''; ?>>---</option>
             <option value="sync" <?php echo ($pane === 'sync') ? 'selected' : ''; ?>>Synchroniser banque</option>
+            <option value="testsync" <?php echo ($pane === 'testsync') ? 'selected' : ''; ?>>Test synchro</option>
             <option value="connect" <?php echo ($pane === 'connect') ? 'selected' : ''; ?>>Connecter banque</option>
           </select>
         </label>
@@ -114,6 +114,20 @@ $country = $config['enable_country'] ?? 'FR';
           <pre id="pendingJson" style="white-space:pre-wrap;font-size:.9rem;margin:0"></pre>
         </div>
 
+      <?php elseif ($pane === 'testsync'): ?>
+        <h2>Test synchronisation (raw)</h2>
+        <p>Le JSON renvoyé par `sync.php` sera affiché brut sans mise en forme.</p>
+        <div style="margin-top:12px;background:#fff;padding:10px;border:1px solid #eee;">
+          <pre id="testRaw" style="white-space:pre-wrap;font-family:monospace;">Chargement…</pre>
+        </div>
+        <script>
+          (function(){
+            fetch('sync.php', { method: 'GET' }).then(function(r){ return r.text(); }).then(function(txt){
+              document.getElementById('testRaw').textContent = txt;
+            }).catch(function(e){ document.getElementById('testRaw').textContent = 'Erreur: ' + e; });
+          })();
+        </script>
+
       <?php elseif ($pane === 'connect'): ?>
         <h2>Connecter une banque</h2>
         <p>Sélectionnez votre banque ci-dessous :</p>
@@ -127,7 +141,7 @@ $country = $config['enable_country'] ?? 'FR';
         ></enablebanking-aspsp-list>
 
         <!-- Hidden form submitted when user picks a bank -->
-        <form id="authForm" method="POST" action="choix.php" style="display:none">
+        <form id="authForm" method="POST" action="bank.php" style="display:none">
           <input type="hidden" name="aspsp_name" id="aspsp_name">
           <input type="hidden" name="aspsp_country" id="aspsp_country">
           <input type="hidden" name="psu_type" id="psu_type" value="personal">
@@ -169,7 +183,6 @@ if (syncBtn) {
     var jsonEl = document.getElementById('syncJson');
     resultEl.textContent = 'Synchronisation en cours';
     statsEl.style.display = 'none';
-    // Optionally ask for token if configured
     var token = prompt('Token de synchronisation (laisser vide si non configuré)');
     var headers = {};
     if (token && token.trim() !== '') headers['X-Sync-Token'] = token.trim();
@@ -184,7 +197,6 @@ if (syncBtn) {
           resultEl.textContent = msg;
           jsonEl.textContent = JSON.stringify(res, null, 2);
           statsEl.style.display = 'block';
-          // show skipped transactions if any
           var pendingEl = document.getElementById('pendingWrites');
           var pendingJson = document.getElementById('pendingJson');
           var pendingCount = document.getElementById('pendingCount');

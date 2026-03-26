@@ -14,7 +14,7 @@ $current = basename($_SERVER['SCRIPT_NAME'] ?? '');
     <a href="rules.php" target="_self"<?php echo ($current === 'rules.php') ? ' class="active"' : ''; ?>>Règles</a>
     <a href="mon-site/admin_logs.php" target="_self"<?php echo ($current === 'admin_logs.php') ? ' class="active"' : ''; ?>>Logs</a>
     <a href="terms.php" target="_self"<?php echo ($current === 'terms.php') ? ' class="active"' : ''; ?>>Termes et conditions</a>
-    <a href="choix.php" target="_self" class="bank-link"<?php echo ($current === 'choix.php') ? ' class="active"' : ''; ?>>Banque</a>
+    <a href="bank.php" target="_self" class="bank-link"<?php echo ($current === 'bank.php') ? ' class="active"' : ''; ?>>Banque</a>
     <a href="synchsmart.php" target="_self"<?php echo ($current === 'synchsmart.php') ? ' class="active"' : ''; ?>>Synchro</a>
   </nav>
 </div>

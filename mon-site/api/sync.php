@@ -171,7 +171,7 @@ function run_sync($pdo, $config)
     $sessionId = $stmt->fetchColumn();
 
     if (!$sessionId) {
-        $result['errors'][] = 'Aucune session Enable Banking trouvée. Connectez d\'abord une banque via choix.php.';
+        $result['errors'][] = 'Aucune session Enable Banking trouvée. Connectez d\'abord une banque via bank.php.';
         return $result;
     }
 

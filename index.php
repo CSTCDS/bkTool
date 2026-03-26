@@ -20,7 +20,7 @@ $whitelist = [
   'synchro' => 'synchsmart.php',
   'transactions' => 'transactions.php',
   'categories' => 'categories.php',
-  'banque' => 'choix.php',
+  'banque' => 'bank.php',
   'mobile' => 'mobile.php'
 ];
 
