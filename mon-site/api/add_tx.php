@@ -53,7 +53,8 @@ try {
     $debug['resolved_account_before'] = $account_id;
     if (strpos($account_id, 'g:') === 0) {
         $gid = (int)substr($account_id, 2);
-        $q = $pdo->prepare('SELECT label FROM categories WHERE criterion = 0 AND parent_id = :pid ORDER BY id LIMIT 1');
+        // find first child label under this group (labels contain account identifiers or names)
+        $q = $pdo->prepare('SELECT label FROM categories WHERE parent_id = :pid AND criterion = 0 ORDER BY id LIMIT 1');
         $q->execute([':pid' => $gid]);
         $row = $q->fetch(PDO::FETCH_ASSOC);
         if (!$row) {
@@ -62,7 +63,20 @@ try {
             echo json_encode(['ok' => false, 'error' => 'Groupe de comptes invalide', 'debug' => $debug]);
             exit;
         }
-        $account_id = $row['label'];
+        $candidate = $row['label'];
+        // The candidate may be the account id or the account name; try to resolve to a real account id
+        $q2 = $pdo->prepare('SELECT id FROM accounts WHERE id = :x OR name = :x LIMIT 1');
+        $q2->execute([':x' => $candidate]);
+        $r2 = $q2->fetch(PDO::FETCH_ASSOC);
+        if (!$r2) {
+            http_response_code(400);
+            $debug['stage'] = 'resolve_group_no_account_match';
+            $debug['candidate'] = $candidate;
+            echo json_encode(['ok' => false, 'error' => 'Aucun compte trouvé pour le groupe', 'debug' => $debug]);
+            exit;
+        }
+        $account_id = $r2['id'];
+        $debug['resolved_account_from_group'] = $account_id;
     }
 
     if ($account_id === '') {
