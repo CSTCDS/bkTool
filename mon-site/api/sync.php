@@ -11,6 +11,17 @@ function upsertAccount($pdo, $acc)
     $balance = $acc['balance'] ?? 0;
     $currency = $acc['currency'] ?? 'EUR';
     $raw = json_encode($acc);
+    $account_type = $acc['account_type'] ?? null;
+
+    // helper: check if column exists in accounts table
+    $hasAccountTypeCol = null;
+    try {
+        $chk = $pdo->prepare("SHOW COLUMNS FROM accounts LIKE 'account_type'");
+        $chk->execute();
+        $hasAccountTypeCol = (bool)$chk->fetchColumn();
+    } catch (Throwable $e) {
+        $hasAccountTypeCol = false;
+    }
 
     // Check existence to count insert vs update
     $exists = false;
@@ -21,27 +32,54 @@ function upsertAccount($pdo, $acc)
     }
 
     if (!$exists) {
-        $stmt = $pdo->prepare(
-            'INSERT INTO accounts (id, name, balance, currency, raw, updated_at) VALUES (:id, :name, :balance, :currency, :raw, NOW())'
-        );
-        $stmt->execute([
-            ':id' => $id,
-            ':name' => $name,
-            ':balance' => $balance,
-            ':currency' => $currency,
-            ':raw' => $raw
-        ]);
+        if ($hasAccountTypeCol && $account_type !== null) {
+            $stmt = $pdo->prepare(
+                'INSERT INTO accounts (id, name, balance, currency, raw, account_type, updated_at) VALUES (:id, :name, :balance, :currency, :raw, :account_type, NOW())'
+            );
+            $stmt->execute([
+                ':id' => $id,
+                ':name' => $name,
+                ':balance' => $balance,
+                ':currency' => $currency,
+                ':raw' => $raw,
+                ':account_type' => $account_type
+            ]);
+        } else {
+            $stmt = $pdo->prepare(
+                'INSERT INTO accounts (id, name, balance, currency, raw, updated_at) VALUES (:id, :name, :balance, :currency, :raw, NOW())'
+            );
+            $stmt->execute([
+                ':id' => $id,
+                ':name' => $name,
+                ':balance' => $balance,
+                ':currency' => $currency,
+                ':raw' => $raw
+            ]);
+        }
         return ['action' => 'insert'];
     } else {
-        $stmt = $pdo->prepare(
-            'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, updated_at = NOW() WHERE id = :id'
-        );
-        $stmt->execute([
-            ':id' => $id,
-            ':balance' => $balance,
-            ':currency' => $currency,
-            ':raw' => $raw
-        ]);
+        if ($hasAccountTypeCol && $account_type !== null) {
+            $stmt = $pdo->prepare(
+                'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, account_type = :account_type, updated_at = NOW() WHERE id = :id'
+            );
+            $stmt->execute([
+                ':id' => $id,
+                ':balance' => $balance,
+                ':currency' => $currency,
+                ':raw' => $raw,
+                ':account_type' => $account_type
+            ]);
+        } else {
+            $stmt = $pdo->prepare(
+                'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, updated_at = NOW() WHERE id = :id'
+            );
+            $stmt->execute([
+                ':id' => $id,
+                ':balance' => $balance,
+                ':currency' => $currency,
+                ':raw' => $raw
+            ]);
+        }
         return ['action' => 'update'];
     }
 }
@@ -215,15 +253,34 @@ function run_sync($pdo, $config)
         // Fetch balances
         $balRes = $client->getAccountBalances($uid);
         $balance = 0;
+        $account_type = null;
+        // Determine account type and choose which balance to keep
         if ($balRes['status'] >= 200 && $balRes['status'] < 300 && !empty($balRes['body']['balances'])) {
-            foreach ($balRes['body']['balances'] as $bal) {
-                if (in_array($bal['balance_type'] ?? '', ['CLAV', 'ITAV', 'CLBD', 'ITBD'])) {
-                    $balance = $bal['balance_amount']['amount'] ?? 0;
-                    break;
-                }
+            $balances = $balRes['body']['balances'];
+            $allOthr = true;
+            foreach ($balances as $b) {
+                if (strtoupper($b['balance_type'] ?? '') !== 'OTHR') { $allOthr = false; break; }
             }
-            if ($balance == 0 && !empty($balRes['body']['balances'][0]['balance_amount']['amount'])) {
-                $balance = $balRes['body']['balances'][0]['balance_amount']['amount'];
+            if ($allOthr) {
+                // Card account: display all OTHR lines; keep first for numeric balance
+                $account_type = 'card';
+                $first = $balances[0];
+                $balance = $first['balance_amount']['amount'] ?? 0;
+            } else {
+                // Current account: prefer CLBD if present, else fall back to first recognised type
+                $account_type = 'current';
+                $found = false;
+                foreach ($balances as $b) {
+                    $bt = strtoupper($b['balance_type'] ?? '');
+                    if ($bt === 'CLBD') { $balance = $b['balance_amount']['amount'] ?? 0; $found = true; break; }
+                }
+                if (!$found) {
+                    // fallback to any of these types
+                    foreach ($balances as $b) {
+                        $bt = strtoupper($b['balance_type'] ?? '');
+                        if (in_array($bt, ['CLAV','ITAV','ITBD','CLBD'])) { $balance = $b['balance_amount']['amount'] ?? 0; break; }
+                    }
+                }
             }
         }
 
@@ -232,6 +289,9 @@ function run_sync($pdo, $config)
             'name' => $accData['identification_hash'] ?? $uid,
             'balance' => $balance,
             'currency' => 'EUR',
+            'account_type' => $account_type,
+            // include the raw balances for reference
+            'balances_raw' => $balRes['raw'] ?? json_encode($balRes['body'] ?? null),
         ]);
         $result['accounts']++;
         if (!empty($r['action']) && $r['action'] === 'insert') $result['accounts_insert']++;

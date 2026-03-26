@@ -14,7 +14,7 @@ require __DIR__ . '/mon-site/api/sync.php';
 // AJAX handler: return accounts + received/last entries for a given import_num
 if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
   $importNum = isset($_GET['import_num']) && ctype_digit((string)$_GET['import_num']) ? (int)$_GET['import_num'] : (int)$pdo->query('SELECT COALESCE(MAX(NumImport), 0) FROM transactions')->fetchColumn();
-  $stmt = $pdo->prepare('SELECT id, name, balance, alert_threshold, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage, name');
+  $stmt = $pdo->prepare('SELECT id, name, balance, raw, account_type, alert_threshold, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage, name');
   $stmt->execute();
   $accs = $stmt->fetchAll(PDO::FETCH_ASSOC);
   foreach ($accs as &$a) {
@@ -69,14 +69,71 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
       div.style.marginBottom = '12px';
       var th = (typeof a.alert_threshold !== 'undefined' && a.alert_threshold !== null && a.alert_threshold !== '') ? a.alert_threshold : '';
       div.dataset.threshold = th;
+      // Determine balance display: support 'card' accounts with multiple OTHR balances
       var balance = parseFloat(a.balance) || 0;
-      var balFmt = balance.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-      var balRow = document.createElement('div'); balRow.className = 'mobile-card-row';
       var nameEl = document.createElement('strong'); nameEl.textContent = a.name || '';
+      var balancesToShow = [];
+      try {
+        var rawObj = null;
+        if (a.raw) {
+          try { rawObj = JSON.parse(a.raw); } catch(e) { rawObj = a.raw; }
+        }
+        var balances = [];
+        if (rawObj) {
+          if (Array.isArray(rawObj.balances)) balances = rawObj.balances;
+          else if (rawObj.balances_raw) {
+            try { var br = (typeof rawObj.balances_raw === 'string') ? JSON.parse(rawObj.balances_raw) : rawObj.balances_raw; balances = br.balances || br; } catch(e) { }
+          }
+        }
+        if (balances && balances.length) {
+          var allOthr = true;
+          balances.forEach(function(b){ if (((b.balance_type||'') + '').toUpperCase() !== 'OTHR') allOthr = false; });
+          if (allOthr) {
+            balances.forEach(function(b){
+              var amt = parseFloat((b.balance_amount && (b.balance_amount.amount || b.balance_amount.amount === 0)) ? b.balance_amount.amount : 0) || 0;
+              balancesToShow.push({label: b.name || '', amount: amt});
+            });
+          } else {
+            // find CLBD
+            var cl = balances.find(function(b){ return ((b.balance_type||'') + '').toUpperCase() === 'CLBD'; });
+            if (!cl) {
+              cl = balances.find(function(b){ return ['CLAV','ITAV','ITBD','CLBD'].indexOf(((b.balance_type||'') + '').toUpperCase()) !== -1; });
+            }
+            if (!cl) cl = balances[0];
+            var amt = parseFloat((cl.balance_amount && (cl.balance_amount.amount || cl.balance_amount.amount === 0)) ? cl.balance_amount.amount : 0) || 0;
+            balancesToShow.push({label: 'Solde', amount: amt});
+            // ensure main numeric 'balance' remains the stored value for threshold checks
+            balance = parseFloat(a.balance) || amt;
+          }
+        } else {
+          // no balances in raw -> fallback to single balance
+          balancesToShow.push({label: 'Solde', amount: balance});
+        }
+      } catch(e) { balancesToShow.push({label: 'Solde', amount: balance}); }
+
+      // render header row (account name + primary balance)
+      var balRow = document.createElement('div'); balRow.className = 'mobile-card-row';
       var valSpan = document.createElement('span');
+      var balFmt = balance.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
       valSpan.innerHTML = (balance < 0) ? '<strong style="color:#c62828">' + balFmt + '</strong>' : '<strong style="color:#2e7d32">' + balFmt + '</strong>';
       balRow.appendChild(nameEl); balRow.appendChild(valSpan);
       div.appendChild(balRow);
+
+      // render additional balance lines when applicable (e.g., card accounts)
+      if (balancesToShow && balancesToShow.length > 0) {
+        var list = document.createElement('div'); list.style.padding = '6px 0 0 0';
+        balancesToShow.forEach(function(it, idx){
+          // skip the primary line if identical to header (avoid duplicate)
+          if (idx === 0 && it.label === 'Solde') return;
+          var row = document.createElement('div'); row.className = 'mobile-card-row';
+          var lab = document.createElement('span'); lab.className = 'mobile-card-label'; lab.textContent = it.label || 'Solde';
+          var val = document.createElement('span'); val.className = 'm-value';
+          var amtFmt = (parseFloat(it.amount) || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+          val.innerHTML = (it.amount < 0) ? '<strong style="color:#c62828">' + amtFmt + '</strong>' : '<strong style="color:#2e7d32">' + amtFmt + '</strong>';
+          row.appendChild(lab); row.appendChild(val); list.appendChild(row);
+        });
+        if (list.children.length > 0) body.appendChild(list);
+      }
 
       var body = document.createElement('div'); body.style.padding = '8px 0';
       if (a.received && a.received.length > 0) {
