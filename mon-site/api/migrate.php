@@ -237,6 +237,13 @@ function bkt_migrate(PDO $pdo): void
                 $pdo->exec('ALTER TABLE auto_category_rules DROP COLUMN category_id');
             }
         },
+        // Version 14 : add account_type to accounts (card / current)
+        14 => function (PDO $pdo) {
+            $cols = $pdo->query('SHOW COLUMNS FROM accounts LIKE "account_type"')->fetchAll();
+            if (empty($cols)) {
+                $pdo->exec("ALTER TABLE accounts ADD COLUMN account_type VARCHAR(20) DEFAULT NULL AFTER raw");
+            }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées
