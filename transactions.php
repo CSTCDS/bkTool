@@ -961,20 +961,16 @@ document.addEventListener('DOMContentLoaded', function(){
     todelMarkBtn.addEventListener('click', function(){
       if (!currentTr) return;
       var txid = currentTr.dataset.txid;
-      if (!confirm('Marquer cette ligne pour suppression ?')) return;
-      fetch('mon-site/api/tx_action.php', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=todel&id='+encodeURIComponent(txid) })
+      if (!confirm('Confirmer la suppression de cette ligne ? Cette action est irréversible.')) return;
+      fetch('mon-site/api/tx_action.php', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=delete&id='+encodeURIComponent(txid) })
       .then(r=>r.json()).then(function(j){
         if (j && j.ok) {
-          currentTr.dataset.status = 'TODEL';
-          var dcell = currentTr.querySelector('.col-date');
-          if (dcell && !dcell.querySelector('.badge-todel')) {
-            var span = document.createElement('span'); span.className = 'badge-todel'; span.textContent = 'à supprimer ?';
-            dcell.insertBefore(span, dcell.firstChild);
-            dcell.insertBefore(document.createElement('br'), span.nextSibling);
-          }
           hidePopup();
-          showToast('Ligne marquée pour suppression');
-        } else alert('Erreur: ' + (j && j.error ? j.error : 'action échouée'));
+          // reload the transactions page to reflect deletion and preserve server state
+          location.reload();
+        } else {
+          alert('Erreur: ' + (j && j.error ? j.error : 'action échouée'));
+        }
       }).catch(function(e){ alert('Erreur réseau: '+e); });
     });
   }
