@@ -540,6 +540,37 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
     </tbody>
   </table>
 </main>
+<!-- Floating add button (keeps current view) -->
+<button id="bottomAddBtn" title="Ajouter une opération" style="position:fixed;right:16px;bottom:16px;z-index:2000;background:#1976d2;color:#fff;border:none;border-radius:50%;width:56px;height:56px;font-size:28px;line-height:56px;box-shadow:0 6px 18px rgba(0,0,0,0.18);cursor:pointer">+</button>
+
+<!-- Add modal -->
+<div id="addModal" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:2100;align-items:center;justify-content:center">
+  <div style="background:#fff;padding:14px;border-radius:8px;max-width:520px;width:92%;box-sizing:border-box">
+    <h3 style="margin-top:0">Ajouter une opération</h3>
+    <form id="addTxForm">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <select name="account_id" required style="flex:1">
+          <option value="">Choisir compte…</option>
+          <?php foreach ($accs as $a): ?>
+            <option value="<?php echo (int)$a['id']; ?>"><?php echo htmlspecialchars($a['name']); ?></option>
+          <?php endforeach; ?>
+        </select>
+        <input name="currency" placeholder="Devise" style="width:80px" value="EUR">
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input name="booking_date" type="date" required style="flex:1" value="<?php echo date('Y-m-d'); ?>">
+        <input name="amount" placeholder="Montant" required style="width:140px">
+      </div>
+      <div style="margin-bottom:8px">
+        <input name="description" placeholder="Libellé" style="width:100%">
+      </div>
+      <div style="text-align:right">
+        <button type="button" id="addCancel" class="btn" style="margin-right:8px">Annuler</button>
+        <button type="submit" class="btn btn-primary">Ajouter</button>
+      </div>
+    </form>
+  </div>
+</div>
 <script>
 // Save category selection via AJAX
 document.querySelectorAll('.cat-select').forEach(function(sel) {
@@ -554,6 +585,33 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
         if (!j.ok) console.error('Erreur save category', j);
       })
       .catch(function(e) { console.error(e); });
+  });
+});
+</script>
+<script>
+// Add button/modal behaviour
+document.addEventListener('DOMContentLoaded', function(){
+  var bottom = document.getElementById('bottomAddBtn');
+  var modal = document.getElementById('addModal');
+  var form = document.getElementById('addTxForm');
+  var cancel = document.getElementById('addCancel');
+  if (!bottom || !modal || !form) return;
+  bottom.addEventListener('click', function(){ modal.style.display = 'flex'; });
+  cancel.addEventListener('click', function(){ modal.style.display = 'none'; });
+  form.addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var fd = new FormData(form);
+    fetch('mon-site/api/add_tx.php', { method: 'POST', body: fd })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (j && j.ok) {
+          alert('Opération ajoutée (id=' + j.id + '). L affichage reste sur la ligne courante.');
+          modal.style.display = 'none';
+          form.reset();
+        } else {
+          alert('Erreur ajout: ' + (j && j.error ? j.error : 'erreur inconnue'));
+        }
+      }).catch(function(e){ alert('Erreur réseau: '+e); });
   });
 });
 </script>
