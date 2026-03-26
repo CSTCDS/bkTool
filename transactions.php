@@ -311,6 +311,9 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         <div>
               <select name="fcat1" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[1]); ?></option>
+        <!-- Bottom load more button (fixed, centered) -->
+        <button id="loadMoreBottom" class="btn" style="position:fixed;left:50%;transform:translateX(-50%);bottom:90px;z-index:2002;padding:10px 18px;font-size:15px;border-radius:8px;background:#1976d2;color:#fff;border:none;cursor:pointer">Lignes suivantes</button>
+
         
               <?php if (!empty($catTree[1])): foreach ($catTree[1] as $pid => $node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
