@@ -159,6 +159,22 @@ if ($tx) {
 <body>
 <?php include __DIR__ . '/header.php'; ?>
 
+<!-- Redirect to desktop transactions view when viewport is wide (>1000px) -->
+<script>
+  (function(){
+    try {
+      if (typeof window !== 'undefined' && window.innerWidth > 1000) {
+        var params = new URLSearchParams();
+        <?php if ($acctSel !== ''): ?>params.set('account', <?php echo json_encode((string)$acctSel); ?>);<?php endif; ?>
+        params.set('show_pending', <?php echo $showPending ? '1' : '0'; ?>);
+        params.set('idx', <?php echo (int)$idx; ?>);
+        // Use replace to avoid polluting history
+        window.location.replace('transactions.php?' + params.toString());
+      }
+    } catch(e) { /* ignore */ }
+  })();
+</script>
+
   <div class="mobile-page">
   <div id="toast"></div>
 
