@@ -119,6 +119,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
       balRow.appendChild(nameEl); balRow.appendChild(valSpan);
       div.appendChild(balRow);
 
+      // create body container for transaction lists and pending items
+      var body = document.createElement('div'); body.style.padding = '8px 0';
+
       // render additional balance lines when applicable (e.g., card accounts)
       if (balancesToShow && balancesToShow.length > 0) {
         var list = document.createElement('div'); list.style.padding = '6px 0 0 0';
@@ -134,8 +137,6 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
         });
         if (list.children.length > 0) body.appendChild(list);
       }
-
-      var body = document.createElement('div'); body.style.padding = '8px 0';
       if (a.received && a.received.length > 0) {
         var h = document.createElement('strong'); h.textContent = 'Écritures reçues'; body.appendChild(h);
         var ul = document.createElement('ul');
