@@ -260,7 +260,7 @@ if ($tx) {
       // If opened as popup, do not auto-redirect back to transactions even on wide screens
       var sp = new URLSearchParams(location.search);
       var isPopup = sp.get('popup') === '1' || sp.get('popup') === 'true';
-      if (typeof window !== 'undefined' && window.innerWidth > 832 && !isPopup) {
+      if (typeof window !== 'undefined' && window.innerWidth > 800 && !isPopup) {
         var params = new URLSearchParams();
         <?php if ($acctSel !== ''): ?>params.set('account', <?php echo json_encode((string)$acctSel); ?>);<?php endif; ?>
         params.set('show_pending', <?php echo $showPending ? '1' : '0'; ?>);

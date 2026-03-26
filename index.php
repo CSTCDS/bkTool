@@ -9,8 +9,11 @@ error_reporting(E_ALL);
 $page = isset($_GET['page']) && is_string($_GET['page']) ? trim($_GET['page']) : '';
 
 if ($page === '') {
-  // Redirect root to the asynchronous sync page
-  header('Location: index.php?page=synchro');
+  // Client-side redirect based on screen width: transactions for desktop-like, mobile otherwise
+  // Server cannot know client viewport; emit minimal HTML that performs the decision.
+  echo '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Redirection</title></head><body><script>';
+  echo 'try{var w=window.innerWidth||document.documentElement.clientWidth||screen.width; if(w>800) location.replace("transactions.php"); else location.replace("mobile.php");}catch(e){location.replace("transactions.php");}';
+  echo '</script></body></html>';
   exit;
 }
 
