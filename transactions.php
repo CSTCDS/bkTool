@@ -304,7 +304,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
             <option value="2y"<?php echo ($selectedQuickRange === '2y') ? ' selected' : ''; ?>>2 ans</option>
             <option value="custom"<?php echo ($selectedQuickRange === 'custom') ? ' selected' : ''; ?>>Choix de dates</option>
           </select>
-            <label style="margin-left:8px"><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?> onchange="(function(){ var q = new URLSearchParams(location.search); q.set('show_pending', this.checked ? '1' : '0'); q.set('page', '0'); location.search = q.toString(); }).call(this);"> Afficher les mouvements carte</label>
+            <!-- 'Afficher les mouvements carte' checkbox removed (UI-only) -->
           </div>
         </div>
       </div>

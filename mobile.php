@@ -247,7 +247,6 @@ if ($tx) {
         </option>
       <?php endforeach; endif; ?>
     </select>
-      <label style="font-size:.95rem;margin-left:8px;display:inline-block"><input type="checkbox" id="showPending" <?php echo $showPending ? 'checked' : ''; ?>> opérations en attente</label>
 
       <!-- balances moved into the transaction card below; keep this area compact -->
   </div>
