@@ -48,7 +48,7 @@ th{background:#f2f2f2}
   table{display:block;overflow-x:auto}
   table thead, table tbody, table tr, table th, table td { display:block; }
   table thead { display:none }
-  table tbody tr { margin-bottom:10px; border:1px solid #e6e6e6; padding:6px; border-radius:6px; background:#fff }
+  table tbody tr { margin-bottom:10px; border:2px solid #dcdcdc; padding:6px; border-radius:6px; background:#fff; box-shadow:0 4px 12px rgba(0,0,0,0.04) }
   /* Use flex rows so we can position first 5 columns on the first line and the rest below */
   table tbody tr { display:flex; flex-wrap:wrap; align-items:center }
   table tbody td { display:block; padding:4px 6px; border:none; box-sizing:border-box }
@@ -69,7 +69,7 @@ th{background:#f2f2f2}
 @media (max-width:1000px) and (min-width:641px) {
   table{display:block;overflow-x:auto}
   table thead { display:none }
-  table tbody tr { margin-bottom:10px; border:1px solid #e6e6e6; padding:6px; border-radius:6px; background:#fff; display:flex; flex-wrap:wrap; align-items:center }
+  table tbody tr { margin-bottom:10px; border:2px solid #dcdcdc; padding:6px; border-radius:6px; background:#fff; display:flex; flex-wrap:wrap; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.04) }
   table tbody td { display:block; padding:4px 6px; border:none; box-sizing:border-box }
   /* First four columns: occupy ~25% each on the first line; make column 5 stack under */
   table tbody td:nth-child(1), table tbody td:nth-child(2), table tbody td:nth-child(3), table tbody td:nth-child(4) {
@@ -167,7 +167,7 @@ th{background:#f2f2f2}
 .mobile-card-view{display:block}
 
 /* Mobile card styling applied at all widths so operation details keep the mobile layout */
-.mobile-card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:10px;margin:8px auto;box-shadow:0 2px 6px rgba(0,0,0,.08);max-width:800px;width:100%;box-sizing:border-box}
+.mobile-card{background:#fff;border:2px solid #dcdcdc;border-radius:8px;padding:10px;margin:8px auto;box-shadow:0 4px 12px rgba(0,0,0,.06);max-width:800px;width:100%;box-sizing:border-box}
 .mobile-card-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0}
 .mobile-card-row:last-child{border-bottom:none}
 .mobile-card-label{font-weight:600;color:#666;font-size:.85rem}
