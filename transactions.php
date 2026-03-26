@@ -557,7 +557,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         <select name="account_id" required style="flex:1">
           <option value="">Choisir compte…</option>
           <?php foreach ($accs as $a): ?>
-            <option value="<?php echo (int)$a['id']; ?>"><?php echo htmlspecialchars($a['name']); ?></option>
+            <option value="<?php echo htmlspecialchars($a['id']); ?>"><?php echo htmlspecialchars($a['name']); ?></option>
           <?php endforeach; ?>
         </select>
         <input name="currency" placeholder="Devise" style="width:80px" value="EUR">
