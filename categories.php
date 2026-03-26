@@ -413,7 +413,7 @@ foreach ($allCats as $c) {
 
     <?php if (!empty($tree[$crit])): ?>
     <table style="width:100%;margin-bottom:6px">
-      <thead><tr><th style="width:40%">Niveau 1</th><th style="width:40%">Niveau 2</th><th style="width:20%">Actions</th></tr></thead>
+      <thead><tr><th style="width:45%">Niveau 1</th><th style="width:35%">Niveau 2</th><th style="width:20%">Actions</th></tr></thead>
       <tbody>
       <?php foreach ($tree[$crit] as $parentId => $node):
         if (!$node['info']) continue;
@@ -442,7 +442,14 @@ foreach ($allCats as $c) {
             <form method="post" style="display:inline-flex;gap:4px">
               <input type="hidden" name="action" value="edit">
               <input type="hidden" name="cat_id" value="<?php echo $child['id']; ?>">
-              <input type="text" name="label" value="<?php echo htmlspecialchars($child['label']); ?>" style="width:130px" required>
+              <?php
+                // Prepare display label: if stored value contains "Parent/Child", strip the parent prefix for the editable field
+                $displayLabel = $child['label'];
+                if (isset($parent['label']) && $parent['label'] !== '' && strpos($child['label'], $parent['label'].'/') === 0) {
+                  $displayLabel = substr($child['label'], strlen($parent['label']) + 1);
+                }
+              ?>
+              <input type="text" name="label" value="<?php echo htmlspecialchars($displayLabel); ?>" style="width:170px" required>
               <button type="submit" title="Modifier">💾</button>
             </form>
           </td>
@@ -459,8 +466,8 @@ foreach ($allCats as $c) {
                 $concatLabel = $parent['label'] . '/' . $child['label'];
               }
             ?>
-            <div style="display:inline-block;margin-left:8px;vertical-align:middle">
-              <input type="text" readonly value="<?php echo htmlspecialchars($concatLabel); ?>" style="width:220px" title="Libellé concaténé Parent/Enfant">
+            <div style="display:inline-block;margin-left:8px;vertical-align:middle;min-width:220px;color:#333">
+              <?php echo htmlspecialchars($concatLabel); ?>
             </div>
           </td>
           <?php endforeach; endif; ?>
