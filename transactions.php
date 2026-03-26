@@ -312,6 +312,20 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
               <select name="fcat1" onchange="this.form.submit()">
             <option value=""><?php echo htmlspecialchars($criterionNames[1]); ?></option>
         
+      (function(){
+        // simple toast container and helper
+        var tc = document.createElement('div'); tc.id = 'toastContainer'; tc.style.position = 'fixed'; tc.style.right = '16px'; tc.style.top = '16px'; tc.style.zIndex = '3200'; tc.style.display = 'flex'; tc.style.flexDirection = 'column'; tc.style.gap = '8px'; document.body.appendChild(tc);
+        window.showToast = function(msg, timeout){
+          try {
+            timeout = (typeof timeout === 'number') ? timeout : 3000;
+            var el = document.createElement('div');
+            el.textContent = msg || '';
+            el.style.background = 'rgba(32,32,32,0.9)'; el.style.color = '#fff'; el.style.padding = '8px 12px'; el.style.borderRadius = '6px'; el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.2)'; el.style.opacity = '1'; el.style.transition = 'opacity 0.35s ease'; el.style.maxWidth = '320px'; el.style.fontSize = '0.95rem';
+            tc.appendChild(el);
+            setTimeout(function(){ el.style.opacity = '0'; setTimeout(function(){ try{ el.remove(); }catch(e){} }, 360); }, timeout);
+          } catch(e){ console.log('toast', msg); }
+        };
+      })();
               <?php if (!empty($catTree[1])): foreach ($catTree[1] as $pid => $node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
                 <?php foreach ($node['children'] as $child): ?>
@@ -863,6 +877,9 @@ document.addEventListener('DOMContentLoaded', function(){
     <button id="todelDelete" class="btn btn-danger">Supprimer définitivement</button>
     <button id="todelRestore" class="btn btn-restore">Restaurer</button>
   </div>
+  <div id="todelMarkActions" style="margin-top:8px">
+    <button id="todelMark" class="btn btn-warning">Supprimer la ligne</button>
+  </div>
   <div style="margin-top:8px">
     <button id="todelCancel" class="btn btn-cancel">Annuler</button>
   </div>
@@ -891,10 +908,13 @@ document.addEventListener('DOMContentLoaded', function(){
     // Show popup for any row; hide TODEL actions if not TODEL
     showPopup(e.pageX, e.pageY, tr.dataset.txid, tr);
     var todelActions = document.getElementById('todelActions');
+    var todelMarkActions = document.getElementById('todelMarkActions');
     if (st === 'TODEL') {
       todelActions.style.display = 'block';
+      if (todelMarkActions) todelMarkActions.style.display = 'none';
     } else {
       todelActions.style.display = 'none';
+      if (todelMarkActions) todelMarkActions.style.display = 'block';
     }
     // update the showImportRows button label based on current state
     var importBtn = document.getElementById('showImportRows');
@@ -909,7 +929,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (!confirm('Confirmer la suppression définitive de cette ligne ? Cette action est irréversible.')) return;
     fetch('mon-site/api/tx_action.php', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=delete&id='+encodeURIComponent(txid) })
       .then(r=>r.json()).then(function(j){
-        if (j && j.ok) { currentTr.parentNode.removeChild(currentTr); hidePopup(); }
+        if (j && j.ok) { currentTr.parentNode.removeChild(currentTr); hidePopup(); showToast('Ligne supprimée définitivement'); }
         else alert('Erreur: ' + (j && j.error ? j.error : 'action échouée'));
       }).catch(function(e){ alert('Erreur réseau: '+e); });
   });
@@ -924,9 +944,34 @@ document.addEventListener('DOMContentLoaded', function(){
           currentTr.dataset.status = 'OTHR';
           var badge = currentTr.querySelector('.badge-todel'); if (badge) badge.parentNode.removeChild(badge);
           hidePopup();
+          showToast('Ligne restaurée');
         } else alert('Erreur: ' + (j && j.error ? j.error : 'action échouée'));
       }).catch(function(e){ alert('Erreur réseau: '+e); });
   });
+
+  // Mark a row as to-delete (soft mark)
+  var todelMarkBtn = document.getElementById('todelMark');
+  if (todelMarkBtn) {
+    todelMarkBtn.addEventListener('click', function(){
+      if (!currentTr) return;
+      var txid = currentTr.dataset.txid;
+      if (!confirm('Marquer cette ligne pour suppression ?')) return;
+      fetch('mon-site/api/tx_action.php', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: 'action=todel&id='+encodeURIComponent(txid) })
+      .then(r=>r.json()).then(function(j){
+        if (j && j.ok) {
+          currentTr.dataset.status = 'TODEL';
+          var dcell = currentTr.querySelector('.col-date');
+          if (dcell && !dcell.querySelector('.badge-todel')) {
+            var span = document.createElement('span'); span.className = 'badge-todel'; span.textContent = 'à supprimer ?';
+            dcell.insertBefore(span, dcell.firstChild);
+            dcell.insertBefore(document.createElement('br'), span.nextSibling);
+          }
+          hidePopup();
+          showToast('Ligne marquée pour suppression');
+        } else alert('Erreur: ' + (j && j.error ? j.error : 'action échouée'));
+      }).catch(function(e){ alert('Erreur réseau: '+e); });
+    });
+  }
 
   // Show/Hide rows of the same import (toggle)
   document.getElementById('showImportRows').addEventListener('click', function(){

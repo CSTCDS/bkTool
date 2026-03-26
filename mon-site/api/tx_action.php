@@ -22,6 +22,12 @@ try {
         $stmt->execute([':id' => $id]);
         echo json_encode(['ok' => true, 'action' => 'deleted']);
         exit;
+    } elseif ($action === 'todel') {
+        // mark transaction as to-delete (soft mark)
+        $stmt = $pdo->prepare('UPDATE transactions SET status = :st WHERE id = :id');
+        $stmt->execute([':st' => 'TODEL', ':id' => $id]);
+        echo json_encode(['ok' => true, 'action' => 'marked_todel']);
+        exit;
     } elseif ($action === 'restore') {
         $stmt = $pdo->prepare('UPDATE transactions SET status = :st WHERE id = :id');
         $stmt->execute([':st' => 'OTHR', ':id' => $id]);
