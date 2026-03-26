@@ -154,8 +154,11 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
             $chk->execute([':aid' => $accountId, ':bdate' => $bookingDate, ':yend' => $yearEnd, ':desc' => $description ?? '', ':amt' => $amount, ':st' => 'OTHR', ':nid' => $id]);
             $oldId = $chk->fetchColumn();
             if ($oldId) {
-                $upd = $pdo->prepare('UPDATE transactions SET status = :newst WHERE id = :id');
-                $upd->execute([':newst' => 'TODEL', ':id' => $oldId]);
+                // Remove older placeholder OTHR row immediately instead of two-step TODEL marking
+                try {
+                    $del = $pdo->prepare('DELETE FROM transactions WHERE id = :id');
+                    $del->execute([':id' => $oldId]);
+                } catch (Throwable $e) { /* ignore deletion errors */ }
             }
         } catch (Throwable $e) {
             // ignore, don't break the sync on this optional step

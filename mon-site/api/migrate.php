@@ -268,6 +268,20 @@ function bkt_migrate(PDO $pdo): void
                 }
             }
         },
+        // Version 17 : create log table for cron and error tracing
+        17 => function (PDO $pdo) {
+            $pdo->exec('CREATE TABLE IF NOT EXISTS logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                log_date DATE NOT NULL,
+                log_time TIME NOT NULL,
+                code_programme VARCHAR(50) NOT NULL,
+                libelle VARCHAR(200) DEFAULT NULL,
+                payload TEXT DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX (code_programme),
+                INDEX (log_date)
+            )');
+        },
     ];
 
     // Exécuter les migrations non encore appliquées

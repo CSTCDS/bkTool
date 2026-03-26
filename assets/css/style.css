@@ -114,8 +114,7 @@ th{background:#f2f2f2}
 .row-pending td{opacity:.85}
 .badge-pending{display:inline-block;font-size:.72rem;background:#ff9800;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px;font-style:normal;vertical-align:middle}
 
-/* Badge for transactions marked to be deleted */
-.badge-todel{display:inline-block;font-size:.72rem;background:#c62828;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px;font-style:normal;vertical-align:middle}
+/* Note: TODEL marker removed (legacy) */
 
 /* Badge for accounting date equal today */
 .badge-today{display:inline-block;font-size:.72rem;background:#c62828;color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px;font-style:normal;vertical-align:middle}

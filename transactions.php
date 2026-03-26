@@ -481,7 +481,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         </td>
         <td class="col-date">
           <?php if ($badgeHtml) { echo $badgeHtml . '<br>'; } else if ($isPending) { echo '<span class="badge-pending">P. Différé</span><br>'; } ?>
-          <?php if (isset($t['status']) && strtoupper((string)$t['status']) === 'TODEL') echo '<span class="badge-todel">à supprimer ?</span><br>'; ?>
+          <?php /* TODEL status removed: legacy marker cleaned */ ?>
           <?php echo htmlspecialchars((string)($t['booking_date'] ?? '')); ?>
         </td>
         <td class="col-montant" style="<?php echo ($t['amount'] < 0) ? 'color:#c62828' : 'color:#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$t['amount'], 2, ',', ' ')); ?></td>
