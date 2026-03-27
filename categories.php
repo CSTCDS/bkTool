@@ -121,6 +121,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $stmt = $pdo->prepare('UPDATE categories SET label = :l WHERE id = :id');
               $stmt->execute([':l' => $accountId, ':id' => $id]);
               $notice = 'Association compte modifiée.';
+              if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => true, 'id' => $id, 'label' => $accountId, 'criterion' => 0]);
+                exit;
+              }
             }
           } else {
             $label = trim((string)($_POST['label'] ?? ''));
@@ -145,6 +150,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $stmt = $pdo->prepare('UPDATE categories SET label = :l WHERE id = :id');
               $stmt->execute([':l' => $labelToStore, ':id' => $id]);
               $notice = 'Libellé modifié.';
+              if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => true, 'id' => $id, 'label' => $labelToStore, 'criterion' => $crit]);
+                exit;
+              }
             }
           }
         }
