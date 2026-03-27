@@ -55,6 +55,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['aspsp_name']) && !em
 }
 
 $country = $config['enable_country'] ?? 'FR';
+
+// Determine requested pane early to avoid undefined variable when rendering
+$pane = $_GET['pane'] ?? '';
+if (!in_array($pane, ['', 'sync', 'connect', 'testsync', 'logs'], true)) {
+  $pane = '';
+}
+
 ?><!doctype html>
 <html>
 <head>
@@ -206,7 +213,7 @@ $country = $config['enable_country'] ?? 'FR';
               $rows = [];
             }
           ?>
-          <table style="width:100%;border-collapse:collapse">
+          <table style="width:auto;border-collapse:collapse;table-layout:auto">
             <thead>
               <tr>
                 <th style="border:1px solid #ddd;padding:6px">Date</th>
