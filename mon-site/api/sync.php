@@ -319,17 +319,16 @@ function run_sync($pdo, $config)
                             elseif ($debug_d2 === null) $debug_d2 = $d->format('Y-m-d');
                         } catch (Throwable $e) { /* ignore parse errors */ }
                     }
-                    // filter candidates strictly greater than today
-                    $future = array_filter($candidates, function($d) use ($today){ return $d > $today; });
-                    if (!empty($future)) {
-                        usort($future, function($a,$b){ return $a <=> $b; });
-                        $chosen = $future[0];
-                        $debug_reason = 'chosen future date_du';
+                    // If any date_du candidates exist, choose the maximum (the latest date)
+                    if (!empty($candidates)) {
+                        usort($candidates, function($a,$b){ return $a <=> $b; });
+                        $chosen = end($candidates);
+                        $debug_reason = 'chosen max date_du';
                     } else {
-                        // fallback to 20th of current month
+                        // fallback to 20th of current month when no date_du found
                         $chosen = new DateTime('first day of this month');
                         $chosen->setDate((int)$chosen->format('Y'), (int)$chosen->format('m'), 20);
-                        $debug_reason = 'no future date_du found, fallback to 20th';
+                        $debug_reason = 'no date_du found, fallback to 20th';
                     }
                     $accRefDate = $chosen->format('Y-m-d');
                     // compute sup of d1/d2 for debug if both present
