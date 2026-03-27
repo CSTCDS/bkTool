@@ -425,58 +425,65 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
     <tbody>
       <?php
       $runningAcc = [];
+      // cumulative sums: $groupRunning counts only BOOK rows; $virtualGroupRunning counts rows with CountInVirtual=1
+      $groupRunning = 0.0;
+      $virtualGroupRunning = 0.0;
       foreach ($txs as $t):
       // Consider BOOK as booked/current; MANUAL will be shown as manual badge (not generic pending)
       $statusUpper = strtoupper((string)($t['status'] ?? ''));
       $isPending = ($statusUpper !== 'BOOK' && $statusUpper !== 'MANUAL');
       $today = date('Y-m-d');
-      // Determine OTHR badge and whether OTHR should count in virtual balance
-      $countInVirtual = false;
+      // Use stored `badge` and `CountInVirtual` when available; fall back to legacy logic if absent
       $badgeHtml = '';
+      $storedBadge = isset($t['badge']) && $t['badge'] !== '' ? $t['badge'] : null;
+      $storedCount = isset($t['CountInVirtual']) ? (int)$t['CountInVirtual'] : null;
       if ($statusUpper === 'MANUAL') {
         $badgeHtml = '<span class="badge-manual">Saisie manuelle</span>';
-        $countInVirtual = false;
-          } elseif ($statusUpper === 'OTHR') {
-            // If both a transaction date (booking_date) and an account reference_date exist,
-            // and the transaction_date is strictly greater than the reference_date, mark as next month
-            $acctDate = isset($t['accounting_date']) && $t['accounting_date'] !== null && $t['accounting_date'] !== '' ? (string)$t['accounting_date'] : null;
-            $txDate = isset($t['booking_date']) && $t['booking_date'] !== null && $t['booking_date'] !== '' ? (string)$t['booking_date'] : null;
-            $accRef = isset($accRefMap[$t['account_id']]) ? $accRefMap[$t['account_id']] : null;
-            if ($txDate && $accRef) {
-              try {
-                $dtx = new DateTime($txDate);
-                $dref = new DateTime($accRef);
-                if ($dtx >= $dref) {
-                  $badgeHtml = '<span class="badge-nextmonth">Mois prochain</span>';
-                  $countInVirtual = true;
-                } else {
-                  // fall back to accounting_date logic below
-                  if ($acctDate) {
-                    if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; $countInVirtual = false; }
-                    elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtual = true; }
-                    else { $badgeHtml = '<span class="badge-paid">Payé</span>'; $countInVirtual = false; }
-                  } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtual = false; }
-                }
-              } catch (Throwable $e) {
-                // parsing error: fallback to existing accounting_date logic
-                if ($acctDate) {
-                  if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; $countInVirtual = false; }
-                  elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtual = true; }
-                  else { $badgeHtml = '<span class="badge-paid">Payé</span>'; $countInVirtual = false; }
-                } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtual = false; }
-              }
-            } else {
-              // fallback: use accounting_date logic
-              if ($acctDate) {
-                if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; $countInVirtual = false; }
-                elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtual = true; }
-                else { $badgeHtml = '<span class="badge-paid">Payé</span>'; $countInVirtual = false; }
+      } elseif ($storedBadge !== null) {
+        switch ($storedBadge) {
+          case 'nextmonth': $badgeHtml = '<span class="badge-nextmonth">Mois prochain</span>'; break;
+          case 'today': $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; break;
+          case 'pending': $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; break;
+          case 'paid': $badgeHtml = '<span class="badge-paid">Payé</span>'; break;
+          case 'manual': $badgeHtml = '<span class="badge-manual">Saisie manuelle</span>'; break;
+          default: $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; break;
+        }
+      } else {
+        // legacy fallback: compute from accounting_date/reference_date
+        if ($statusUpper === 'OTHR') {
+          $acctDate = isset($t['accounting_date']) && $t['accounting_date'] !== null && $t['accounting_date'] !== '' ? (string)$t['accounting_date'] : null;
+          $txDate = isset($t['booking_date']) && $t['booking_date'] !== null && $t['booking_date'] !== '' ? (string)$t['booking_date'] : null;
+          $accRef = isset($accRefMap[$t['account_id']]) ? $accRefMap[$t['account_id']] : null;
+          if ($txDate && $accRef) {
+            try {
+              $dtx = new DateTime($txDate);
+              $dref = new DateTime($accRef);
+              if ($dtx >= $dref) {
+                $badgeHtml = '<span class="badge-nextmonth">Mois prochain</span>';
               } else {
-                // fallback: treat as pending but do not count in virtual without accounting_date
-                $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
-                $countInVirtual = false;
+                if ($acctDate) {
+                  if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; }
+                  elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
+                  else { $badgeHtml = '<span class="badge-paid">Payé</span>'; }
+                } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
               }
+            } catch (Throwable $e) {
+              if ($acctDate) {
+                if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; }
+                elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
+                else { $badgeHtml = '<span class="badge-paid">Payé</span>'; }
+              } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
             }
+          } else {
+            if ($acctDate) {
+              if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; }
+              elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
+              else { $badgeHtml = '<span class="badge-paid">Payé</span>'; }
+            } else {
+              $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
+            }
+          }
+        }
       }
       $acctId = $t['account_id'];
       if (!isset($runningAcc[$acctId])) $runningAcc[$acctId] = 0.0; // cumul des montants déjà vus (newest->oldest)
@@ -561,29 +568,33 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           </div>
         </td>
         <?php if ($showSolde): ?>
-          <?php if (isset($t['status']) && strtoupper((string)$t['status']) === 'OTHR'): ?>
-            <td class="col-solde" data-label="Solde"></td>
-          <?php else: ?>
+          <?php // Show Solde only for BOOK rows; otherwise leave empty and do not count in $groupRunning ?>
+          <?php if (isset($t['status']) && strtoupper((string)$t['status']) === 'BOOK'): ?>
             <td class="col-solde" data-label="Solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td>
+          <?php else: ?>
+            <td class="col-solde" data-label="Solde"></td>
           <?php endif; ?>
         <?php endif; ?>
         <?php if ($groupSelected): ?>
-          <?php // compute virtual group balance before applying this row's amount ?>
-          <td class="col-solde-virtuel" data-label="Solde virtuel"><?php echo htmlspecialchars(number_format($groupStartBalance - ($groupRunning ?? 0.0), 2, ',', ' ')); ?></td>
+          <?php // compute virtual group balance (uses CountInVirtual) before applying this row's amount ?>
+          <td class="col-solde-virtuel" data-label="Solde virtuel"><?php echo htmlspecialchars(number_format($groupStartBalance - ($virtualGroupRunning ?? 0.0), 2, ',', ' ')); ?></td>
         <?php endif; ?>
       </tr>
         <?php
         // mettre à jour cumul pour ce compte (après affichage)
-        $shouldCount = true;
-        if ($statusUpper === 'OTHR') {
-          $shouldCount = $countInVirtual;
-        }
-        if ($shouldCount) {
+        // For Solde: count only BOOK rows
+        $shouldCountForSolde = (strtoupper((string)($t['status'] ?? '')) === 'BOOK');
+        if ($shouldCountForSolde) {
           $runningAcc[$acctId] += (float)$t['amount'];
-          // mettre à jour cumul pour le groupe sélectionné si applicable
           if ($groupSelected) {
-            if (!isset($groupRunning)) $groupRunning = 0.0;
             $groupRunning += (float)$t['amount'];
+          }
+        }
+        // For Solde Virtuel: count rows where CountInVirtual == 1
+        $shouldCountForVirtual = ((int)($t['CountInVirtual'] ?? 0) === 1);
+        if ($shouldCountForVirtual) {
+          if ($groupSelected) {
+            $virtualGroupRunning += (float)$t['amount'];
           }
         }
     endforeach;
