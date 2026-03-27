@@ -262,6 +262,8 @@ function run_sync($pdo, $config)
     // Process each account
         foreach ($accountsData as $accData) {
         $uid = $accData['uid'] ?? null;
+        // default reference date must be null for non-card accounts
+        $accRefDate = null;
         if (!$uid) continue;
 
         // Fetch balances
