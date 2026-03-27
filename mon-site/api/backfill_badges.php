@@ -73,9 +73,9 @@ while ($tx = $sel->fetch(PDO::FETCH_ASSOC)) {
             }
         }
     } else {
-        // For non-OTHR, keep badge NULL and CountInVirtual 0 by default
+        // For non-OTHR, badge NULL. For BOOK, CountInVirtual should be 1.
         $expectedBadge = null;
-        $expectedCount = 0;
+        if ($status === 'BOOK') $expectedCount = 1; else $expectedCount = 0;
     }
 
     $currentBadge = $tx['badge'] ?? null;

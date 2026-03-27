@@ -161,7 +161,12 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
         }
     } else {
         $badge = null;
-        $countInVirtual = 0;
+        // For BOOK status, count in virtual balance
+        if (strtoupper((string)$status) === 'BOOK') {
+            $countInVirtual = 1;
+        } else {
+            $countInVirtual = 0;
+        }
     }
 
     // Check existence to differentiate insert vs update; fetch full row if exists
