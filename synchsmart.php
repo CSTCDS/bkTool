@@ -271,9 +271,17 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
       alerts.innerHTML = '';
       loader.style.display = 'block';
       return fetch('sync.php', { method: 'GET' })
-        .then(function(r){ return r.json().catch(function(){ return { status: 'error', message: 'Invalid JSON response' }; }); })
-        .then(function(j){
+        .then(function(r){
+          return r.text();
+        }).then(function(text){
           loader.style.display = 'none';
+          var j = null;
+          try {
+            j = JSON.parse(text);
+          } catch (e) {
+            alerts.innerHTML = '<div style="color:#c62828">Erreur: réponse non JSON — voir détails ci‑dessous</div><pre style="white-space:pre-wrap;margin-top:8px;max-height:300px;overflow:auto;border:1px solid #eee;padding:8px">' + escapeHtml(text) + '</pre>';
+            return;
+          }
           if (!j) { alerts.innerHTML = '<div style="color:#c62828">Erreur: réponse vide</div>'; return; }
           if (j.status === 'ok') {
             // Group skipped transactions by account for per-account display
