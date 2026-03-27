@@ -720,7 +720,7 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
         try {
           var pv = this.value || '0';
           childSel.innerHTML = '';
-          renameRow.style.display = 'none';
+          if (renameRow) try { renameRow.style.display = 'none'; } catch(e){}
           if (pv && pv !== '0') {
             // populate child select with existing children for this parent
             var crit = document.getElementById('cc_criterion').value || '';
