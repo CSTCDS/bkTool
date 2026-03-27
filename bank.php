@@ -67,7 +67,7 @@ $country = $config['enable_country'] ?? 'FR';
 </head>
 <body>
 <?php include __DIR__ . '/header.php'; ?>
-<main>
+<main<?php echo ($pane === 'logs') ? ' class="full-width"' : ''; ?>>
   <h1>Banque</h1>
 
   <?php if (!empty($error)): ?>
