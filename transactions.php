@@ -446,7 +446,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
               try {
                 $dtx = new DateTime($txDate);
                 $dref = new DateTime($accRef);
-                if ($dtx > $dref) {
+                if ($dtx >= $dref) {
                   $badgeHtml = '<span class="badge-nextmonth">Mois prochain</span>';
                   $countInVirtual = true;
                 } else {

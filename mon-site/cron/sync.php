@@ -40,4 +40,4 @@ if (!empty($out['errors']) || !empty($out['skipped_transactions']) ) {
     } catch (Throwable $e) { /* ignore logging errors */ }
 }
 
-echo date('Y/m/d H:i:s')." Sync complete: accounts=" . ($out['accounts'] ?? 0) . " transactions=" . ($out['transactions'] ?? 0) . "\n";
+echo date('Y-m-d H:i:s')." Sync complete: accounts=" . ($out['accounts'] ?? 0) . " transactions=" . ($out['transactions'] ?? 0) . "\n";

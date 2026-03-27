@@ -11,6 +11,24 @@ try {
 }
 require __DIR__ . '/mon-site/api/sync.php';
 
+// AJAX logging endpoint: insert a row into `logs` when requested by client-side
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax_log']) && $_POST['ajax_log'] === '1') {
+  try {
+    $code = trim((string)($_POST['code'] ?? 'Synchro manuelle'));
+    $lib = trim((string)($_POST['lib'] ?? ''));
+    $payload = isset($_POST['payload']) ? $_POST['payload'] : null;
+    $stmt = $pdo->prepare('INSERT INTO logs (log_date, log_time, code_programme, libelle, payload, created_at) VALUES (CURDATE(), CURTIME(), :code, :lib, :payload, NOW())');
+    $stmt->execute([':code' => $code, ':lib' => $lib, ':payload' => $payload]);
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => true]);
+    exit;
+  } catch (Throwable $e) {
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => false, 'error' => (string)$e]);
+    exit;
+  }
+}
+
 // AJAX handler: return accounts + received/last entries for a given import_num
 if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
   $importNum = isset($_GET['import_num']) && ctype_digit((string)$_GET['import_num']) ? (int)$_GET['import_num'] : (int)$pdo->query('SELECT COALESCE(MAX(NumImport), 0) FROM transactions')->fetchColumn();
@@ -270,6 +288,14 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
       var loader = document.getElementById('loader'); var alerts = document.getElementById('alerts');
       alerts.innerHTML = '';
       loader.style.display = 'block';
+      // Log start of interactive sync to logs table via AJAX
+      try {
+        fetch('synchsmart.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams({ ajax_log: '1', code: 'Synchro manuelle', lib: 'start' })
+        }).catch(function(e){ /* ignore logging errors */ });
+      } catch(e) { /* ignore */ }
       return fetch('sync.php', { method: 'GET' })
         .then(function(r){
           return r.text();
@@ -301,6 +327,26 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
               });
             }
             var imp = (res && typeof res.import_num !== 'undefined') ? res.import_num : null;
+            // If sync produced errors or skipped transactions, log the result into DB
+            try {
+              var hasProblems = (res.errors && res.errors.length) || (res.transactions_skipped && res.transactions_skipped > 0);
+              if (hasProblems) {
+                var accounts = (res.accounts) ? (res.accounts) : 0;
+                var tx_read = (res.transactions) ? res.transactions : 0;
+                var tx_ins = (res.transactions_insert) ? res.transactions_insert : 0;
+                var tx_upd = (res.transactions_update) ? res.transactions_update : 0;
+                var tx_sk = (res.transactions_skipped) ? res.transactions_skipped : 0;
+                var sep = ' · ';
+                var lib = 'Comptes lus: ' + accounts + sep + 'Opérations lues: ' + tx_read + sep + 'Créées: ' + tx_ins + sep + 'Modifiées: ' + tx_upd + sep + 'En attente: ' + tx_sk;
+                var payload = JSON.stringify(res);
+                fetch('synchsmart.php', {
+                  method: 'POST',
+                  headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                  body: new URLSearchParams({ ajax_log: '1', code: 'Synchro manuelle', lib: lib, payload: payload })
+                }).catch(function(e){ /* ignore logging errors */ });
+              }
+            } catch(e) { /* ignore logging errors */ }
+
             if (imp === null) {
               return fetch('synchsmart.php?ajax=1').then(function(r){ return r.json(); }).then(function(data){ renderAccounts(data.accounts); notifyIfNeeded(); });
             } else {
@@ -308,6 +354,15 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
             }
           } else {
             alerts.innerHTML = '<div style="color:#c62828">Erreur: ' + (j.message || JSON.stringify(j)) + '</div>';
+            // Log sync error response
+            try {
+              var libErr = 'Sync error: ' + (j.message || JSON.stringify(j));
+              fetch('synchsmart.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({ ajax_log: '1', code: 'Synchro manuelle', lib: libErr, payload: JSON.stringify(j) })
+              }).catch(function(e){ /* ignore */ });
+            } catch(e) { /* ignore */ }
           }
         }).catch(function(e){ loader.style.display = 'none'; alerts.innerHTML = '<div style="color:#c62828">Erreur: '+e+'</div>'; });
     }

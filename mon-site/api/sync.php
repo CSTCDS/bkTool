@@ -300,17 +300,16 @@ function run_sync($pdo, $config)
                 }
                 if (!empty($ranges)) {
                     $accountAccountingRanges[$uid] = $ranges;
-                    // Compute reference_date: pick 'date_au' (end date) closest to today and strictly > today.
+                    // Compute reference_date: pick 'date_du' (start date) closest to today and strictly > today.
                     // If none found, fallback to the 20th of current month.
                     $today = new DateTime();
                     $candidates = [];
                     foreach ($ranges as $rg) {
-                        $dau = $rg['date_au'] ?? null;
-                        if (!$dau) continue;
+                        $ddu = $rg['date_du'] ?? null;
+                        if (!$ddu) continue;
                         try {
-                            // Accept formats with '/' or '-'
-                            $d = DateTime::createFromFormat('d/m/Y', str_replace('-', '/', $dau));
-                            if (!$d) $d = new DateTime($dau);
+                            // $ddu is stored as 'Y-m-d' above, use DateTime directly
+                            $d = new DateTime($ddu);
                             if ($d) $candidates[] = $d;
                         } catch (Throwable $e) { /* ignore parse errors */ }
                     }
