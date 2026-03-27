@@ -201,11 +201,8 @@ if ($tx) {
       $placeholders = [];
       $bindings = [];
       foreach ($acctIds as $i => $aid) { $ph = ':g' . $i; $placeholders[] = $ph; $bindings[$ph] = $aid; }
-      if ($hasAccountingDate) {
-        $q = 'SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (' . implode(',', $placeholders) . ') AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND (UPPER(status) = "BOOK" OR (UPPER(status) = "OTHR" AND accounting_date > :today))';
-      } else {
-        $q = 'SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (' . implode(',', $placeholders) . ') AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND UPPER(status) = "BOOK"';
-      }
+      // Use CountInVirtual flag to decide which transactions count in virtual balance
+      $q = 'SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (' . implode(',', $placeholders) . ') AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND CountInVirtual = 1';
       $stmtg = $pdo->prepare($q);
       $stmtg->bindValue(':bdate', $tx['booking_date']); $stmtg->bindValue(':id', $tx['id']);
       if ($hasAccountingDate) $stmtg->bindValue(':today', date('Y-m-d'));
@@ -216,27 +213,35 @@ if ($tx) {
     }
   }
 
-  // Determine badge and virtual counting for the single displayed transaction (OTHR rules)
+  // Determine badge and virtual counting for the single displayed transaction using stored fields
   $today = date('Y-m-d');
   $statusUpper = strtoupper((string)($tx['status'] ?? ''));
   $badgeHtml = '';
   $countInVirtualRow = false;
-  if ($statusUpper === 'OTHR') {
+  $storedBadge = isset($tx['badge']) && $tx['badge'] !== '' ? $tx['badge'] : null;
+  $storedCount = isset($tx['CountInVirtual']) ? (int)$tx['CountInVirtual'] : null;
+  if ($statusUpper === 'MANUAL') {
+    $badgeHtml = '<span class="badge-manual">Saisie manuelle</span>';
+    $countInVirtualRow = false;
+  } elseif ($storedBadge !== null) {
+    switch ($storedBadge) {
+      case 'nextmonth': $badgeHtml = '<span class="badge-nextmonth">Mois prochain</span>'; break;
+      case 'today': $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; break;
+      case 'pending': $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; break;
+      case 'paid': $badgeHtml = '<span class="badge-paid">Payé</span>'; break;
+      case 'manual': $badgeHtml = '<span class="badge-manual">Saisie manuelle</span>'; break;
+      default: $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; break;
+    }
+    $countInVirtualRow = ($storedCount === 1);
+  } else {
+    // legacy fallback: keep previous accounting_date behaviour
     $acctDate = isset($tx['accounting_date']) && $tx['accounting_date'] !== null && $tx['accounting_date'] !== '' ? (string)$tx['accounting_date'] : null;
-    if ($acctDate) {
-      if ($today === $acctDate) {
-        $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>';
-        $countInVirtualRow = false;
-      } elseif ($today < $acctDate) {
-        $badgeHtml = '<span class="badge-pending">P. Différé</span>';
-        $countInVirtualRow = true;
-      } else {
-        $badgeHtml = '<span class="badge-paid">Payé</span>';
-        $countInVirtualRow = false;
-      }
-    } else {
-      $badgeHtml = '<span class="badge-pending">P. Différé</span>';
-      $countInVirtualRow = false;
+    if ($statusUpper === 'OTHR') {
+      if ($acctDate) {
+        if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; $countInVirtualRow = false; }
+        elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtualRow = true; }
+        else { $badgeHtml = '<span class="badge-paid">Payé</span>'; $countInVirtualRow = false; }
+      } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtualRow = false; }
     }
   }
 
