@@ -291,6 +291,21 @@ function bkt_migrate(PDO $pdo): void
                 } catch (Throwable $e) { /* ignore if cannot add */ }
             }
         },
+        // Version 19 : add badge and CountInVirtual to transactions for centralized badge logic
+        19 => function (PDO $pdo) {
+            $cols = $pdo->query("SHOW COLUMNS FROM transactions LIKE 'badge'")->fetchAll();
+            if (empty($cols)) {
+                try {
+                    $pdo->exec("ALTER TABLE transactions ADD COLUMN badge VARCHAR(64) DEFAULT NULL AFTER status");
+                } catch (Throwable $e) { /* ignore if cannot add */ }
+            }
+            $cols2 = $pdo->query("SHOW COLUMNS FROM transactions LIKE 'CountInVirtual'")->fetchAll();
+            if (empty($cols2)) {
+                try {
+                    $pdo->exec("ALTER TABLE transactions ADD COLUMN CountInVirtual TINYINT(1) DEFAULT 0 AFTER badge");
+                } catch (Throwable $e) { /* ignore if cannot add */ }
+            }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées
