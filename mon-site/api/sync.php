@@ -13,6 +13,7 @@ function upsertAccount($pdo, $acc)
     $raw = json_encode($acc);
     $account_type = $acc['account_type'] ?? null;
     $reference_date = $acc['reference_date'] ?? null;
+    $solde2eme = isset($acc['solde2eme']) ? $acc['solde2eme'] : null;
 
     // helper: check if column exists in accounts table
     $hasAccountTypeCol = null;
@@ -34,18 +35,39 @@ function upsertAccount($pdo, $acc)
 
     if (!$exists) {
         if ($hasAccountTypeCol && $account_type !== null) {
-            $stmt = $pdo->prepare(
-                'INSERT INTO accounts (id, name, balance, currency, raw, account_type, reference_date, updated_at) VALUES (:id, :name, :balance, :currency, :raw, :account_type, :reference_date, NOW())'
-            );
-            $stmt->execute([
-                ':id' => $id,
-                ':name' => $name,
-                ':balance' => $balance,
-                ':currency' => $currency,
-                ':raw' => $raw,
-                ':account_type' => $account_type,
-                ':reference_date' => $reference_date
-            ]);
+            // try to include solde2eme if column exists
+            $hasSolde2Col = false;
+            try {
+                $chk2 = $pdo->prepare("SHOW COLUMNS FROM accounts LIKE 'solde2eme'"); $chk2->execute(); $hasSolde2Col = (bool)$chk2->fetchColumn();
+            } catch (Throwable $e) { $hasSolde2Col = false; }
+            if ($hasSolde2Col && $solde2eme !== null) {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO accounts (id, name, balance, currency, raw, account_type, solde2eme, reference_date, updated_at) VALUES (:id, :name, :balance, :currency, :raw, :account_type, :solde2eme, :reference_date, NOW())'
+                );
+                $stmt->execute([
+                    ':id' => $id,
+                    ':name' => $name,
+                    ':balance' => $balance,
+                    ':currency' => $currency,
+                    ':raw' => $raw,
+                    ':account_type' => $account_type,
+                    ':solde2eme' => $solde2eme,
+                    ':reference_date' => $reference_date
+                ]);
+            } else {
+                $stmt = $pdo->prepare(
+                    'INSERT INTO accounts (id, name, balance, currency, raw, account_type, reference_date, updated_at) VALUES (:id, :name, :balance, :currency, :raw, :account_type, :reference_date, NOW())'
+                );
+                $stmt->execute([
+                    ':id' => $id,
+                    ':name' => $name,
+                    ':balance' => $balance,
+                    ':currency' => $currency,
+                    ':raw' => $raw,
+                    ':account_type' => $account_type,
+                    ':reference_date' => $reference_date
+                ]);
+            }
         } else {
             $stmt = $pdo->prepare(
                 'INSERT INTO accounts (id, name, balance, currency, raw, reference_date, updated_at) VALUES (:id, :name, :balance, :currency, :raw, :reference_date, NOW())'
@@ -62,17 +84,37 @@ function upsertAccount($pdo, $acc)
         return ['action' => 'insert'];
     } else {
         if ($hasAccountTypeCol && $account_type !== null) {
-            $stmt = $pdo->prepare(
-                'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, account_type = :account_type, reference_date = :reference_date, updated_at = NOW() WHERE id = :id'
-            );
-            $stmt->execute([
-                ':id' => $id,
-                ':balance' => $balance,
-                ':currency' => $currency,
-                ':raw' => $raw,
-                ':account_type' => $account_type,
-                ':reference_date' => $reference_date
-            ]);
+            // try to update solde2eme if column exists
+            $hasSolde2Col = false;
+            try {
+                $chk2 = $pdo->prepare("SHOW COLUMNS FROM accounts LIKE 'solde2eme'"); $chk2->execute(); $hasSolde2Col = (bool)$chk2->fetchColumn();
+            } catch (Throwable $e) { $hasSolde2Col = false; }
+            if ($hasSolde2Col && $solde2eme !== null) {
+                $stmt = $pdo->prepare(
+                    'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, account_type = :account_type, solde2eme = :solde2eme, reference_date = :reference_date, updated_at = NOW() WHERE id = :id'
+                );
+                $stmt->execute([
+                    ':id' => $id,
+                    ':balance' => $balance,
+                    ':currency' => $currency,
+                    ':raw' => $raw,
+                    ':account_type' => $account_type,
+                    ':solde2eme' => $solde2eme,
+                    ':reference_date' => $reference_date
+                ]);
+            } else {
+                $stmt = $pdo->prepare(
+                    'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, account_type = :account_type, reference_date = :reference_date, updated_at = NOW() WHERE id = :id'
+                );
+                $stmt->execute([
+                    ':id' => $id,
+                    ':balance' => $balance,
+                    ':currency' => $currency,
+                    ':raw' => $raw,
+                    ':account_type' => $account_type,
+                    ':reference_date' => $reference_date
+                ]);
+            }
         } else {
             $stmt = $pdo->prepare(
                 'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, reference_date = :reference_date, updated_at = NOW() WHERE id = :id'
@@ -376,6 +418,8 @@ function run_sync($pdo, $config, $opts = [])
                 $account_type = 'card';
                 $first = $balances[0];
                 $balance = $first['balance_amount']['amount'] ?? 0;
+                // capture second balance if present
+                $secondBalance = isset($balances[1]) ? ($balances[1]['balance_amount']['amount'] ?? 0) : 0;
                 // extract accounting ranges (date_du/date_au from name, and reference_date)
                 $ranges = [];
                 foreach ($balances as $bline) {
@@ -441,6 +485,7 @@ function run_sync($pdo, $config, $opts = [])
             'account_type' => $account_type,
             // include the raw balances for reference
             'balances_raw' => $balRes['raw'] ?? json_encode($balRes['body'] ?? null),
+            'solde2eme' => $secondBalance ?? 0,
             'reference_date' => $accRefDate ?? null,
         ]);
         $result['accounts']++;

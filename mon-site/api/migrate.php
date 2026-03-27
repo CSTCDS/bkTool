@@ -306,6 +306,15 @@ function bkt_migrate(PDO $pdo): void
                 } catch (Throwable $e) { /* ignore if cannot add */ }
             }
         },
+        // Version 20 : add solde2eme to accounts for storing secondary balance (initialized to 0)
+        20 => function (PDO $pdo) {
+            $cols = $pdo->query("SHOW COLUMNS FROM accounts LIKE 'solde2eme'")->fetchAll();
+            if (empty($cols)) {
+                try {
+                    $pdo->exec("ALTER TABLE accounts ADD COLUMN solde2eme DECIMAL(20,4) DEFAULT 0 AFTER balance");
+                } catch (Throwable $e) { /* ignore if cannot add */ }
+            }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées

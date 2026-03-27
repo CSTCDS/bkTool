@@ -31,12 +31,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['tx_id']) && !empty($
   exit;
 }
 
-// Liste des comptes pour le dropdown (inclut le solde courant et reference_date)
-$accs = $pdo->query('SELECT id, name, balance, color, reference_date, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage ASC, name ASC')->fetchAll(PDO::FETCH_ASSOC);
+// Liste des comptes pour le dropdown (inclut le solde courant, solde2eme, type et reference_date)
+$accs = $pdo->query('SELECT id, name, balance, solde2eme, account_type, color, reference_date, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage ASC, name ASC')->fetchAll(PDO::FETCH_ASSOC);
 $accMap = [];
 $accBalances = [];
+$accSecond = [];
+$accTypeMap = [];
 $accRefMap = [];
-foreach ($accs as $a) { $accMap[$a['id']] = $a['name']; $accBalances[$a['id']] = (float)($a['balance'] ?? 0); $accRefMap[$a['id']] = (!empty($a['reference_date']) ? $a['reference_date'] : null); }
+foreach ($accs as $a) {
+  $accMap[$a['id']] = $a['name'];
+  $accBalances[$a['id']] = (float)($a['balance'] ?? 0);
+  $accSecond[$a['id']] = (float)($a['solde2eme'] ?? 0);
+  $accTypeMap[$a['id']] = $a['account_type'] ?? null;
+  $accRefMap[$a['id']] = (!empty($a['reference_date']) ? $a['reference_date'] : null);
+}
 
 // Palette de couleurs identique au graphe du Dashboard
 $palette = [
@@ -488,6 +496,10 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       $acctId = $t['account_id'];
       if (!isset($runningAcc[$acctId])) $runningAcc[$acctId] = 0.0; // cumul des montants déjà vus (newest->oldest)
       $startBal = $accBalances[$acctId] ?? 0.0;
+      // If a single card account is selected, include the second balance in the starting balance
+      if (!$groupSelected && (isset($accTypeMap[$acctId]) && $accTypeMap[$acctId] === 'card')) {
+        $startBal += ($accSecond[$acctId] ?? 0.0);
+      }
       // solde affiché = solde courant du compte - cumul des montants précédents
       $displayBalance = $startBal - $runningAcc[$acctId];
       // Decide counting flags BEFORE rendering the row so we can conditionally show cells
