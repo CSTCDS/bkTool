@@ -276,6 +276,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
         }).then(function(text){
           loader.style.display = 'none';
           var j = null;
+          // Remove any leading characters before the first JSON object to handle stray logs/notices
+          var braceIdx = text.indexOf('{');
+          if (braceIdx > 0) {
+            text = text.slice(braceIdx);
+          }
           try {
             j = JSON.parse(text);
           } catch (e) {
