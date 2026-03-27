@@ -105,6 +105,22 @@ foreach ($allCats as $c) {
 $catLabels = [];
 foreach ($allCats as $c) { $catLabels[$c['id']] = $c['label']; }
 
+// Build categories grouped by criterion for modal population (parents with children)
+$catsByCriterion = [];
+for ($ci = 1; $ci <= 4; $ci++) {
+  $catsByCriterion[$ci] = [];
+  if (!empty($catTree[$ci])) {
+    foreach ($catTree[$ci] as $pid => $node) {
+      if (!$node['info']) continue;
+      // only include parents that have children
+      if (empty($node['children'])) continue;
+      $grp = ['label' => $node['info']['label'], 'children' => []];
+      foreach ($node['children'] as $child) $grp['children'][] = ['id' => (int)$child['id'], 'label' => $child['label']];
+      $catsByCriterion[$ci][] = $grp;
+    }
+  }
+}
+
 // Build group children map (criterion=0): parent_id => [account_id, ...]
 $groupChildren = [];
 foreach ($allCats as $c) {
@@ -508,7 +524,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       $shouldCountForVirtual = ((int)($t['CountInVirtual'] ?? 0) === 1);
     ?>
       <?php $trClass = $isPending ? 'row-pending' : ''; ?>
-      <tr id="tx_<?php echo htmlspecialchars($t['id']); ?>"<?php echo $trClass ? ' class="' . $trClass . '"' : ''; ?> data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-status="<?php echo htmlspecialchars($t['status'] ?? ''); ?>" data-numimport="<?php echo htmlspecialchars($t['NumImport'] ?? 0); ?>">
+      <tr id="tx_<?php echo htmlspecialchars($t['id']); ?>"<?php echo $trClass ? ' class="' . $trClass . '"' : ''; ?> data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-status="<?php echo htmlspecialchars($t['status'] ?? ''); ?>" data-numimport="<?php echo htmlspecialchars($t['NumImport'] ?? 0); ?>" data-account="<?php echo htmlspecialchars($t['account_id']); ?>" data-desc="<?php echo htmlspecialchars($t['description'] ?? ''); ?>">
         <td class="col-compte" style="background:<?php echo $accColorMap[$t['account_id']] ?? 'transparent'; ?>; ">
           <?php echo htmlspecialchars($t['account_name'] ?? $t['account_id']); ?>
           <?php if (!empty($t['NumImport']) && (int)$t['NumImport'] > 0):
@@ -715,6 +731,88 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
   </div>
 </div>
 
+<!-- Create rule modal -->
+<div id="createRuleModal" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:2300;align-items:center;justify-content:center">
+  <div style="background:#fff;padding:14px;border-radius:8px;max-width:520px;width:92%;box-sizing:border-box">
+    <h3>Nouvelle règle</h3>
+    <form id="createRuleForm" method="post" action="rules.php">
+      <input type="hidden" name="action" value="create">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" name="active" value="1" checked> Actif</label>
+        <select name="category_level" id="rule_category_level" class="select-category-level" style="width:160px">
+          <option value="0">Choisir critère (1..4)</option>
+          <?php for ($ci=1;$ci<=4;$ci++): ?>
+            <option value="<?php echo $ci; ?>"><?php echo $ci . ' - ' . htmlspecialchars($criterionNames[$ci]); ?></option>
+          <?php endfor; ?>
+        </select>
+        <input name="pattern" id="rule_pattern" placeholder="Motif / libellé" style="flex:2;padding:8px">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select name="scope_account_id" id="rule_scope_account">
+          <option value="">-- pas de sélection --</option>
+          <option value="NULL">Global (tous les comptes)</option>
+          <?php foreach ($accs as $a): ?>
+            <option value="<?php echo htmlspecialchars($a['id']); ?>"><?php echo htmlspecialchars($a['name']); ?></option>
+          <?php endforeach; ?>
+        </select>
+        <input name="priority" id="rule_priority" value="100" style="width:70px;padding:6px">
+        <select name="valeur_a_affecter" id="rule_valeur_a_affecter" class="select-valeur" style="min-width:180px;margin-left:auto">
+          <option value="0">Valeur à affecter (sélectionner critère)</option>
+        </select>
+        <button class="btn" type="submit">Créer</button>
+        <button type="button" id="createRuleCancel" class="btn" style="margin-left:8px">Annuler</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// catsByCriterion available for modal population
+var catsByCriterion = <?php echo json_encode($catsByCriterion); ?>;
+
+function openCreateRuleModal(criterion, txid) {
+  var modal = document.getElementById('createRuleModal');
+  var form = document.getElementById('createRuleForm');
+  var levelSel = document.getElementById('rule_category_level');
+  var scopeSel = document.getElementById('rule_scope_account');
+  var patternInp = document.getElementById('rule_pattern');
+  var valSel = document.getElementById('rule_valeur_a_affecter');
+  if (!modal || !form) return;
+  // preselect criterion
+  levelSel.value = (criterion || 0);
+  // prefill pattern from transaction description if txid provided
+  if (txid) {
+    var row = document.getElementById('tx_' + txid);
+    if (row) {
+      var acc = row.getAttribute('data-account') || '';
+      var desc = row.getAttribute('data-desc') || '';
+      scopeSel.value = acc || '';
+      patternInp.value = desc || '';
+    }
+  }
+  // populate valeur_a_affecter for this criterion
+  populateRuleValues(criterion);
+  modal.style.display = 'flex';
+  // focus pattern
+  try { patternInp.focus(); } catch(e){}
+}
+
+function populateRuleValues(criterion) {
+  var valSel = document.getElementById('rule_valeur_a_affecter');
+  valSel.innerHTML = '';
+  var firstOpt = document.createElement('option'); firstOpt.value = '0'; firstOpt.textContent = 'Valeur à affecter (sélectionner critère)'; valSel.appendChild(firstOpt);
+  var groups = catsByCriterion[criterion] || [];
+  groups.forEach(function(g){
+    var optgroup = document.createElement('optgroup'); optgroup.label = g.label;
+    g.children.forEach(function(ch){ var o = document.createElement('option'); o.value = ch.id; o.textContent = ch.label; optgroup.appendChild(o); });
+    valSel.appendChild(optgroup);
+  });
+}
+
+document.getElementById('createRuleCancel').addEventListener('click', function(){ document.getElementById('createRuleModal').style.display = 'none'; });
+document.getElementById('rule_category_level').addEventListener('change', function(){ populateRuleValues(this.value); });
+</script>
+
 <script>
 (function(){
   var catTree = <?php echo json_encode($catTree); ?>;
@@ -770,10 +868,11 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
     var r = v.match(/^999998(\d)$/);
     if (r) {
       var crit2 = parseInt(r[1], 10);
-      // Open the rules screen and preselect the criterion
+      // Open create-rule modal prefilled with transaction data
       try {
-        window.location = 'rules.php?category_level=' + crit2 + '#new';
-      } catch(e) { window.open('rules.php?category_level=' + crit2 + '#new', '_blank'); }
+        var txid = el.getAttribute('data-txid');
+        openCreateRuleModal(crit2, txid);
+      } catch(e) { console.error(e); }
       setTimeout(function(){ el.value = ''; }, 200);
       return;
     }
