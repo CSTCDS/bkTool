@@ -183,17 +183,19 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
   // new variables requested
   $startSold = null;
   $startVirtualSold = null;
+  // determine if selection is a group (available to rendering scope)
+  $isGroupSel = is_string($acctSel) && strpos($acctSel, 'g:') === 0;
   if ($tx) {
     $acctId = $tx['account_id'];
-    // determine if selection is a group
-    $isGroupSel = is_string($acctSel) && strpos($acctSel, 'g:') === 0;
     if ($isGroupSel) {
       $gid = (int)substr($acctSel, 2);
       $acctIds = $groupChildren[$gid] ?? [];
-      // compute startSold as sum of balances of selected accounts
-      $startSold = 0.0;
-      foreach ($acctIds as $aid) { if (isset($accBalances[$aid])) $startSold += $accBalances[$aid]; }
-      $startVirtualSold = $startSold;
+      // compute startSold: for group, use balance of first account only
+      $firstAid = $acctIds[0] ?? null;
+      $startSold = ($firstAid !== null) ? ($accBalances[$firstAid] ?? 0.0) : 0.0;
+      // startVirtualSold is sum of balances of all accounts in the group
+      $startVirtualSold = 0.0;
+      foreach ($acctIds as $aid) { if (isset($accBalances[$aid])) $startVirtualSold += $accBalances[$aid]; }
 
       if (!empty($acctIds)) {
         $placeholders = [];
@@ -224,13 +226,13 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
       // single account selection
       $startSold = $accBalances[$acctId] ?? 0.0;
       $startVirtualSold = $startSold;
-      // Sum of previous BOOK transactions for this account
-      $sumNewer = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id = :aid AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND UPPER(status) = 'BOOK'");
+      // Sum of previous transactions for this account (ignore status)
+      $sumNewer = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id = :aid AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id))");
       $sumNewer->execute([':aid' => $acctId, ':bdate' => $tx['booking_date'], ':id' => $tx['id']]);
       $newer = (float)$sumNewer->fetchColumn();
       $displayBalance = $startSold - $newer;
 
-      // Sum of previous CountInVirtual transactions for this account
+      // Sum of previous CountInVirtual transactions for this account (still computed but will be hidden in UI)
       $sumVirt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id = :aid AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND CountInVirtual = 1");
       $sumVirt->execute([':aid' => $acctId, ':bdate' => $tx['booking_date'], ':id' => $tx['id']]);
       $virtNewer = (float)$sumVirt->fetchColumn();
@@ -369,14 +371,10 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     <div class="mobile-card-row"><span class="mobile-card-label">Devise</span><span class="m-value"><?php echo htmlspecialchars($tx['currency'] ?? ''); ?></span></div>
     <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Libellé</span><span class="m-value"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>
     <?php if ($displayBalance !== null): ?>
-      <?php if (isset($tx['status']) && strtoupper((string)$tx['status']) === 'OTHR'): ?>
-        <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span class="m-value"></span></div>
-      <?php else: ?>
-        <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span class="m-value"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></span></div>
-      <?php endif; ?>
+      <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span class="m-value"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></span></div>
     <?php endif; ?>
-    <?php if ($groupVirtualBalance !== null): ?>
-    <div class="mobile-card-row"><span class="mobile-card-label">Solde virtuel</span><span class="m-value" style="color:#5c6bc0"><?php echo htmlspecialchars(number_format($groupVirtualBalance, 2, ',', ' ')); ?></span></div>
+    <?php if ($isGroupSel): ?>
+    <div class="mobile-card-row"><span class="mobile-card-label">Solde virtuel</span><span class="m-value" style="color:#5c6bc0"><?php echo htmlspecialchars(number_format($groupVirtualBalance ?? 0.0, 2, ',', ' ')); ?></span></div>
     <?php endif; ?>
   </div>
   
