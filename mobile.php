@@ -31,12 +31,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['tx_id']) && !empty($
   header('Expires: 0');
 
 // Accounts list: order by numero_affichage (NULLs last), then numero_affichage, then name
-$accs = $pdo->query('SELECT id, name, balance, currency, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage ASC, name ASC')->fetchAll(PDO::FETCH_ASSOC);
+// Load accounts including secondary balance and account type
+$accs = $pdo->query('SELECT id, name, balance, solde2eme, account_type, currency, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage ASC, name ASC')->fetchAll(PDO::FETCH_ASSOC);
 $acctSel = $_GET['account'] ?? ($_COOKIE['selected_account'] ?? '');
 
-// Build quick maps for balances and names
+// Build quick maps for balances, second balances, types and names
 $accBalances = [];
-foreach ($accs as $a) { $accBalances[$a['id']] = (float)($a['balance'] ?? 0.0); }
+$accSecond = [];
+$accTypeMap = [];
+foreach ($accs as $a) { $accBalances[$a['id']] = (float)($a['balance'] ?? 0.0); $accSecond[$a['id']] = (float)($a['solde2eme'] ?? 0.0); $accTypeMap[$a['id']] = $a['account_type'] ?? null; }
 
 // Check if transactions.accounting_date column exists (migration may not have been run yet)
 $hasAccountingDate = false;
@@ -225,6 +228,10 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     } else {
       // single account selection
       $startSold = $accBalances[$acctId] ?? 0.0;
+      // if single selected account is a card, include the secondary balance
+      if (isset($accTypeMap[$acctId]) && $accTypeMap[$acctId] === 'card') {
+        $startSold += ($accSecond[$acctId] ?? 0.0);
+      }
       $startVirtualSold = $startSold;
       // Sum of previous transactions for this account (ignore status)
       $sumNewer = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id = :aid AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id))");
