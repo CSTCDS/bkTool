@@ -186,6 +186,16 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
                         ':countinvirtual' => (int)$countInVirtual,
                         ':raw' => $raw
                 ]);
+                // debug: record insert decision
+                if (!empty($GLOBALS['SYNC_DEBUG_ENABLED'])) {
+                    $GLOBALS['SYNC_DEBUG'][] = [
+                        'tx_id' => $id,
+                        'account_id' => $accountId,
+                        'action' => 'insert',
+                        'current' => null,
+                        'computed' => ['badge' => $badge, 'CountInVirtual' => (int)$countInVirtual]
+                    ];
+                }
         // After inserting a new transaction, check for older rows matching same account/date/description/amount with status 'OTHR'
         try {
             // also consider rows dated 31 December of the current year as potential matches
@@ -221,6 +231,16 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
             && ($existsBadge === (string)($badge ?? ''))
             && ($existsCount === (int)$countInVirtual);
         if ($same) {
+            // debug: noop
+            if (!empty($GLOBALS['SYNC_DEBUG_ENABLED'])) {
+                $GLOBALS['SYNC_DEBUG'][] = [
+                    'tx_id' => $id,
+                    'account_id' => $accountId,
+                    'action' => 'noop',
+                    'current' => ['amount'=>$existsAmt,'booking_date'=>$existsDate,'status'=>$existsStatus,'description'=>$existsDesc,'badge'=>$existsBadge,'CountInVirtual'=>$existsCount],
+                    'computed' => ['badge' => $badge, 'CountInVirtual' => (int)$countInVirtual]
+                ];
+            }
             return ['action' => 'noop'];
         }
 
@@ -258,11 +278,21 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
                 ':countinvirtual' => (int)$countInVirtual,
                 ':raw' => $raw
             ]);
-        return ['action' => 'update'];
+            // debug: record update decision
+            if (!empty($GLOBALS['SYNC_DEBUG_ENABLED'])) {
+                $GLOBALS['SYNC_DEBUG'][] = [
+                    'tx_id' => $id,
+                    'account_id' => $accountId,
+                    'action' => 'update',
+                    'current' => ['amount'=>$existsAmt,'booking_date'=>$existsDate,'status'=>$existsStatus,'description'=>$existsDesc,'badge'=>$existsBadge,'CountInVirtual'=>$existsCount],
+                    'computed' => ['badge' => $badge, 'CountInVirtual' => (int)$countInVirtual]
+                ];
+            }
+            return ['action' => 'update'];
     }
 }
 
-function run_sync($pdo, $config)
+function run_sync($pdo, $config, $opts = [])
 {
     $result = [
         'accounts' => 0,
@@ -275,6 +305,15 @@ function run_sync($pdo, $config)
         'skipped_transactions' => [],
         'errors' => []
     ];
+    // prepare debug capture if requested via opts
+    $debugEnabled = !empty($opts['debug']);
+    if ($debugEnabled) {
+        $GLOBALS['SYNC_DEBUG_ENABLED'] = true;
+        $GLOBALS['SYNC_DEBUG'] = [];
+    } else {
+        $GLOBALS['SYNC_DEBUG_ENABLED'] = false;
+        $GLOBALS['SYNC_DEBUG'] = [];
+    }
     
 
     // Get stored session_id
@@ -460,3 +499,4 @@ function run_sync($pdo, $config)
 
     return $result;
 }
+

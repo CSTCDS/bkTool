@@ -70,7 +70,10 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
 </head>
 <body>
   <?php include __DIR__ . '/header.php'; ?>
-  <div style="margin-top:8px"><button id="restartSyncBtn" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer">Relancer la synchro</button></div>
+  <div style="margin-top:8px">
+    <button id="restartSyncBtn" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer">Relancer la synchro</button>
+    <label style="margin-left:12px; font-size:0.9rem"><input type="checkbox" id="debugSync"> Debug</label>
+  </div>
   <div id="syncArea">
     <div id="loader" style="margin-top:12px">🔄 <strong>Synchronisation en cours...</strong></div>
     <div id="alerts" style="margin-top:12px"></div>
@@ -296,7 +299,10 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
           body: new URLSearchParams({ ajax_log: '1', code: 'Synchro manuelle', lib: 'start' })
         }).catch(function(e){ /* ignore logging errors */ });
       } catch(e) { /* ignore */ }
-      return fetch('sync.php', { method: 'GET' })
+      var dbg = document.getElementById('debugSync');
+      var syncUrl = 'sync.php';
+      if (dbg && dbg.checked) syncUrl += '?debug=1';
+      return fetch(syncUrl, { method: 'GET' })
         .then(function(r){
           return r.text();
         }).then(function(text){
@@ -315,6 +321,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
           }
           if (!j) { alerts.innerHTML = '<div style="color:#c62828">Erreur: réponse vide</div>'; return; }
           if (j.status === 'ok') {
+            // show debug lines if present
+            if (j.result && j.result.debug && Array.isArray(j.result.debug) && j.result.debug.length) {
+              var dbg = document.createElement('pre'); dbg.style.whiteSpace = 'pre-wrap'; dbg.style.maxHeight = '240px'; dbg.style.overflow = 'auto'; dbg.style.border = '1px solid #eee'; dbg.style.padding = '8px'; dbg.style.background = '#f7f7f7'; dbg.style.marginBottom = '8px';
+              dbg.textContent = j.result.debug.map(function(d){ return JSON.stringify(d); }).join('\n');
+              alerts.appendChild(dbg);
+            }
             // Group skipped transactions by account for per-account display
             var res = j.result || {};
             window.pendingByAccount = {};
