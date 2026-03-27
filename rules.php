@@ -226,15 +226,30 @@ $rules = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <button class="btn" type="submit">Filtrer</button>
 </form>
 
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  if (location.hash === '#new') {
+    var form = document.getElementById('newRuleForm');
+    if (form) {
+      try { form.scrollIntoView({behavior:'smooth', block:'center'}); } catch(e) {}
+      // focus pattern input for convenience
+      var pat = form.querySelector('input[name="pattern"]');
+      if (pat) pat.focus();
+    }
+  }
+});
+</script>
+
 <h2>Nouvelle règle</h2>
-<form method="post" style="margin-bottom:12px">
+<?php $preselectLevel = isset($_GET['category_level']) ? (int)$_GET['category_level'] : 0; ?>
+<form id="newRuleForm" method="post" style="margin-bottom:12px">
   <input type="hidden" name="action" value="create">
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
     <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" name="active" value="1" checked> Actif</label>
     <select name="category_level" class="select-category-level" style="width:160px">
       <option value="0">Choisir critère (1..4)</option>
       <?php for ($ci=1;$ci<=4;$ci++): ?>
-        <option value="<?php echo $ci; ?>"><?php echo $ci . ' - ' . htmlspecialchars($criterionNames[$ci]); ?></option>
+        <option value="<?php echo $ci; ?>"<?php echo ($preselectLevel === $ci) ? ' selected' : ''; ?>><?php echo $ci . ' - ' . htmlspecialchars($criterionNames[$ci]); ?></option>
       <?php endfor; ?>
     </select>
     <input name="pattern" placeholder="Motif / libellé" style="flex:2;padding:8px">
