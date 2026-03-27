@@ -80,9 +80,6 @@ foreach ($allCats as $c) {
     if (!isset($catTree[$cr][$c['parent_id']])) $catTree[$cr][$c['parent_id']] = ['info' => null, 'children' => []];
     $catTree[$cr][$c['parent_id']]['children'][] = $c;
   }
-}
-
-// Flat map id=>label for quick lookup (used for suggestion display)
 $catLabels = [];
 foreach ($allCats as $c) { $catLabels[$c['id']] = $c['label']; }
 
