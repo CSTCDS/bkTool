@@ -129,14 +129,48 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
     $raw = json_encode($tx);
     $accountingDate = isset($tx['accounting_date']) && $tx['accounting_date'] !== '' ? $tx['accounting_date'] : null;
 
+    // Determine badge and CountInVirtual based on account settings and dates
+    $badge = null;
+    $countInVirtual = 0;
+    $today = date('Y-m-d');
+    $accountId = $tx['_account_id'] ?? null;
+    $account_type = null;
+    $account_ref_date = null;
+    if ($accountId) {
+        try {
+            $qacc = $pdo->prepare('SELECT account_type, reference_date FROM accounts WHERE id = :id LIMIT 1');
+            $qacc->execute([':id' => $accountId]);
+            $ar = $qacc->fetch(PDO::FETCH_ASSOC);
+            if ($ar) { $account_type = $ar['account_type'] ?? null; $account_ref_date = $ar['reference_date'] ?? null; }
+        } catch (Throwable $e) { /* ignore */ }
+    }
+
     // Check existence to differentiate insert vs update; fetch full row if exists
     $q = $pdo->prepare('SELECT amount, booking_date, status, COALESCE(description,"") AS description FROM transactions WHERE id = :id LIMIT 1');
     $q->execute([':id' => $id]);
     $existing = $q->fetch(PDO::FETCH_ASSOC);
     if (!$existing) {
+                // compute badge/count for insert
+                if (strtoupper((string)$status) === 'OTHR') {
+                    // card-specific 'Mois prochain' when booking_date >= account.reference_date
+                    if ($account_type === 'card' && !empty($account_ref_date) && $bookingDate >= $account_ref_date) {
+                        $badge = 'nextmonth';
+                        $countInVirtual = 0;
+                    } else {
+                        if ($accountingDate) {
+                            if ($today === $accountingDate) { $badge = 'today'; $countInVirtual = 0; }
+                            elseif ($today < $accountingDate) { $badge = 'pending'; $countInVirtual = ($account_type === 'current' ? 1 : 1); }
+                            else { $badge = 'paid'; $countInVirtual = 0; }
+                        } else {
+                            $badge = 'pending';
+                            $countInVirtual = 0;
+                        }
+                    }
+                }
+
                 $stmt = $pdo->prepare(
-                        'INSERT INTO transactions (id, account_id, amount, currency, NumImport, description, booking_date, status, accounting_date, raw, created_at) '
-                    . 'VALUES (:id, :account_id, :amount, :currency, :num_import, :description, :booking_date, :status, :accounting_date, :raw, NOW())'
+                        'INSERT INTO transactions (id, account_id, amount, currency, NumImport, description, booking_date, status, accounting_date, badge, CountInVirtual, raw, created_at) '
+                    . 'VALUES (:id, :account_id, :amount, :currency, :num_import, :description, :booking_date, :status, :accounting_date, :badge, :countinvirtual, :raw, NOW())'
                 );
                 $stmt->execute([
                         ':id' => $id,
@@ -148,6 +182,8 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
                         ':booking_date' => $bookingDate,
                         ':status' => $status,
                         ':accounting_date' => $accountingDate,
+                        ':badge' => $badge,
+                        ':countinvirtual' => (int)$countInVirtual,
                         ':raw' => $raw
                 ]);
         // After inserting a new transaction, check for older rows matching same account/date/description/amount with status 'OTHR'
@@ -182,8 +218,25 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
         }
 
             // On updates, ne pas modifier NumImport (conserver la valeur existante)
+            // compute badge/count for update
+            if (strtoupper((string)$status) === 'OTHR') {
+                if ($account_type === 'card' && !empty($account_ref_date) && $bookingDate >= $account_ref_date) {
+                    $badge = 'nextmonth';
+                    $countInVirtual = 0;
+                } else {
+                    if ($accountingDate) {
+                        if ($today === $accountingDate) { $badge = 'today'; $countInVirtual = 0; }
+                        elseif ($today < $accountingDate) { $badge = 'pending'; $countInVirtual = ($account_type === 'current' ? 1 : 1); }
+                        else { $badge = 'paid'; $countInVirtual = 0; }
+                    } else {
+                        $badge = 'pending';
+                        $countInVirtual = 0;
+                    }
+                }
+            }
+
             $stmt = $pdo->prepare(
-                'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, description = :description, booking_date = :booking_date, status = :status, accounting_date = :accounting_date, raw = :raw WHERE id = :id'
+                'UPDATE transactions SET account_id = :account_id, amount = :amount, currency = :currency, description = :description, booking_date = :booking_date, status = :status, accounting_date = :accounting_date, badge = :badge, CountInVirtual = :countinvirtual, raw = :raw WHERE id = :id'
             );
             $stmt->execute([
                 ':id' => $id,
@@ -194,6 +247,8 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
                 ':booking_date' => $bookingDate,
                 ':status' => $status,
                 ':accounting_date' => $accountingDate,
+                ':badge' => $badge,
+                ':countinvirtual' => (int)$countInVirtual,
                 ':raw' => $raw
             ]);
         return ['action' => 'update'];
