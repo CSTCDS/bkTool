@@ -498,6 +498,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
                 <div style="flex:1">
                   <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>" style="width:100%">
                     <option value="">—</option>
+                    <option value="999999<?php echo $ci2; ?>">Créer une Catégorie N°<?php echo $ci2; ?></option>
                     <?php if (!empty($catTree[$ci2])): foreach ($catTree[$ci2] as $pid => $node): if (!$node['info']) continue; ?>
                       <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
                         <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)$curVal === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
@@ -520,6 +521,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
                 <div style="flex:1">
                   <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>" style="width:100%">
                     <option value="">—</option>
+                    <option value="999999<?php echo $ci2; ?>">Créer une Catégorie N°<?php echo $ci2; ?></option>
                     <?php if (!empty($catTree[$ci2])): foreach ($catTree[$ci2] as $pid => $node): if (!$node['info']) continue; ?>
                       <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
                         <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)$curVal === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
@@ -663,7 +665,10 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
     critInput.value = criterion;
     document.getElementById('cc_label').value = '';
     modal.dataset.level = level;
-    modal.dataset.trigger = triggerSelect ? (triggerSelect.name || '') : '';
+    // store trigger info: for row selects we keep txid+field, for modal selects we keep name
+    modal.dataset.trigger_name = triggerSelect && triggerSelect.name ? triggerSelect.name : '';
+    modal.dataset.trigger_txid = triggerSelect && triggerSelect.getAttribute ? (triggerSelect.getAttribute('data-txid') || '') : '';
+    modal.dataset.trigger_field = triggerSelect && triggerSelect.getAttribute ? (triggerSelect.getAttribute('data-field') || '') : '';
     if (level === 1) {
       title.textContent = 'Créer une Catégorie N°' + criterion;
       parentRow.style.display = 'none';
@@ -708,10 +713,33 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
     fd.append('ajax','1');
     fetch('categories.php', { method: 'POST', body: fd }).then(function(r){ return r.json(); }).then(function(j){
       if (!j || !j.ok) { alert('Erreur création: ' + (j && j.error ? j.error : 'unknown')); return; }
-      var newId = j.id; var newLabel = j.label;
-      var triggerName = modal.dataset.trigger; var trigger = null;
-      if (triggerName) trigger = document.querySelector('select[name="' + triggerName + '"]');
-      document.querySelectorAll('select[name^="cat"]').forEach(function(sel){ if (sel.dataset && parseInt(sel.dataset.criterion,10) === parseInt(j.criterion,10)) { var opt = document.createElement('option'); opt.value = newId; opt.textContent = newLabel; sel.appendChild(opt); } });
+      var newId = j.id; var newLabel = j.label; var criterion = j.criterion;
+      // add new option to all matching selects: selects with name catN and row selects (.cat-select)
+      var selCandidates = Array.from(document.querySelectorAll('select'));
+      selCandidates.forEach(function(sel){
+        var crit = null;
+        if (sel.name && sel.name.match(/^cat(\d+)/)) {
+          crit = parseInt(sel.name.replace(/^cat(\d+).*$/, '$1'), 10);
+        } else if (sel.classList && sel.classList.contains('cat-select') && sel.dataset && sel.dataset.field) {
+          var m = sel.dataset.field.match(/^cat(\d+)_id$/);
+          if (m) crit = parseInt(m[1],10);
+        }
+        if (crit === null || isNaN(crit)) return;
+        if (crit === parseInt(criterion,10)) {
+          var opt = document.createElement('option'); opt.value = newId; opt.textContent = newLabel; sel.appendChild(opt);
+        }
+      });
+
+      // locate triggering select: prefer row select by txid+field, else by name
+      var trigger = null;
+      var ttx = modal.dataset.trigger_txid || '';
+      var tfield = modal.dataset.trigger_field || '';
+      if (ttx && tfield) {
+        trigger = document.querySelector('select.cat-select[data-txid="' + ttx + '"][data-field="' + tfield + '"]');
+      }
+      if (!trigger && modal.dataset.trigger_name) {
+        trigger = document.querySelector('select[name="' + modal.dataset.trigger_name + '"]');
+      }
       if (trigger) { trigger.value = newId; trigger.dispatchEvent(new Event('change')); }
       modal.style.display = 'none';
     }).catch(function(e){ alert('Erreur AJAX: '+e); });
