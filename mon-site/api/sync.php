@@ -146,7 +146,7 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
     }
 
     // Check existence to differentiate insert vs update; fetch full row if exists
-    $q = $pdo->prepare('SELECT amount, booking_date, status, COALESCE(description,"") AS description FROM transactions WHERE id = :id LIMIT 1');
+    $q = $pdo->prepare('SELECT amount, booking_date, status, COALESCE(description,"") AS description, COALESCE(badge,"") AS badge, COALESCE(CountInVirtual,0) AS CountInVirtual FROM transactions WHERE id = :id LIMIT 1');
     $q->execute([':id' => $id]);
     $existing = $q->fetch(PDO::FETCH_ASSOC);
     if (!$existing) {
@@ -206,13 +206,20 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
         }
         return ['action' => 'insert'];
     } else {
-        // Compare fields: booking_date, amount, status, description
+        // Compare fields: booking_date, amount, status, description, badge, CountInVirtual
         $existsDesc = (string)($existing['description'] ?? '');
         $existsAmt = (float)($existing['amount'] ?? 0);
         $existsDate = (string)($existing['booking_date'] ?? '');
         $existsStatus = (string)($existing['status'] ?? '');
+        $existsBadge = (string)($existing['badge'] ?? '');
+        $existsCount = (int)($existing['CountInVirtual'] ?? 0);
 
-        $same = ($existsDate === (string)$bookingDate) && ((float)$existsAmt === (float)$amount) && ($existsStatus === (string)$status) && ($existsDesc === (string)($description ?? ''));
+        $same = ($existsDate === (string)$bookingDate)
+            && ((float)$existsAmt === (float)$amount)
+            && ($existsStatus === (string)$status)
+            && ($existsDesc === (string)($description ?? ''))
+            && ($existsBadge === (string)($badge ?? ''))
+            && ($existsCount === (int)$countInVirtual);
         if ($same) {
             return ['action' => 'noop'];
         }
