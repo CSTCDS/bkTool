@@ -690,7 +690,10 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
   document.addEventListener('change', function(e){
     var el = e.target;
     if (!el || el.tagName !== 'SELECT') return;
-    if (!el.name || el.name.indexOf('cat') !== 0) return;
+    // Accept either named selects like select[name="cat1"] (modal) or row selects with data-field (cat-select)
+    var isRowSelect = el.classList && el.classList.contains('cat-select') && el.dataset && el.dataset.field && (/^cat\d+_id$/.test(el.dataset.field));
+    var isNamedCat = el.name && (/^cat\d+/.test(el.name));
+    if (!isRowSelect && !isNamedCat) return;
     var v = el.value;
     if (!v) return;
     var m = v.match(/^999999(\d)$/);
