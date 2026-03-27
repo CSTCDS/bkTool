@@ -490,6 +490,9 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       $startBal = $accBalances[$acctId] ?? 0.0;
       // solde affiché = solde courant du compte - cumul des montants précédents
       $displayBalance = $startBal - $runningAcc[$acctId];
+      // Decide counting flags BEFORE rendering the row so we can conditionally show cells
+      $shouldCountForSolde = (strtoupper((string)($t['status'] ?? '')) === 'BOOK');
+      $shouldCountForVirtual = ((int)($t['CountInVirtual'] ?? 0) === 1);
     ?>
       <?php $trClass = $isPending ? 'row-pending' : ''; ?>
       <tr id="tx_<?php echo htmlspecialchars($t['id']); ?>"<?php echo $trClass ? ' class="' . $trClass . '"' : ''; ?> data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-status="<?php echo htmlspecialchars($t['status'] ?? ''); ?>" data-numimport="<?php echo htmlspecialchars($t['NumImport'] ?? 0); ?>">
@@ -576,14 +579,17 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           <?php endif; ?>
         <?php endif; ?>
         <?php if ($groupSelected): ?>
-          <?php // compute virtual group balance (uses CountInVirtual) before applying this row's amount ?>
-          <td class="col-solde-virtuel" data-label="Solde virtuel"><?php echo htmlspecialchars(number_format($groupStartBalance - ($virtualGroupRunning ?? 0.0), 2, ',', ' ')); ?></td>
+          <?php // Show Solde virtuel only when this row counts for virtual (CountInVirtual==1) ?>
+          <?php if ($shouldCountForVirtual): ?>
+            <td class="col-solde-virtuel" data-label="Solde virtuel"><?php echo htmlspecialchars(number_format($groupStartBalance - ($virtualGroupRunning ?? 0.0), 2, ',', ' ')); ?></td>
+          <?php else: ?>
+            <td class="col-solde-virtuel" data-label="Solde virtuel"></td>
+          <?php endif; ?>
         <?php endif; ?>
       </tr>
         <?php
         // mettre à jour cumul pour ce compte (après affichage)
         // For Solde: count only BOOK rows
-        $shouldCountForSolde = (strtoupper((string)($t['status'] ?? '')) === 'BOOK');
         if ($shouldCountForSolde) {
           $runningAcc[$acctId] += (float)$t['amount'];
           if ($groupSelected) {
@@ -591,7 +597,6 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           }
         }
         // For Solde Virtuel: count rows where CountInVirtual == 1
-        $shouldCountForVirtual = ((int)($t['CountInVirtual'] ?? 0) === 1);
         if ($shouldCountForVirtual) {
           if ($groupSelected) {
             $virtualGroupRunning += (float)$t['amount'];
