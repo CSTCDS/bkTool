@@ -173,7 +173,7 @@ $cntStmt->execute();
 $total = (int)$cntStmt->fetchColumn();
 
 $sql = 'SELECT t.*, a.name AS account_name FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id' . ($where ? ' WHERE ' . implode(' AND ', $where) : '');
-$sql .= ' ORDER BY t.booking_date DESC, t.id DESC LIMIT :limit OFFSET :offset';
+$sql .= ' ORDER BY t.booking_date DESC, t.id DESC LIMIT 1 OFFSET :offset';
 $stmt = $pdo->prepare($sql);
 foreach ($params as $k => $v) $stmt->bindValue($k, $v);
 $stmt->bindValue(':offset', max(0, $idx), PDO::PARAM_INT);
@@ -203,7 +203,7 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         $bindings = [];
         foreach ($acctIds as $i => $aid) { $ph = ':g' . $i; $placeholders[] = $ph; $bindings[$ph] = $aid; }
         // Sum of previous BOOK transactions across the group (newer in ordering)
-        $qBook = 'SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (' . implode(',', $placeholders) . ') AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND UPPER(status) = ''BOOK''';
+        $qBook = "SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (" . implode(',', $placeholders) . ") AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND UPPER(status) = 'BOOK'";
         $stmtBook = $pdo->prepare($qBook);
         $stmtBook->bindValue(':bdate', $tx['booking_date']); $stmtBook->bindValue(':id', $tx['id']);
         foreach ($bindings as $k => $v) $stmtBook->bindValue($k, $v);
