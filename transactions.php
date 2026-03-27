@@ -194,7 +194,7 @@ for ($fi = 1; $fi <= 4; $fi++) {
 
 $sql = 'SELECT t.*, a.name AS account_name FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id';
 if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
- $sql .= ' ORDER BY t.booking_date DESC, t.amount DESC LIMIT :limit OFFSET :offset';
+ $sql .= ' ORDER BY t.booking_date DESC, t.id DESC LIMIT :limit OFFSET :offset';
 
  $stmt = $pdo->prepare($sql);
  foreach ($params as $k => $v) $stmt->bindValue($k, $v);
