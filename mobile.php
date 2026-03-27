@@ -173,7 +173,7 @@ $cntStmt->execute();
 $total = (int)$cntStmt->fetchColumn();
 
 $sql = 'SELECT t.*, a.name AS account_name FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id' . ($where ? ' WHERE ' . implode(' AND ', $where) : '');
-$sql .= ' ORDER BY t.booking_date DESC, t.amount DESC LIMIT 1 OFFSET :offset';
+$sql .= ' ORDER BY t.booking_date DESC, t.id DESC LIMIT :limit OFFSET :offset';
 $stmt = $pdo->prepare($sql);
 foreach ($params as $k => $v) $stmt->bindValue($k, $v);
 $stmt->bindValue(':offset', max(0, $idx), PDO::PARAM_INT);
