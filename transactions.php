@@ -435,14 +435,14 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       if ($statusUpper === 'MANUAL') {
         $badgeHtml = '<span class="badge-manual">Saisie manuelle</span>';
         $countInVirtual = false;
-      } elseif ($statusUpper === 'OTHR') {
+          } elseif ($statusUpper === 'OTHR') {
         $acctDate = isset($t['accounting_date']) && $t['accounting_date'] !== null && $t['accounting_date'] !== '' ? (string)$t['accounting_date'] : null;
         if ($acctDate) {
           if ($today === $acctDate) {
             $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>';
             $countInVirtual = false;
           } elseif ($today < $acctDate) {
-            $badgeHtml = '<span class="badge-pending">P. Différé</span>';
+            $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
             $countInVirtual = true;
           } else {
             $badgeHtml = '<span class="badge-paid">Payé</span>';
@@ -450,7 +450,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           }
         } else {
           // fallback: treat as pending but do not count in virtual without accounting_date
-          $badgeHtml = '<span class="badge-pending">P. Différé</span>';
+          $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
           $countInVirtual = false;
         }
       }
@@ -805,9 +805,20 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       }
       if (!trigger && modal.dataset.trigger_name) { trigger = document.querySelector('select[name="' + modal.dataset.trigger_name + '"]'); }
       if (trigger) { trigger.value = (fd.get('action') === 'edit') ? fd.get('cat_id') : newId; trigger.dispatchEvent(new Event('change')); }
+      // show confirmation toast
+      try {
+        var op = fd.get('action');
+        if (op === 'edit') showToast('Catégorie renommée'); else showToast('Catégorie créée');
+      } catch(e){}
       modal.style.display = 'none';
     }).catch(function(e){ alert('Erreur AJAX: '+e); });
   });
+  
+  // show toast after successful create/rename inside modal flow
+  (function(){
+    var originalFetch = window.fetch;
+    // we don't override fetch globally; instead add toast calls in the promise resolution above.
+  })();
 })();
 </script>
 <script>
