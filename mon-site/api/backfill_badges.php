@@ -26,11 +26,24 @@ function getAccountInfo(PDO $pdo, $aid, array &$cache) {
     return $r;
 }
 
-$sel = $pdo->query('SELECT id, account_id, booking_date, accounting_date, status, badge, CountInVirtual FROM transactions');
+// CLI options: --debug (print per-row), --dry-run (don't update), --limit=N, --id=TXID
+$opts = ['debug'=>false, 'dry'=>false, 'limit'=>0, 'id'=>null];
+foreach ($argv ?? [] as $a) {
+    if ($a === '--debug') $opts['debug'] = true;
+    if ($a === '--dry-run') $opts['dry'] = true;
+    if (strpos($a,'--limit=') === 0) $opts['limit'] = (int)substr($a,8);
+    if (strpos($a,'--id=') === 0) $opts['id'] = substr($a,5);
+}
+
+$sql = 'SELECT id, account_id, booking_date, accounting_date, status, badge, CountInVirtual FROM transactions';
+if ($opts['id']) { $sql .= ' WHERE id = ' . $pdo->quote($opts['id']); }
+$sel = $pdo->query($sql);
 $upd = $pdo->prepare('UPDATE transactions SET badge = :badge, CountInVirtual = :countinvirtual, raw = COALESCE(raw, raw) WHERE id = :id');
 
-$total = 0; $changed = 0; $errors = 0;
+$total = 0; $changed = 0; $errors = 0; $printed = 0;
 while ($tx = $sel->fetch(PDO::FETCH_ASSOC)) {
+    if ($opts['limit'] > 0 && $printed >= $opts['limit']) break;
+    $printed++;
     $total++;
     $id = $tx['id'];
     $accId = $tx['account_id'];
@@ -71,10 +84,20 @@ while ($tx = $sel->fetch(PDO::FETCH_ASSOC)) {
     // Normalize null vs empty string
     if ($currentBadge === '') $currentBadge = null;
 
-    if ($currentBadge !== $expectedBadge || $currentCount !== $expectedCount) {
+    $need = ($currentBadge !== $expectedBadge || $currentCount !== $expectedCount);
+
+    if ($opts['debug']) {
+        fwrite(STDOUT, "TX={$id} account={$accId} booking={$bookingDate} accounting={$accountingDate} status={$status}\n");
+        fwrite(STDOUT, "  current: badge=" . var_export($currentBadge, true) . ", CountInVirtual=" . var_export($currentCount, true) . "\n");
+        fwrite(STDOUT, "  expected: badge=" . var_export($expectedBadge, true) . ", CountInVirtual=" . var_export($expectedCount, true) . "\n");
+        fwrite(STDOUT, "  update_needed=" . ($need ? 'YES' : 'NO') . "\n");
+    }
+
+    if ($need && !$opts['dry']) {
         try {
             $upd->execute([':badge' => $expectedBadge, ':countinvirtual' => $expectedCount, ':id' => $id]);
             $changed++;
+            if ($opts['debug']) fwrite(STDOUT, "  -> UPDATED\n");
         } catch (Throwable $e) {
             fwrite(STDERR, "Failed update tx {$id}: " . $e->getMessage() . "\n");
             $errors++;
