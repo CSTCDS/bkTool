@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['tx_id']) && !empty($
 }
 
 // Liste des comptes pour le dropdown (inclut le solde courant et reference_date)
-$accs = $pdo->query('SELECT id, name, balance, color, reference_date FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+$accs = $pdo->query('SELECT id, name, balance, color, reference_date, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage ASC, name ASC')->fetchAll(PDO::FETCH_ASSOC);
 $accMap = [];
 $accBalances = [];
 $accRefMap = [];
@@ -491,7 +491,8 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       // solde affiché = solde courant du compte - cumul des montants précédents
       $displayBalance = $startBal - $runningAcc[$acctId];
       // Decide counting flags BEFORE rendering the row so we can conditionally show cells
-      $shouldCountForSolde = (strtoupper((string)($t['status'] ?? '')) === 'BOOK');
+      // If a single account is selected, count all rows regardless of status for Solde
+      $shouldCountForSolde = !$groupSelected ? true : (strtoupper((string)($t['status'] ?? '')) === 'BOOK');
       $shouldCountForVirtual = ((int)($t['CountInVirtual'] ?? 0) === 1);
     ?>
       <?php $trClass = $isPending ? 'row-pending' : ''; ?>
@@ -571,11 +572,15 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           </div>
         </td>
         <?php if ($showSolde): ?>
-          <?php // Show Solde only for BOOK rows; otherwise leave empty and do not count in $groupRunning ?>
-          <?php if (isset($t['status']) && strtoupper((string)$t['status']) === 'BOOK'): ?>
+          <?php if (!$groupSelected): ?>
             <td class="col-solde" data-label="Solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td>
           <?php else: ?>
-            <td class="col-solde" data-label="Solde"></td>
+            <?php // group selected: show Solde only for BOOK rows ?>
+            <?php if (isset($t['status']) && strtoupper((string)$t['status']) === 'BOOK'): ?>
+              <td class="col-solde" data-label="Solde"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></td>
+            <?php else: ?>
+              <td class="col-solde" data-label="Solde"></td>
+            <?php endif; ?>
           <?php endif; ?>
         <?php endif; ?>
         <?php if ($groupSelected): ?>
