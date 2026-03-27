@@ -50,7 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $max = $pdo->prepare('SELECT COALESCE(MAX(sort_order),0)+1 FROM categories WHERE criterion = :c AND parent_id IS NULL');
         $max->execute([':c' => $crit]);
         $stmt->execute([':c' => $crit, ':l' => $label, ':s' => $max->fetchColumn()]);
+        $newId = $pdo->lastInsertId();
         $notice = 'Niveau 1 ajouté.';
+        if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
+          header('Content-Type: application/json');
+          echo json_encode(['ok' => true, 'id' => (int)$newId, 'label' => $label, 'criterion' => $crit]);
+          exit;
+        }
       }
     }
 
@@ -72,14 +78,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($accountId !== '') {
               $stmt = $pdo->prepare('INSERT INTO categories (criterion, parent_id, label, sort_order) VALUES (0, :pid, :l, :s)');
               $stmt->execute([':pid' => $parentId, ':l' => $accountId, ':s' => $max->fetchColumn()]);
+              $newId = $pdo->lastInsertId();
               $notice = 'Compte ajouté au regroupement.';
+              if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => true, 'id' => (int)$newId, 'label' => $accountId, 'criterion' => 0]);
+                exit;
+              }
             }
           } else {
             $label = trim((string)($_POST['label'] ?? ''));
             if ($label !== '') {
               $stmt = $pdo->prepare('INSERT INTO categories (criterion, parent_id, label, sort_order) VALUES (:c, :pid, :l, :s)');
               $stmt->execute([':c' => $crit, ':pid' => $parentId, ':l' => $label, ':s' => $max->fetchColumn()]);
+              $newId = $pdo->lastInsertId();
               $notice = 'Niveau 2 ajouté.';
+              if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => true, 'id' => (int)$newId, 'label' => $label, 'criterion' => $crit]);
+                exit;
+              }
             }
           }
         }

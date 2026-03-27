@@ -584,8 +584,9 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       </div>
       <div style="display:flex;gap:8px;margin-bottom:8px">
         <?php for ($ci=1;$ci<=4;$ci++): ?>
-          <select name="cat<?php echo $ci; ?>" style="flex:1">
+          <select name="cat<?php echo $ci; ?>" class="cat-list" data-criterion="<?php echo $ci; ?>" style="flex:1">
             <option value=""><?php echo htmlspecialchars($criterionNames[$ci] ?? 'Cat'); ?></option>
+            <option value="999999<?php echo $ci; ?>">Créer une Catégorie N°<?php echo $ci; ?></option>
             <?php if (!empty($catTree[$ci])): foreach ($catTree[$ci] as $pid=>$node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
                 <option value="<?php echo (int)$node['info']['id']; ?>"><?php echo htmlspecialchars($node['info']['label']); ?></option>
@@ -628,6 +629,94 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       .catch(function(e) { console.error(e); });
   });
 });
+</script>
+<!-- Create category modal -->
+<div id="createCatModal" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:2200;align-items:center;justify-content:center">
+  <div style="background:#fff;padding:14px;border-radius:8px;max-width:520px;width:92%;box-sizing:border-box">
+    <h3 id="createCatTitle">Créer une catégorie</h3>
+    <form id="createCatForm">
+      <input type="hidden" name="criterion" id="cc_criterion">
+      <div style="margin-bottom:8px">
+        <label>Libellé: <input type="text" name="label" id="cc_label" required style="width:100%"></label>
+      </div>
+      <div style="margin-bottom:8px;display:none" id="cc_parent_row">
+        <label>Parent: <select name="parent_id" id="cc_parent" style="width:100%"></select></label>
+      </div>
+      <div style="text-align:right">
+        <button type="button" id="cc_cancel" class="btn" style="margin-right:8px">Annuler</button>
+        <button type="submit" class="btn btn-primary">Créer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  var catTree = <?php echo json_encode($catTree); ?>;
+
+  function openCreateModal(criterion, level, triggerSelect) {
+    var modal = document.getElementById('createCatModal');
+    var title = document.getElementById('createCatTitle');
+    var critInput = document.getElementById('cc_criterion');
+    var parentRow = document.getElementById('cc_parent_row');
+    var parentSel = document.getElementById('cc_parent');
+    critInput.value = criterion;
+    document.getElementById('cc_label').value = '';
+    modal.dataset.level = level;
+    modal.dataset.trigger = triggerSelect ? (triggerSelect.name || '') : '';
+    if (level === 1) {
+      title.textContent = 'Créer une Catégorie N°' + criterion;
+      parentRow.style.display = 'none';
+    } else {
+      title.textContent = 'Créer une Sous-catégorie N°' + criterion;
+      parentSel.innerHTML = '';
+      var parents = catTree[criterion] || {};
+      Object.keys(parents).forEach(function(pid){
+        var info = parents[pid].info;
+        if (!info) return;
+        var opt = document.createElement('option'); opt.value = info.id; opt.textContent = info.label;
+        parentSel.appendChild(opt);
+      });
+      parentRow.style.display = 'block';
+    }
+    modal.style.display = 'flex';
+  }
+
+  document.addEventListener('change', function(e){
+    var el = e.target;
+    if (!el || el.tagName !== 'SELECT') return;
+    if (!el.name || el.name.indexOf('cat') !== 0) return;
+    var v = el.value;
+    if (!v) return;
+    var m = v.match(/^999999(\d)$/);
+    if (m) {
+      var crit = parseInt(m[1], 10);
+      var level = 1;
+      openCreateModal(crit, level, el);
+      setTimeout(function(){ el.value = ''; }, 200);
+    }
+  });
+
+  document.getElementById('cc_cancel').addEventListener('click', function(){ document.getElementById('createCatModal').style.display = 'none'; });
+
+  document.getElementById('createCatForm').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var modal = document.getElementById('createCatModal');
+    var fd = new FormData(this);
+    var level = parseInt(modal.dataset.level || '1', 10);
+    if (level === 1) fd.append('action','add_level1'); else fd.append('action','add_level2');
+    fd.append('ajax','1');
+    fetch('categories.php', { method: 'POST', body: fd }).then(function(r){ return r.json(); }).then(function(j){
+      if (!j || !j.ok) { alert('Erreur création: ' + (j && j.error ? j.error : 'unknown')); return; }
+      var newId = j.id; var newLabel = j.label;
+      var triggerName = modal.dataset.trigger; var trigger = null;
+      if (triggerName) trigger = document.querySelector('select[name="' + triggerName + '"]');
+      document.querySelectorAll('select[name^="cat"]').forEach(function(sel){ if (sel.dataset && parseInt(sel.dataset.criterion,10) === parseInt(j.criterion,10)) { var opt = document.createElement('option'); opt.value = newId; opt.textContent = newLabel; sel.appendChild(opt); } });
+      if (trigger) { trigger.value = newId; trigger.dispatchEvent(new Event('change')); }
+      modal.style.display = 'none';
+    }).catch(function(e){ alert('Erreur AJAX: '+e); });
+  });
+})();
 </script>
 <script>
 // Add button/modal behaviour
