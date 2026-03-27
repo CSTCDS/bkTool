@@ -432,7 +432,9 @@ function run_sync($pdo, $config, $opts = [])
                         $d_au = DateTime::createFromFormat('d/m/Y', str_replace('-', '/', $m[2]));
                         if (!$d_au) $d_au = DateTime::createFromFormat('d/m/Y', $m[2]);
                         if ($d_du && $d_au) {
-                            $ranges[] = ['date_du' => $d_du->format('Y-m-d'), 'date_au' => $d_au->format('Y-m-d'), 'date_ref' => $date_ref];
+                            $d_du_minus = clone $d_du;
+                            $d_du_minus->modify('+1 day');
+                            $ranges[] = ['date_du' => $d_du_minus->format('Y-m-d'), 'date_au' => $d_au->format('Y-m-d'), 'date_ref' => $date_ref];
                         }
                     }
                 }
