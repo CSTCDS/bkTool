@@ -669,21 +669,19 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
     modal.dataset.trigger_name = triggerSelect && triggerSelect.name ? triggerSelect.name : '';
     modal.dataset.trigger_txid = triggerSelect && triggerSelect.getAttribute ? (triggerSelect.getAttribute('data-txid') || '') : '';
     modal.dataset.trigger_field = triggerSelect && triggerSelect.getAttribute ? (triggerSelect.getAttribute('data-field') || '') : '';
-    if (level === 1) {
-      title.textContent = 'Créer une Catégorie N°' + criterion;
-      parentRow.style.display = 'none';
-    } else {
-      title.textContent = 'Créer une Sous-catégorie N°' + criterion;
-      parentSel.innerHTML = '';
-      var parents = catTree[criterion] || {};
-      Object.keys(parents).forEach(function(pid){
-        var info = parents[pid].info;
-        if (!info) return;
-        var opt = document.createElement('option'); opt.value = info.id; opt.textContent = info.label;
-        parentSel.appendChild(opt);
-      });
-      parentRow.style.display = 'block';
-    }
+    // Always show parent selector so user can choose to create a new level-1
+    // or create a level-2 under an existing level-1. First option = create new.
+    title.textContent = (level === 1) ? ('Créer une Catégorie N°' + criterion) : ('Créer une Sous-catégorie N°' + criterion);
+    parentSel.innerHTML = '';
+    var firstOpt = document.createElement('option'); firstOpt.value = '0'; firstOpt.textContent = 'Créer un nouveau code'; parentSel.appendChild(firstOpt);
+    var parents = catTree[criterion] || {};
+    Object.keys(parents).forEach(function(pid){
+      var info = parents[pid].info;
+      if (!info) return;
+      var opt = document.createElement('option'); opt.value = info.id; opt.textContent = info.label;
+      parentSel.appendChild(opt);
+    });
+    parentRow.style.display = 'block';
     modal.style.display = 'flex';
   }
 
@@ -711,8 +709,16 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
     ev.preventDefault();
     var modal = document.getElementById('createCatModal');
     var fd = new FormData(this);
-    var level = parseInt(modal.dataset.level || '1', 10);
-    if (level === 1) fd.append('action','add_level1'); else fd.append('action','add_level2');
+    var parentSel = document.getElementById('cc_parent');
+    var parentVal = parentSel ? parentSel.value : '0';
+    // If user selected an existing level-1 (parentVal != '0'), create a level-2 under it.
+    if (parentVal && parentVal !== '0') {
+      fd.append('action', 'add_level2');
+      fd.append('parent_id', parentVal);
+    } else {
+      // Create a new level-1 category
+      fd.append('action', 'add_level1');
+    }
     fd.append('ajax','1');
     fetch('categories.php', { method: 'POST', body: fd }).then(function(r){ return r.json(); }).then(function(j){
       if (!j || !j.ok) { alert('Erreur création: ' + (j && j.error ? j.error : 'unknown')); return; }
