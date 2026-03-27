@@ -282,6 +282,15 @@ function bkt_migrate(PDO $pdo): void
                 INDEX (log_date)
             )');
         },
+        // Version 18 : add reference_date to accounts (date used to compare card transactions)
+        18 => function (PDO $pdo) {
+            $cols = $pdo->query("SHOW COLUMNS FROM accounts LIKE 'reference_date'")->fetchAll();
+            if (empty($cols)) {
+                try {
+                    $pdo->exec("ALTER TABLE accounts ADD COLUMN reference_date DATE DEFAULT NULL AFTER updated_at");
+                } catch (Throwable $e) { /* ignore if cannot add */ }
+            }
+        },
     ];
 
     // Exécuter les migrations non encore appliquées

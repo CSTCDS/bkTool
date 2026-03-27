@@ -12,6 +12,7 @@ function upsertAccount($pdo, $acc)
     $currency = $acc['currency'] ?? 'EUR';
     $raw = json_encode($acc);
     $account_type = $acc['account_type'] ?? null;
+    $reference_date = $acc['reference_date'] ?? null;
 
     // helper: check if column exists in accounts table
     $hasAccountTypeCol = null;
@@ -34,7 +35,7 @@ function upsertAccount($pdo, $acc)
     if (!$exists) {
         if ($hasAccountTypeCol && $account_type !== null) {
             $stmt = $pdo->prepare(
-                'INSERT INTO accounts (id, name, balance, currency, raw, account_type, updated_at) VALUES (:id, :name, :balance, :currency, :raw, :account_type, NOW())'
+                'INSERT INTO accounts (id, name, balance, currency, raw, account_type, reference_date, updated_at) VALUES (:id, :name, :balance, :currency, :raw, :account_type, :reference_date, NOW())'
             );
             $stmt->execute([
                 ':id' => $id,
@@ -42,42 +43,46 @@ function upsertAccount($pdo, $acc)
                 ':balance' => $balance,
                 ':currency' => $currency,
                 ':raw' => $raw,
-                ':account_type' => $account_type
+                ':account_type' => $account_type,
+                ':reference_date' => $reference_date
             ]);
         } else {
             $stmt = $pdo->prepare(
-                'INSERT INTO accounts (id, name, balance, currency, raw, updated_at) VALUES (:id, :name, :balance, :currency, :raw, NOW())'
+                'INSERT INTO accounts (id, name, balance, currency, raw, reference_date, updated_at) VALUES (:id, :name, :balance, :currency, :raw, :reference_date, NOW())'
             );
             $stmt->execute([
                 ':id' => $id,
                 ':name' => $name,
                 ':balance' => $balance,
                 ':currency' => $currency,
-                ':raw' => $raw
+                ':raw' => $raw,
+                ':reference_date' => $reference_date
             ]);
         }
         return ['action' => 'insert'];
     } else {
         if ($hasAccountTypeCol && $account_type !== null) {
             $stmt = $pdo->prepare(
-                'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, account_type = :account_type, updated_at = NOW() WHERE id = :id'
+                'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, account_type = :account_type, reference_date = :reference_date, updated_at = NOW() WHERE id = :id'
             );
             $stmt->execute([
                 ':id' => $id,
                 ':balance' => $balance,
                 ':currency' => $currency,
                 ':raw' => $raw,
-                ':account_type' => $account_type
+                ':account_type' => $account_type,
+                ':reference_date' => $reference_date
             ]);
         } else {
             $stmt = $pdo->prepare(
-                'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, updated_at = NOW() WHERE id = :id'
+                'UPDATE accounts SET balance = :balance, currency = :currency, raw = :raw, reference_date = :reference_date, updated_at = NOW() WHERE id = :id'
             );
             $stmt->execute([
                 ':id' => $id,
                 ':balance' => $balance,
                 ':currency' => $currency,
-                ':raw' => $raw
+                ':raw' => $raw,
+                ':reference_date' => $reference_date
             ]);
         }
         return ['action' => 'update'];
@@ -293,6 +298,35 @@ function run_sync($pdo, $config)
                 }
                 if (!empty($ranges)) {
                     $accountAccountingRanges[$uid] = $ranges;
+                    // Compute reference_date candidate: choose smallest date_ref > today if present, else end of current month
+                    $today = new DateTime();
+                    $candidates = [];
+                    foreach ($ranges as $rg) {
+                        $dref = $rg['date_ref'] ?? null;
+                        if (!$dref) {
+                            // fallback to date_au if available
+                            $dref = $rg['date_au'] ?? null;
+                        }
+                        if ($dref) {
+                            try { $dt = new DateTime($dref); $candidates[] = $dt; } catch (Throwable $e) { /* ignore */ }
+                        }
+                    }
+                    $chosenRef = null;
+                    if (!empty($candidates)) {
+                        // find minimal candidate strictly > today
+                        $future = array_filter($candidates, function($d) use ($today){ return $d > $today; });
+                        if (!empty($future)) {
+                            usort($future, function($a,$b){ return $a <=> $b; });
+                            $chosenRef = $future[0];
+                        }
+                    }
+                    if (!$chosenRef) {
+                        // set to last day of current month
+                        $endMonth = new DateTime('last day of this month');
+                        $chosenRef = $endMonth;
+                    }
+                    // store as Y-m-d for account upsert
+                    $accRefDate = $chosenRef->format('Y-m-d');
                 }
             } else {
                 // Current account: prefer CLBD if present, else fall back to first recognised type
@@ -320,6 +354,7 @@ function run_sync($pdo, $config)
             'account_type' => $account_type,
             // include the raw balances for reference
             'balances_raw' => $balRes['raw'] ?? json_encode($balRes['body'] ?? null),
+            'reference_date' => $accRefDate ?? null,
         ]);
         $result['accounts']++;
         if (!empty($r['action']) && $r['action'] === 'insert') $result['accounts_insert']++;

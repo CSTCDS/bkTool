@@ -31,11 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['tx_id']) && !empty($
   exit;
 }
 
-// Liste des comptes pour le dropdown (inclut le solde courant)
-$accs = $pdo->query('SELECT id, name, balance, color FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+// Liste des comptes pour le dropdown (inclut le solde courant et reference_date)
+$accs = $pdo->query('SELECT id, name, balance, color, reference_date FROM accounts ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
 $accMap = [];
 $accBalances = [];
-foreach ($accs as $a) { $accMap[$a['id']] = $a['name']; $accBalances[$a['id']] = (float)($a['balance'] ?? 0); }
+$accRefMap = [];
+foreach ($accs as $a) { $accMap[$a['id']] = $a['name']; $accBalances[$a['id']] = (float)($a['balance'] ?? 0); $accRefMap[$a['id']] = (!empty($a['reference_date']) ? $a['reference_date'] : null); }
 
 // Palette de couleurs identique au graphe du Dashboard
 $palette = [
@@ -436,23 +437,46 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         $badgeHtml = '<span class="badge-manual">Saisie manuelle</span>';
         $countInVirtual = false;
           } elseif ($statusUpper === 'OTHR') {
-        $acctDate = isset($t['accounting_date']) && $t['accounting_date'] !== null && $t['accounting_date'] !== '' ? (string)$t['accounting_date'] : null;
-        if ($acctDate) {
-          if ($today === $acctDate) {
-            $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>';
-            $countInVirtual = false;
-          } elseif ($today < $acctDate) {
-            $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
-            $countInVirtual = true;
-          } else {
-            $badgeHtml = '<span class="badge-paid">Payé</span>';
-            $countInVirtual = false;
-          }
-        } else {
-          // fallback: treat as pending but do not count in virtual without accounting_date
-          $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
-          $countInVirtual = false;
-        }
+            // If both a transaction date (booking_date) and an account reference_date exist,
+            // and the transaction_date is strictly greater than the reference_date, mark as next month
+            $acctDate = isset($t['accounting_date']) && $t['accounting_date'] !== null && $t['accounting_date'] !== '' ? (string)$t['accounting_date'] : null;
+            $txDate = isset($t['booking_date']) && $t['booking_date'] !== null && $t['booking_date'] !== '' ? (string)$t['booking_date'] : null;
+            $accRef = isset($accRefMap[$t['account_id']]) ? $accRefMap[$t['account_id']] : null;
+            if ($txDate && $accRef) {
+              try {
+                $dtx = new DateTime($txDate);
+                $dref = new DateTime($accRef);
+                if ($dtx > $dref) {
+                  $badgeHtml = '<span class="badge-nextmonth">Mois prochain</span>';
+                  $countInVirtual = true;
+                } else {
+                  // fall back to accounting_date logic below
+                  if ($acctDate) {
+                    if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; $countInVirtual = false; }
+                    elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtual = true; }
+                    else { $badgeHtml = '<span class="badge-paid">Payé</span>'; $countInVirtual = false; }
+                  } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtual = false; }
+                }
+              } catch (Throwable $e) {
+                // parsing error: fallback to existing accounting_date logic
+                if ($acctDate) {
+                  if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; $countInVirtual = false; }
+                  elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtual = true; }
+                  else { $badgeHtml = '<span class="badge-paid">Payé</span>'; $countInVirtual = false; }
+                } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtual = false; }
+              }
+            } else {
+              // fallback: use accounting_date logic
+              if ($acctDate) {
+                if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; $countInVirtual = false; }
+                elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtual = true; }
+                else { $badgeHtml = '<span class="badge-paid">Payé</span>'; $countInVirtual = false; }
+              } else {
+                // fallback: treat as pending but do not count in virtual without accounting_date
+                $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
+                $countInVirtual = false;
+              }
+            }
       }
       $acctId = $t['account_id'];
       if (!isset($runningAcc[$acctId])) $runningAcc[$acctId] = 0.0; // cumul des montants déjà vus (newest->oldest)
