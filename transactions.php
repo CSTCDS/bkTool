@@ -638,12 +638,16 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
     <h3 id="createCatTitle">Créer une catégorie</h3>
     <form id="createCatForm">
       <input type="hidden" name="criterion" id="cc_criterion">
+      <div style="margin-bottom:8px" id="cc_parent_row">
+        <label>Parent: <select name="parent_id" id="cc_parent" style="width:100%"></select></label>
+      </div>
+      <div style="margin-bottom:8px;display:none" id="cc_child_row">
+        <label>Sous-code: <select name="child_id" id="cc_child" style="width:100%" disabled></select></label>
+      </div>
       <div style="margin-bottom:8px">
         <label>Libellé: <input type="text" name="label" id="cc_label" required style="width:100%"></label>
       </div>
-      <div style="margin-bottom:8px;display:none" id="cc_parent_row">
-        <label>Parent: <select name="parent_id" id="cc_parent" style="width:100%"></select></label>
-      </div>
+      <div style="margin-bottom:8px;display:none" id="cc_rename_badge_row"><span id="cc_rename_badge" style="display:inline-block;padding:6px 8px;background:#ffecb3;border-radius:6px;color:#5d4037;font-weight:700">Renommage</span></div>
       <div style="text-align:right">
         <button type="button" id="cc_cancel" class="btn" style="margin-right:8px">Annuler</button>
         <button type="submit" class="btn btn-primary">Créer</button>
@@ -682,6 +686,8 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       parentSel.appendChild(opt);
     });
     parentRow.style.display = 'block';
+    // reset child select and rename badge
+    try { document.getElementById('cc_child').innerHTML = ''; document.getElementById('cc_child').disabled = true; document.getElementById('cc_child_row').style.display = 'none'; document.getElementById('cc_rename_badge_row').style.display = 'none'; } catch(e){}
     modal.style.display = 'flex';
   }
 
@@ -704,52 +710,101 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
   });
 
   document.getElementById('cc_cancel').addEventListener('click', function(){ document.getElementById('createCatModal').style.display = 'none'; });
+  // Parent/child selects behavior inside modal
+  (function(){
+    var parentSel = document.getElementById('cc_parent');
+    var childSel = document.getElementById('cc_child');
+    var childRow = document.getElementById('cc_child_row');
+    var renameRow = document.getElementById('cc_rename_badge_row');
+    if (parentSel) {
+      parentSel.addEventListener('change', function(){
+        try {
+          var pv = this.value || '0';
+          childSel.innerHTML = '';
+          renameRow.style.display = 'none';
+          if (pv && pv !== '0') {
+            // populate child select with existing children for this parent
+            var crit = document.getElementById('cc_criterion').value || '';
+            var parents = catTree[crit] || {};
+            var node = parents[pv] || null;
+            var firstOpt = document.createElement('option'); firstOpt.value = '0'; firstOpt.textContent = 'Créer un nouveau sous-code'; childSel.appendChild(firstOpt);
+            if (node && node.children && node.children.length) {
+              node.children.forEach(function(ch){ var o = document.createElement('option'); o.value = ch.id; o.textContent = ch.label; childSel.appendChild(o); });
+            }
+            childSel.disabled = false; childRow.style.display = 'block';
+          } else {
+            childSel.disabled = true; childRow.style.display = 'none';
+          }
+        } catch(e) { console.error(e); }
+      });
+    }
+    if (childSel) {
+      childSel.addEventListener('change', function(){
+        if (this.value && this.value !== '0') { renameRow.style.display = 'block'; } else { renameRow.style.display = 'none'; }
+      });
+    }
+  })();
 
   document.getElementById('createCatForm').addEventListener('submit', function(ev){
     ev.preventDefault();
     var modal = document.getElementById('createCatModal');
     var fd = new FormData(this);
     var parentSel = document.getElementById('cc_parent');
+    var childSel = document.getElementById('cc_child');
     var parentVal = parentSel ? parentSel.value : '0';
-    // If user selected an existing level-1 (parentVal != '0'), create a level-2 under it.
-    if (parentVal && parentVal !== '0') {
-      fd.append('action', 'add_level2');
-      fd.append('parent_id', parentVal);
+    var childVal = childSel ? (childSel.value || '0') : '0';
+    // Determine operation:
+    // - parentVal == '0' => add_level1
+    // - parentVal != '0' and childVal == '0' => add_level2 (create new under parent)
+    // - parentVal != '0' and childVal != '0' => edit (rename existing child)
+    if (parentVal === '0' || parentVal === 0) {
+      fd.set('action','add_level1');
     } else {
-      // Create a new level-1 category
-      fd.append('action', 'add_level1');
+      if (childVal && childVal !== '0') {
+        // rename existing level2
+        fd.set('action','edit');
+        fd.set('cat_id', childVal);
+      } else {
+        // create level2: compose label as ParentLabel/LabelInput
+        var parentOption = parentSel.options[parentSel.selectedIndex];
+        var parentLabel = parentOption ? parentOption.text : '';
+        var inputLabel = document.getElementById('cc_label').value || '';
+        var fullLabel = parentLabel + '/' + inputLabel;
+        fd.set('label', fullLabel);
+        fd.set('action','add_level2');
+        fd.set('parent_id', parentVal);
+      }
     }
-    fd.append('ajax','1');
+    fd.set('ajax','1');
     fetch('categories.php', { method: 'POST', body: fd }).then(function(r){ return r.json(); }).then(function(j){
-      if (!j || !j.ok) { alert('Erreur création: ' + (j && j.error ? j.error : 'unknown')); return; }
+      if (!j || !j.ok) { alert('Erreur création/modification: ' + (j && j.error ? j.error : 'unknown')); return; }
       var newId = j.id; var newLabel = j.label; var criterion = j.criterion;
-      // add new option to all matching selects: selects with name catN and row selects (.cat-select)
+      // update selects across page: insert new or update label if rename
       var selCandidates = Array.from(document.querySelectorAll('select'));
       selCandidates.forEach(function(sel){
         var crit = null;
-        if (sel.name && sel.name.match(/^cat(\d+)/)) {
-          crit = parseInt(sel.name.replace(/^cat(\d+).*$/, '$1'), 10);
-        } else if (sel.classList && sel.classList.contains('cat-select') && sel.dataset && sel.dataset.field) {
-          var m = sel.dataset.field.match(/^cat(\d+)_id$/);
-          if (m) crit = parseInt(m[1],10);
+        if (sel.name && sel.name.match(/^cat(\d+)/)) { crit = parseInt(sel.name.replace(/^cat(\d+).*$/, '$1'), 10); }
+        else if (sel.classList && sel.classList.contains('cat-select') && sel.dataset && sel.dataset.field) {
+          var m = sel.dataset.field.match(/^cat(\d+)_id$/); if (m) crit = parseInt(m[1],10);
         }
         if (crit === null || isNaN(crit)) return;
         if (crit === parseInt(criterion,10)) {
-          var opt = document.createElement('option'); opt.value = newId; opt.textContent = newLabel; sel.appendChild(opt);
+          if (fd.get('action') === 'edit') {
+            // rename existing option if present
+            var opt = sel.querySelector('option[value="' + newId + '"]'); if (opt) opt.textContent = newLabel;
+          } else {
+            var opt2 = document.createElement('option'); opt2.value = newId; opt2.textContent = newLabel; sel.appendChild(opt2);
+          }
         }
       });
 
-      // locate triggering select: prefer row select by txid+field, else by name
-      var trigger = null;
-      var ttx = modal.dataset.trigger_txid || '';
-      var tfield = modal.dataset.trigger_field || '';
+      // locate triggering select to set value
+      var trigger = null; var ttx = modal.dataset.trigger_txid || ''; var tfield = modal.dataset.trigger_field || '';
       if (ttx && tfield) {
         trigger = document.querySelector('select.cat-select[data-txid="' + ttx + '"][data-field="' + tfield + '"]');
       }
-      if (!trigger && modal.dataset.trigger_name) {
-        trigger = document.querySelector('select[name="' + modal.dataset.trigger_name + '"]');
-      }
-      if (trigger) { trigger.value = newId; trigger.dispatchEvent(new Event('change')); }
+      if (!trigger && modal.dataset.trigger_name) { trigger = document.querySelector('select[name="' + modal.dataset.trigger_name + '"]'); }
+      if (trigger) { trigger.value = (fd.get('action') === 'edit') ? fd.get('cat_id') : newId; trigger.dispatchEvent(new Event('change')); }
       modal.style.display = 'none';
     }).catch(function(e){ alert('Erreur AJAX: '+e); });
   });
