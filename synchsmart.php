@@ -347,17 +347,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
               }
             } catch(e) { /* ignore logging errors */ }
 
-            // If debug info for account reference_date selection is present, render it visibly
-            try {
-              if (res.account_reference_debug) {
-                var dbgContainer = document.createElement('div'); dbgContainer.style.marginTop = '12px';
-                var h = document.createElement('strong'); h.textContent = 'Debug reference_date (par compte)'; dbgContainer.appendChild(h);
-                var pre = document.createElement('pre'); pre.style.maxHeight = '320px'; pre.style.overflow = 'auto'; pre.style.background = '#fff'; pre.style.border = '1px solid #eee'; pre.style.padding = '8px';
-                try { pre.textContent = JSON.stringify(res.account_reference_debug, null, 2); } catch(e){ pre.textContent = String(res.account_reference_debug); }
-                dbgContainer.appendChild(pre);
-                var alertsEl = document.getElementById('alerts'); if (alertsEl) alertsEl.insertBefore(dbgContainer, alertsEl.firstChild);
-              }
-            } catch (e) { /* ignore UI debug render errors */ }
+            
 
             if (imp === null) {
               return fetch('synchsmart.php?ajax=1').then(function(r){ return r.json(); }).then(function(data){ renderAccounts(data.accounts); notifyIfNeeded(); });

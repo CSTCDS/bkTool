@@ -213,8 +213,7 @@ function run_sync($pdo, $config)
         'skipped_transactions' => [],
         'errors' => []
     ];
-    // per-account debug info for reference_date selection
-    $result['account_reference_debug'] = [];
+    
 
     // Get stored session_id
     $stmt = $pdo->prepare('SELECT `value` FROM settings WHERE `key` = :k');
@@ -302,50 +301,26 @@ function run_sync($pdo, $config)
                 }
                 if (!empty($ranges)) {
                     $accountAccountingRanges[$uid] = $ranges;
-                    // Compute reference_date: pick 'date_du' (start date) closest to today and strictly > today.
+                    // Compute reference_date: if any 'date_du' candidates exist, choose the maximum (latest date).
                     // If none found, fallback to the 20th of current month.
-                    $today = new DateTime();
                     $candidates = [];
-                    $debug_d1 = null; $debug_d2 = null; $debug_sup = null; $debug_reason = null;
                     foreach ($ranges as $rg) {
                         $ddu = $rg['date_du'] ?? null;
                         if (!$ddu) continue;
                         try {
-                            // $ddu is stored as 'Y-m-d' above, use DateTime directly
                             $d = new DateTime($ddu);
                             if ($d) $candidates[] = $d;
-                            // collect first two date_du for debug
-                            if ($debug_d1 === null) $debug_d1 = $d->format('Y-m-d');
-                            elseif ($debug_d2 === null) $debug_d2 = $d->format('Y-m-d');
                         } catch (Throwable $e) { /* ignore parse errors */ }
                     }
-                    // If any date_du candidates exist, choose the maximum (the latest date)
                     if (!empty($candidates)) {
                         usort($candidates, function($a,$b){ return $a <=> $b; });
                         $chosen = end($candidates);
-                        $debug_reason = 'chosen max date_du';
                     } else {
                         // fallback to 20th of current month when no date_du found
                         $chosen = new DateTime('first day of this month');
                         $chosen->setDate((int)$chosen->format('Y'), (int)$chosen->format('m'), 20);
-                        $debug_reason = 'no date_du found, fallback to 20th';
                     }
                     $accRefDate = $chosen->format('Y-m-d');
-                    // compute sup of d1/d2 for debug if both present
-                    if ($debug_d1 && $debug_d2) {
-                        try {
-                            $dd1 = new DateTime($debug_d1); $dd2 = new DateTime($debug_d2);
-                            $debug_sup = ($dd1 > $dd2) ? $dd1->format('Y-m-d') : $dd2->format('Y-m-d');
-                        } catch (Throwable $e) { $debug_sup = null; }
-                    }
-                    // attach debug info to global result
-                    $result['account_reference_debug'][$uid] = [
-                        'date_du_1' => $debug_d1,
-                        'date_du_2' => $debug_d2,
-                        'sup_date_du_1_2' => $debug_sup,
-                        'chosen_reference_date' => $accRefDate,
-                        'reason' => $debug_reason,
-                    ];
                 }
             } else {
                 // Current account: prefer CLBD if present, else fall back to first recognised type
