@@ -776,9 +776,37 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       }
     }
     fd.set('ajax','1');
+    var _action = fd.get('action');
+    var _parentId = fd.get('parent_id') || null;
     fetch('categories.php', { method: 'POST', body: fd }).then(function(r){ return r.json(); }).then(function(j){
       if (!j || !j.ok) { alert('Erreur création/modification: ' + (j && j.error ? j.error : 'unknown')); return; }
       var newId = j.id; var newLabel = j.label; var criterion = j.criterion;
+      // Update client-side catTree so modal lists are rebuilt with latest data next time
+      try {
+        var critKey = String(criterion);
+        if (!_action) _action = 'add_level1';
+        if (_action === 'add_level1') {
+          if (!catTree[critKey]) catTree[critKey] = {};
+          catTree[critKey][String(newId)] = { info: { id: newId, label: newLabel, criterion: criterion, parent_id: null }, children: [] };
+        } else if (_action === 'add_level2') {
+          var pid = String(_parentId || fd.get('parent_id') || '');
+          if (!catTree[critKey]) catTree[critKey] = {};
+          if (!catTree[critKey][pid]) catTree[critKey][pid] = { info: null, children: [] };
+          // push child
+          catTree[critKey][pid].children.push({ id: newId, label: newLabel });
+        } else if (_action === 'edit') {
+          var catId = String(fd.get('cat_id'));
+          if (catTree[critKey]) {
+            Object.keys(catTree[critKey]).forEach(function(pid){
+              var node = catTree[critKey][pid];
+              if (node && node.info && String(node.info.id) === catId) node.info.label = newLabel;
+              if (node && node.children) {
+                node.children.forEach(function(ch){ if (String(ch.id) === catId) ch.label = newLabel; });
+              }
+            });
+          }
+        }
+      } catch (e) { console.error('update catTree failed', e); }
       // update selects across page: insert new or update label if rename
       var selCandidates = Array.from(document.querySelectorAll('select'));
       selCandidates.forEach(function(sel){
