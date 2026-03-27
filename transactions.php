@@ -546,6 +546,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
                   <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>" style="width:100%">
                     <option value="">—</option>
                     <option value="999999<?php echo $ci2; ?>">Créer une Catégorie N°<?php echo $ci2; ?></option>
+                    <option value="999998<?php echo $ci2; ?>">Créer une règle auto</option>
                     <?php if (!empty($catTree[$ci2])): foreach ($catTree[$ci2] as $pid => $node): if (!$node['info']) continue; ?>
                       <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
                         <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)$curVal === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
@@ -569,6 +570,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
                   <select class="cat-select" data-txid="<?php echo htmlspecialchars($t['id']); ?>" data-field="<?php echo $field; ?>" title="<?php echo htmlspecialchars($criterionNames[$ci2]); ?>" style="width:100%">
                     <option value="">—</option>
                     <option value="999999<?php echo $ci2; ?>">Créer une Catégorie N°<?php echo $ci2; ?></option>
+                    <option value="999998<?php echo $ci2; ?>">Créer une règle auto</option>
                     <?php if (!empty($catTree[$ci2])): foreach ($catTree[$ci2] as $pid => $node): if (!$node['info']) continue; ?>
                       <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
                         <option value="<?php echo $node['info']['id']; ?>" <?php echo ((int)$curVal === (int)$node['info']['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($node['info']['label']); ?></option>
@@ -646,6 +648,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           <select name="cat<?php echo $ci; ?>" class="cat-list" data-criterion="<?php echo $ci; ?>" style="flex:1">
             <option value=""><?php echo htmlspecialchars($criterionNames[$ci] ?? 'Cat'); ?></option>
             <option value="999999<?php echo $ci; ?>">Créer une Catégorie N°<?php echo $ci; ?></option>
+            <option value="999998<?php echo $ci; ?>">Créer une règle auto</option>
             <?php if (!empty($catTree[$ci])): foreach ($catTree[$ci] as $pid=>$node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
                 <option value="<?php echo (int)$node['info']['id']; ?>"><?php echo htmlspecialchars($node['info']['label']); ?></option>
@@ -762,6 +765,17 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       var level = 1;
       openCreateModal(crit, level, el);
       setTimeout(function(){ el.value = ''; }, 200);
+      return;
+    }
+    var r = v.match(/^999998(\d)$/);
+    if (r) {
+      var crit2 = parseInt(r[1], 10);
+      // Open the rules screen and preselect the criterion
+      try {
+        window.location = 'rules.php?category_level=' + crit2 + '#new';
+      } catch(e) { window.open('rules.php?category_level=' + crit2 + '#new', '_blank'); }
+      setTimeout(function(){ el.value = ''; }, 200);
+      return;
     }
   });
 
