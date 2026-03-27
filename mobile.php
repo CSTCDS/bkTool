@@ -180,36 +180,64 @@ $stmt->bindValue(':offset', max(0, $idx), PDO::PARAM_INT);
 $stmt->execute();
 $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
-// compute displayBalance and groupVirtualBalance for this tx (similar to transactions.php)
-$displayBalance = null;
-$groupVirtualBalance = null;
-if ($tx) {
-  $acctId = $tx['account_id'];
-  $startBal = $accBalances[$acctId] ?? 0.0;
-  $sumNewer = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id = :aid AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND UPPER(status) = 'BOOK'");
-  $sumNewer->execute([':aid' => $acctId, ':bdate' => $tx['booking_date'], ':id' => $tx['id']]);
-  $newer = (float)$sumNewer->fetchColumn();
-  $displayBalance = $startBal - $newer;
+  // compute displayBalance and groupVirtualBalance for this tx
+  $displayBalance = null;
+  $groupVirtualBalance = null;
+  // new variables requested
+  $startSold = null;
+  $startVirtualSold = null;
+  if ($tx) {
+    $acctId = $tx['account_id'];
+    // determine if selection is a group
+    $isGroupSel = is_string($acctSel) && strpos($acctSel, 'g:') === 0;
+    if ($isGroupSel) {
+      $gid = (int)substr($acctSel, 2);
+      $acctIds = $groupChildren[$gid] ?? [];
+      // compute startSold as sum of balances of selected accounts
+      $startSold = 0.0;
+      foreach ($acctIds as $aid) { if (isset($accBalances[$aid])) $startSold += $accBalances[$aid]; }
+      $startVirtualSold = $startSold;
 
-  // group virtual balance if account selection is a group 'g:ID'
-  if (is_string($acctSel) && strpos($acctSel, 'g:') === 0) {
-    $gid = (int)substr($acctSel, 2);
-    $acctIds = $groupChildren[$gid] ?? [];
-    $groupStart = 0.0;
-    foreach ($acctIds as $aid) { if (isset($accBalances[$aid])) $groupStart += $accBalances[$aid]; }
-    if (!empty($acctIds)) {
-      $placeholders = [];
-      $bindings = [];
-      foreach ($acctIds as $i => $aid) { $ph = ':g' . $i; $placeholders[] = $ph; $bindings[$ph] = $aid; }
-      // Use CountInVirtual flag to decide which transactions count in virtual balance
-      $q = 'SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (' . implode(',', $placeholders) . ') AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND CountInVirtual = 1';
-      $stmtg = $pdo->prepare($q);
-      $stmtg->bindValue(':bdate', $tx['booking_date']); $stmtg->bindValue(':id', $tx['id']);
-      if ($hasAccountingDate) $stmtg->bindValue(':today', date('Y-m-d'));
-      foreach ($bindings as $k => $v) $stmtg->bindValue($k, $v);
-      $stmtg->execute();
-      $groupNewer = (float)$stmtg->fetchColumn();
-      $groupVirtualBalance = $groupStart - $groupNewer;
+      if (!empty($acctIds)) {
+        $placeholders = [];
+        $bindings = [];
+        foreach ($acctIds as $i => $aid) { $ph = ':g' . $i; $placeholders[] = $ph; $bindings[$ph] = $aid; }
+        // Sum of previous BOOK transactions across the group (newer in ordering)
+        $qBook = 'SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (' . implode(',', $placeholders) . ') AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND UPPER(status) = ''BOOK''';
+        $stmtBook = $pdo->prepare($qBook);
+        $stmtBook->bindValue(':bdate', $tx['booking_date']); $stmtBook->bindValue(':id', $tx['id']);
+        foreach ($bindings as $k => $v) $stmtBook->bindValue($k, $v);
+        $stmtBook->execute();
+        $groupBookNewer = (float)$stmtBook->fetchColumn();
+        $displayBalance = $startSold - $groupBookNewer;
+
+        // Sum of previous transactions counted in virtual across the group
+        $qVirt = 'SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id IN (' . implode(',', $placeholders) . ') AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND CountInVirtual = 1';
+        $stmtVirt = $pdo->prepare($qVirt);
+        $stmtVirt->bindValue(':bdate', $tx['booking_date']); $stmtVirt->bindValue(':id', $tx['id']);
+        foreach ($bindings as $k => $v) $stmtVirt->bindValue($k, $v);
+        $stmtVirt->execute();
+        $groupVirtNewer = (float)$stmtVirt->fetchColumn();
+        $groupVirtualBalance = $startVirtualSold - $groupVirtNewer;
+      } else {
+        // no accounts in group -> treat as zero
+        $startSold = 0.0; $startVirtualSold = 0.0; $displayBalance = 0.0; $groupVirtualBalance = 0.0;
+      }
+    } else {
+      // single account selection
+      $startSold = $accBalances[$acctId] ?? 0.0;
+      $startVirtualSold = $startSold;
+      // Sum of previous BOOK transactions for this account
+      $sumNewer = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id = :aid AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND UPPER(status) = 'BOOK'");
+      $sumNewer->execute([':aid' => $acctId, ':bdate' => $tx['booking_date'], ':id' => $tx['id']]);
+      $newer = (float)$sumNewer->fetchColumn();
+      $displayBalance = $startSold - $newer;
+
+      // Sum of previous CountInVirtual transactions for this account
+      $sumVirt = $pdo->prepare("SELECT COALESCE(SUM(amount),0) FROM transactions WHERE account_id = :aid AND (booking_date > :bdate OR (booking_date = :bdate AND id > :id)) AND CountInVirtual = 1");
+      $sumVirt->execute([':aid' => $acctId, ':bdate' => $tx['booking_date'], ':id' => $tx['id']]);
+      $virtNewer = (float)$sumVirt->fetchColumn();
+      $groupVirtualBalance = $startVirtualSold - $virtNewer;
     }
   }
 
