@@ -300,35 +300,31 @@ function run_sync($pdo, $config)
                 }
                 if (!empty($ranges)) {
                     $accountAccountingRanges[$uid] = $ranges;
-                    // Compute reference_date candidate: choose smallest date_ref > today if present, else end of current month
+                    // Compute reference_date: pick 'date_au' (end date) closest to today and strictly > today.
+                    // If none found, fallback to the 20th of current month.
                     $today = new DateTime();
                     $candidates = [];
                     foreach ($ranges as $rg) {
-                        $dref = $rg['date_ref'] ?? null;
-                        if (!$dref) {
-                            // fallback to date_au if available
-                            $dref = $rg['date_au'] ?? null;
-                        }
-                        if ($dref) {
-                            try { $dt = new DateTime($dref); $candidates[] = $dt; } catch (Throwable $e) { /* ignore */ }
-                        }
+                        $dau = $rg['date_au'] ?? null;
+                        if (!$dau) continue;
+                        try {
+                            // Accept formats with '/' or '-'
+                            $d = DateTime::createFromFormat('d/m/Y', str_replace('-', '/', $dau));
+                            if (!$d) $d = new DateTime($dau);
+                            if ($d) $candidates[] = $d;
+                        } catch (Throwable $e) { /* ignore parse errors */ }
                     }
-                    $chosenRef = null;
-                    if (!empty($candidates)) {
-                        // find minimal candidate strictly > today
-                        $future = array_filter($candidates, function($d) use ($today){ return $d > $today; });
-                        if (!empty($future)) {
-                            usort($future, function($a,$b){ return $a <=> $b; });
-                            $chosenRef = $future[0];
-                        }
+                    // filter candidates strictly greater than today
+                    $future = array_filter($candidates, function($d) use ($today){ return $d > $today; });
+                    if (!empty($future)) {
+                        usort($future, function($a,$b){ return $a <=> $b; });
+                        $chosen = $future[0];
+                    } else {
+                        // fallback to 20th of current month
+                        $chosen = new DateTime('first day of this month');
+                        $chosen->setDate((int)$chosen->format('Y'), (int)$chosen->format('m'), 20);
                     }
-                    if (!$chosenRef) {
-                        // set to last day of current month
-                        $endMonth = new DateTime('last day of this month');
-                        $chosenRef = $endMonth;
-                    }
-                    // store as Y-m-d for account upsert
-                    $accRefDate = $chosenRef->format('Y-m-d');
+                    $accRefDate = $chosen->format('Y-m-d');
                 }
             } else {
                 // Current account: prefer CLBD if present, else fall back to first recognised type
