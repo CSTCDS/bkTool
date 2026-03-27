@@ -647,10 +647,9 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       <div style="margin-bottom:8px">
         <label>Libellé: <input type="text" name="label" id="cc_label" required style="width:100%"></label>
       </div>
-      <div style="margin-bottom:8px;display:none" id="cc_rename_badge_row"><span id="cc_rename_badge" style="display:inline-block;padding:6px 8px;background:#ffecb3;border-radius:6px;color:#5d4037;font-weight:700">Renommage</span></div>
       <div style="text-align:right">
         <button type="button" id="cc_cancel" class="btn" style="margin-right:8px">Annuler</button>
-        <button type="submit" class="btn btn-primary">Créer</button>
+        <button type="submit" id="cc_submit" class="btn btn-primary">Créer</button>
       </div>
     </form>
   </div>
@@ -686,8 +685,8 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       parentSel.appendChild(opt);
     });
     parentRow.style.display = 'block';
-    // reset child select and rename badge
-    try { document.getElementById('cc_child').innerHTML = ''; document.getElementById('cc_child').disabled = true; document.getElementById('cc_child_row').style.display = 'none'; document.getElementById('cc_rename_badge_row').style.display = 'none'; } catch(e){}
+    // reset child select and submit button text
+    try { document.getElementById('cc_child').innerHTML = ''; document.getElementById('cc_child').disabled = true; document.getElementById('cc_child_row').style.display = 'none'; document.getElementById('cc_submit').textContent = 'Créer'; } catch(e){}
     modal.style.display = 'flex';
   }
 
@@ -740,7 +739,8 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
     }
     if (childSel) {
       childSel.addEventListener('change', function(){
-        if (this.value && this.value !== '0') { renameRow.style.display = 'block'; } else { renameRow.style.display = 'none'; }
+        var submitBtn = document.getElementById('cc_submit');
+        if (this.value && this.value !== '0') { if (submitBtn) submitBtn.textContent = 'Renommer'; } else { if (submitBtn) submitBtn.textContent = 'Créer'; }
       });
     }
   })();
