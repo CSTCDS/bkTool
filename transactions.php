@@ -970,7 +970,7 @@ document.getElementById('rule_category_level').addEventListener('change', functi
     var matchesDiv = document.getElementById('rule_matches');
     var acctHidden = document.getElementById('rule_scope_account_hidden');
     var debounce = null;
-    function renderRows(rows) {
+    function renderRows(rows, rules) {
       matchesDiv.innerHTML = '';
       if (!rows || !rows.length) { matchesDiv.textContent = 'Aucune opération correspondante'; return; }
       var unassigned = [];
@@ -994,6 +994,25 @@ document.getElementById('rule_category_level').addEventListener('change', functi
       var summary = document.createElement('div'); summary.style.marginBottom = '8px'; summary.style.fontSize = '0.95rem'; summary.style.color = '#333';
         summary.textContent = 'Correspondances trouvées: ' + rows.length + ' — ' + matchingCount + ': opérations déjà à la valeur';
       matchesDiv.appendChild(summary);
+
+      // Rules block
+      try {
+        var rulesWrap = document.createElement('div');
+        var rulesHdr = document.createElement('div'); rulesHdr.textContent = 'Règles correspondant au libellé (' + (rules && rules.length ? rules.length : 0) + ')'; rulesHdr.style.fontWeight = '700'; rulesHdr.style.padding = '6px 0'; rulesHdr.style.borderBottom = '1px solid #eee';
+        var rulesContent = document.createElement('div'); rulesContent.style.marginBottom = '8px'; rulesContent.style.border = '1px solid #efefef';
+        if (rules && rules.length) {
+          rules.forEach(function(rr){
+            var el = document.createElement('div'); el.style.padding = '6px 8px'; el.style.borderBottom = '1px solid #f8f8f8';
+            var tgtLabel = rr.valeur_label || (rr.valeur_a_affecter ? String(rr.valeur_a_affecter) : '—');
+            var scopeLabel = rr.scope_account_id ? ('compte ' + rr.scope_account_id) : 'global';
+            el.innerHTML = '<strong>' + (rr.pattern || '') + '</strong> &nbsp; → ' + tgtLabel + ' <em style="color:#666">(' + scopeLabel + ')</em>';
+            rulesContent.appendChild(el);
+          });
+        } else {
+          var none = document.createElement('div'); none.style.padding = '6px 8px'; none.textContent = 'Aucune règle trouvée'; rulesContent.appendChild(none);
+        }
+        rulesWrap.appendChild(rulesHdr); rulesWrap.appendChild(rulesContent); matchesDiv.appendChild(rulesWrap);
+      } catch(e) { /* ignore rendering rules */ }
 
       // Unassigned collapsible
       var wrap1 = document.createElement('div');
@@ -1032,21 +1051,25 @@ document.getElementById('rule_category_level').addEventListener('change', functi
       if (!q) { matchesDiv.textContent = 'Entrez un motif pour voir les opérations correspondantes'; return; }
       var clevel = (document.getElementById('rule_category_level_hidden')||{value:'0'}).value || '0';
       var val = (document.getElementById('rule_valeur_a_affecter')||{value:'0'}).value || '0';
-      var url = 'mon-site/api/search_tx.php?account_id=' + encodeURIComponent(acct) + '&q=' + encodeURIComponent(q) + '&category_level=' + encodeURIComponent(clevel) + '&valeur=' + encodeURIComponent(val);
-      fetch(url)
-        .then(function(r){ return r.json(); })
-        .then(function(j){ if (j && j.ok) {
-            renderRows(j.rows);
-            if (j.rule_exists) {
-              var note = document.createElement('div');
-              note.textContent = 'La règle existe déjà';
-              note.style.color = 'orange';
-              note.style.fontWeight = '700';
-              note.style.marginTop = '8px';
-              matchesDiv.insertBefore(note, matchesDiv.firstChild);
-            }
-          } else matchesDiv.textContent = 'Erreur recherche'; })
-        .catch(function(){ matchesDiv.textContent = 'Erreur réseau'; });
+      var txUrl = 'mon-site/api/search_tx.php?account_id=' + encodeURIComponent(acct) + '&q=' + encodeURIComponent(q) + '&category_level=' + encodeURIComponent(clevel) + '&valeur=' + encodeURIComponent(val);
+      var rulesUrl = 'mon-site/api/search_rules.php?account_id=' + encodeURIComponent(acct) + '&q=' + encodeURIComponent(q) + '&category_level=' + encodeURIComponent(clevel);
+      Promise.all([fetch(txUrl).then(function(r){ return r.json(); }).catch(function(){ return null; }), fetch(rulesUrl).then(function(r){ return r.json(); }).catch(function(){ return null; })])
+        .then(function(results){
+          var txRes = results[0];
+          var rulesRes = results[1];
+          var txRows = (txRes && txRes.ok && Array.isArray(txRes.rows)) ? txRes.rows : [];
+          var ruleExistsNote = (txRes && txRes.rule_exists);
+          var rules = (rulesRes && rulesRes.ok && Array.isArray(rulesRes.rules)) ? rulesRes.rules : [];
+          renderRows(txRows, rules);
+          if (ruleExistsNote) {
+            var note = document.createElement('div');
+            note.textContent = 'La règle existe déjà';
+            note.style.color = 'orange';
+            note.style.fontWeight = '700';
+            note.style.marginTop = '8px';
+            matchesDiv.insertBefore(note, matchesDiv.firstChild);
+          }
+        }).catch(function(){ matchesDiv.textContent = 'Erreur réseau'; });
     }
     if (inp) {
       inp.addEventListener('input', function(){ clearTimeout(debounce); debounce = setTimeout(fetchMatches, 300); });
