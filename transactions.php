@@ -733,32 +733,45 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
 
 <!-- Create rule modal -->
 <div id="createRuleModal" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.35);z-index:2300;align-items:center;justify-content:center">
-  <div style="background:#fff;padding:14px;border-radius:8px;max-width:520px;width:92%;box-sizing:border-box">
+  <div style="background:#fff;padding:18px;border-radius:8px;max-width:700px;width:95%;min-height:520px;box-sizing:border-box">
     <h3>Nouvelle règle</h3>
     <form id="createRuleForm" method="post" action="rules.php">
       <input type="hidden" name="action" value="create">
+      <!-- Row 1: Actif, Critère (readonly), Compte (readonly) -->
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" name="active" value="1" checked> Actif</label>
-        <select name="category_level" id="rule_category_level" class="select-category-level" style="width:160px">
+        <select id="rule_category_level" class="select-category-level" style="width:220px" disabled>
           <option value="0">Choisir critère (1..4)</option>
           <?php for ($ci=1;$ci<=4;$ci++): ?>
             <option value="<?php echo $ci; ?>"><?php echo $ci . ' - ' . htmlspecialchars($criterionNames[$ci]); ?></option>
           <?php endfor; ?>
         </select>
-        <input name="pattern" id="rule_pattern" placeholder="Motif / libellé" style="flex:2;padding:8px">
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <select name="scope_account_id" id="rule_scope_account">
+        <input type="hidden" name="category_level" id="rule_category_level_hidden" value="0">
+        <select id="rule_scope_account" style="width:220px" disabled>
           <option value="">-- pas de sélection --</option>
           <option value="NULL">Global (tous les comptes)</option>
           <?php foreach ($accs as $a): ?>
             <option value="<?php echo htmlspecialchars($a['id']); ?>"><?php echo htmlspecialchars($a['name']); ?></option>
           <?php endforeach; ?>
         </select>
-        <input name="priority" id="rule_priority" value="100" style="width:70px;padding:6px">
-        <select name="valeur_a_affecter" id="rule_valeur_a_affecter" class="select-valeur" style="min-width:180px;margin-left:auto">
+        <input type="hidden" name="scope_account_id" id="rule_scope_account_hidden" value="">
+      </div>
+
+      <!-- Row 2: Motif (full width) -->
+      <div style="margin-bottom:8px">
+        <input name="pattern" id="rule_pattern" placeholder="Motif / libellé" style="width:100%;padding:10px;box-sizing:border-box">
+      </div>
+
+      <!-- Row 3: Valeur à affecter (full width) -->
+      <div style="margin-bottom:8px">
+        <select name="valeur_a_affecter" id="rule_valeur_a_affecter" class="select-valeur" style="width:100%;box-sizing:border-box">
           <option value="0">Valeur à affecter (sélectionner critère)</option>
         </select>
+      </div>
+
+      <!-- Row 4: boutons -->
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <input name="priority" id="rule_priority" value="100" style="width:70px;padding:6px;display:none">
         <button class="btn" type="submit">Créer</button>
         <button type="button" id="createRuleCancel" class="btn" style="margin-left:8px">Annuler</button>
       </div>
@@ -774,19 +787,23 @@ function openCreateRuleModal(criterion, txid) {
   var modal = document.getElementById('createRuleModal');
   var form = document.getElementById('createRuleForm');
   var levelSel = document.getElementById('rule_category_level');
+  var levelHidden = document.getElementById('rule_category_level_hidden');
   var scopeSel = document.getElementById('rule_scope_account');
+  var scopeHidden = document.getElementById('rule_scope_account_hidden');
   var patternInp = document.getElementById('rule_pattern');
   var valSel = document.getElementById('rule_valeur_a_affecter');
   if (!modal || !form) return;
   // preselect criterion
-  levelSel.value = (criterion || 0);
+  if (levelSel) levelSel.value = (criterion || 0);
+  if (levelHidden) levelHidden.value = (criterion || 0);
   // prefill pattern from transaction description if txid provided
   if (txid) {
     var row = document.getElementById('tx_' + txid);
     if (row) {
       var acc = row.getAttribute('data-account') || '';
       var desc = row.getAttribute('data-desc') || '';
-      scopeSel.value = acc || '';
+      if (scopeSel) scopeSel.value = acc || '';
+      if (scopeHidden) scopeHidden.value = acc || '';
       patternInp.value = desc || '';
     }
   }
