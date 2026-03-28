@@ -846,6 +846,8 @@ function openCreateRuleModal(criterion, txid) {
   modal.style.display = 'flex';
   // focus pattern
   try { patternInp.focus(); } catch(e){}
+  // trigger suggestion fetch now that scope/account is set
+  try { patternInp.dispatchEvent(new Event('input')); } catch(e){}
 }
 
 function adjustModalHeights() {
@@ -1025,8 +1027,7 @@ document.getElementById('rule_category_level').addEventListener('change', functi
     }
     if (inp) {
       inp.addEventListener('input', function(){ clearTimeout(debounce); debounce = setTimeout(fetchMatches, 300); });
-      // initial fetch
-      setTimeout(fetchMatches, 200);
+      // do not run initial fetch on page load; we'll trigger when modal opens so scope/account is set
     }
   })();
 
