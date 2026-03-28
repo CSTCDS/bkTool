@@ -792,6 +792,7 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
 <script>
 // catsByCriterion available for modal population
 var catsByCriterion = <?php echo json_encode($catsByCriterion); ?>;
+var catLabels = <?php echo json_encode($catLabels); ?>;
 
 function openCreateRuleModal(criterion, txid) {
   var modal = document.getElementById('createRuleModal');
@@ -960,39 +961,55 @@ document.getElementById('rule_category_level').addEventListener('change', functi
       var crit = parseInt((document.getElementById('rule_category_level_hidden')||{value:'0'}).value, 10) || 0;
       var targetVal = (document.getElementById('rule_valeur_a_affecter')||{value:'0'}).value || '0';
       rows.forEach(function(r){
-        var catField = 'cat' + crit + '_id';
-        var cur = (r[catField] === null || typeof r[catField] === 'undefined') ? '0' : String(r[catField]);
-        if (cur === '0' || cur === '' || cur === null) {
-          unassigned.push(r);
-        } else if (String(cur) === String(targetVal)) {
-          matchingCount++;
-        } else {
-          different.push(r);
-        }
+          var catField = 'cat' + crit + '_id';
+          var cur = (r[catField] === null || typeof r[catField] === 'undefined') ? '0' : String(r[catField]);
+          if (cur === '0' || cur === '' || cur === null) {
+            unassigned.push(r);
+          } else if (String(cur) === String(targetVal)) {
+            matchingCount++;
+          } else {
+            different.push(r);
+          }
       });
 
       // Summary line
       var summary = document.createElement('div'); summary.style.marginBottom = '8px'; summary.style.fontSize = '0.95rem'; summary.style.color = '#333';
-      summary.textContent = 'Correspondances trouvées: ' + rows.length + ' — Déjà à la valeur: ' + matchingCount + ' opérations';
+        summary.textContent = 'Correspondances trouvées: ' + rows.length + ' — ' + matchingCount + ': opérations déjà à la valeur';
       matchesDiv.appendChild(summary);
 
-      // Unassigned list
-      var h1 = document.createElement('div'); h1.textContent = 'Opérations non affectées (' + unassigned.length + ')'; h1.style.fontWeight = '700'; h1.style.marginTop = '6px'; matchesDiv.appendChild(h1);
-      var ul1 = document.createElement('div'); ul1.style.border = '1px solid #efefef'; ul1.style.marginBottom = '8px';
-      unassigned.forEach(function(r){ var el = document.createElement('div'); el.style.padding = '6px 8px'; el.style.borderBottom = '1px solid #f8f8f8'; el.dataset.txid = r.id; el.className = 'match unassigned'; el.dataset.current = (r['cat' + crit + '_id'] || '0'); el.innerHTML = '<strong>' + (r.booking_date || '') + '</strong> &nbsp; ' + (r.amount ? Number(r.amount).toFixed(2) : '') + ' &nbsp; ' + (r.description ? r.description : ''); ul1.appendChild(el); });
-      matchesDiv.appendChild(ul1);
+      // Unassigned collapsible
+      var wrap1 = document.createElement('div');
+      var hdr1 = document.createElement('div'); hdr1.textContent = 'Opérations non affectées (' + unassigned.length + ')'; hdr1.style.fontWeight = '700'; hdr1.style.cursor = 'pointer'; hdr1.style.padding = '6px 0'; hdr1.style.borderBottom = '1px solid #eee';
+      var content1 = document.createElement('div'); content1.style.display = 'none'; content1.style.border = '1px solid #efefef'; content1.style.marginBottom = '8px';
+      unassigned.forEach(function(r){ var el = document.createElement('div'); el.style.padding = '6px 8px'; el.style.borderBottom = '1px solid #f8f8f8'; el.dataset.txid = r.id; el.className = 'match unassigned'; el.dataset.current = (r['cat' + crit + '_id'] || '0'); el.innerHTML = '<strong>' + (r.booking_date || '') + '</strong> &nbsp; ' + (r.amount ? Number(r.amount).toFixed(2) : '') + ' &nbsp; ' + (r.description ? r.description : ''); content1.appendChild(el); });
+      hdr1.addEventListener('click', function(){ content1.style.display = (content1.style.display === 'none') ? 'block' : 'none'; adjustModalHeights(); });
+      wrap1.appendChild(hdr1); wrap1.appendChild(content1); matchesDiv.appendChild(wrap1);
 
-      // Different-assigned list
-      var h2 = document.createElement('div'); h2.textContent = 'Opérations affectées à une autre valeur (' + different.length + ')'; h2.style.fontWeight = '700'; h2.style.marginTop = '6px'; matchesDiv.appendChild(h2);
-      var ul2 = document.createElement('div'); ul2.style.border = '1px solid #efefef';
-      different.forEach(function(r){ var el = document.createElement('div'); el.style.padding = '6px 8px'; el.style.borderBottom = '1px solid #f8f8f8'; el.dataset.txid = r.id; el.className = 'match different'; el.dataset.current = (r['cat' + crit + '_id'] || '0'); el.innerHTML = '<strong>' + (r.booking_date || '') + '</strong> &nbsp; ' + (r.amount ? Number(r.amount).toFixed(2) : '') + ' &nbsp; ' + (r.description ? r.description : ''); ul2.appendChild(el); });
-      matchesDiv.appendChild(ul2);
+      // Different-assigned collapsible (show current label)
+      var wrap2 = document.createElement('div');
+      var hdr2 = document.createElement('div'); hdr2.textContent = 'Opérations affectées à une autre valeur (' + different.length + ')'; hdr2.style.fontWeight = '700'; hdr2.style.cursor = 'pointer'; hdr2.style.padding = '6px 0'; hdr2.style.borderBottom = '1px solid #eee';
+      var content2 = document.createElement('div'); content2.style.display = 'none'; content2.style.border = '1px solid #efefef';
+      different.forEach(function(r){ var curId = (r['cat' + crit + '_id'] || '0'); var label = (catLabels[curId] || curId); var el = document.createElement('div'); el.style.padding = '6px 8px'; el.style.borderBottom = '1px solid #f8f8f8'; el.dataset.txid = r.id; el.className = 'match different'; el.dataset.current = curId; el.innerHTML = '<strong>' + (r.booking_date || '') + '</strong> &nbsp; ' + (r.amount ? Number(r.amount).toFixed(2) : '') + ' &nbsp; ' + (r.description ? r.description : '') + ' <em style="color:#666">— ' + label + '</em>'; content2.appendChild(el); });
+      hdr2.addEventListener('click', function(){ content2.style.display = (content2.style.display === 'none') ? 'block' : 'none'; adjustModalHeights(); });
+      wrap2.appendChild(hdr2); wrap2.appendChild(content2); matchesDiv.appendChild(wrap2);
       try { adjustModalHeights(); } catch(e){}
     }
     function fetchMatches() {
       if (!inp) return;
       var q = inp.value || '';
       var acct = acctHidden ? acctHidden.value : '';
+      // fallback to visible scope select if hidden value not set
+      if (!acct) {
+        var scopeSel = document.getElementById('rule_scope_account'); if (scopeSel && scopeSel.value) acct = scopeSel.value;
+      }
+      // fallback to form's txid row account
+      if (!acct) {
+        var form = document.getElementById('createRuleForm');
+        if (form && form.dataset && form.dataset.txid) {
+          var row = document.getElementById('tx_' + form.dataset.txid);
+          if (row) acct = row.getAttribute('data-account') || '';
+        }
+      }
       if (!acct) { matchesDiv.textContent = 'Pas de compte sélectionné'; return; }
       if (!q) { matchesDiv.textContent = 'Entrez un motif pour voir les opérations correspondantes'; return; }
       var clevel = (document.getElementById('rule_category_level_hidden')||{value:'0'}).value || '0';
@@ -1022,9 +1039,14 @@ document.getElementById('rule_category_level').addEventListener('change', functi
     var scopeH = document.getElementById('rule_scope_account_hidden'); if (scopeH) data.set('scope_account_id', scopeH.value || '');
     fetch('mon-site/api/create_rule.php', { method: 'POST', body: data }).then(function(r){ return r.json(); }).then(function(j){
       if (!j) { alert('Erreur création règle'); return; }
-      if (j.exists) { alert('La règle existe déjà'); document.getElementById('createRuleModal').style.display = 'none'; window.location.reload(); return; }
-      if (!j.ok) { alert('Erreur création règle'); return; }
-      var ruleId = j.rule_id;
+      var ruleId = null;
+      if (j.exists) {
+        // rule already exists: do not create again, but use existing id to apply
+        ruleId = j.rule_id || null;
+      } else {
+        if (!j.ok) { alert('Erreur création règle'); return; }
+        ruleId = j.rule_id || null;
+      }
       if (!ruleId) { alert('ID règle manquant'); return; }
       // gather tx ids to apply
       var txIds = [];
