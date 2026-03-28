@@ -819,10 +819,45 @@ function openCreateRuleModal(criterion, txid) {
   }
   // populate valeur_a_affecter for this criterion
   populateRuleValues(criterion);
+  // if txid provided, preselect the valeur_a_affecter to the transaction's current category for this criterion
+  if (txid) {
+    try {
+      var selField = document.querySelector('select.cat-select[data-txid="' + txid + '"][data-field="cat' + criterion + '_id"]');
+      var valSel = document.getElementById('rule_valeur_a_affecter');
+      if (selField && valSel) {
+        // set scope account hidden to account on the row
+        var row = document.getElementById('tx_' + txid);
+        if (row) {
+          var acc = row.getAttribute('data-account') || '';
+          var scopeSel = document.getElementById('rule_scope_account');
+          var scopeHidden = document.getElementById('rule_scope_account_hidden');
+          if (scopeSel) scopeSel.value = acc || '';
+          if (scopeHidden) scopeHidden.value = acc || '';
+        }
+        // set the valeur selection to the transaction's current category value if present
+        var cur = selField.value || '';
+        try { valSel.value = cur || '0'; } catch(e) {}
+      }
+    } catch(e) { /* ignore */ }
+  }
+  // adjust modal/list heights to fit viewport
+  try { adjustModalHeights(); } catch(e){}
   modal.style.display = 'flex';
   // focus pattern
   try { patternInp.focus(); } catch(e){}
 }
+
+function adjustModalHeights() {
+  var modal = document.getElementById('createRuleModal'); if (!modal) return;
+  var content = modal.firstElementChild || null; if (!content) return;
+  content.style.maxHeight = Math.round(window.innerHeight * 0.85) + 'px';
+  var matchesDiv = document.getElementById('rule_matches'); if (!matchesDiv) return;
+  // leave ~260px for header and controls, allocate remaining to matches list
+  var avail = Math.round(window.innerHeight * 0.85) - 260; if (avail < 120) avail = 120;
+  matchesDiv.style.maxHeight = avail + 'px';
+}
+
+window.addEventListener('resize', function(){ try { adjustModalHeights(); } catch(e){} });
 
 function populateRuleValues(criterion) {
   var valSel = document.getElementById('rule_valeur_a_affecter');
@@ -952,6 +987,7 @@ document.getElementById('rule_category_level').addEventListener('change', functi
       var ul2 = document.createElement('div'); ul2.style.border = '1px solid #efefef';
       different.forEach(function(r){ var el = document.createElement('div'); el.style.padding = '6px 8px'; el.style.borderBottom = '1px solid #f8f8f8'; el.dataset.txid = r.id; el.className = 'match different'; el.dataset.current = (r['cat' + crit + '_id'] || '0'); el.innerHTML = '<strong>' + (r.booking_date || '') + '</strong> &nbsp; ' + (r.amount ? Number(r.amount).toFixed(2) : '') + ' &nbsp; ' + (r.description ? r.description : ''); ul2.appendChild(el); });
       matchesDiv.appendChild(ul2);
+      try { adjustModalHeights(); } catch(e){}
     }
     function fetchMatches() {
       if (!inp) return;
@@ -985,7 +1021,9 @@ document.getElementById('rule_category_level').addEventListener('change', functi
     var levelH = document.getElementById('rule_category_level_hidden'); if (levelH) data.set('category_level', levelH.value || '0');
     var scopeH = document.getElementById('rule_scope_account_hidden'); if (scopeH) data.set('scope_account_id', scopeH.value || '');
     fetch('mon-site/api/create_rule.php', { method: 'POST', body: data }).then(function(r){ return r.json(); }).then(function(j){
-      if (!j || !j.ok) { alert('Erreur création règle'); return; }
+      if (!j) { alert('Erreur création règle'); return; }
+      if (j.exists) { alert('La règle existe déjà'); document.getElementById('createRuleModal').style.display = 'none'; window.location.reload(); return; }
+      if (!j.ok) { alert('Erreur création règle'); return; }
       var ruleId = j.rule_id;
       if (!ruleId) { alert('ID règle manquant'); return; }
       // gather tx ids to apply
@@ -1016,7 +1054,7 @@ document.getElementById('rule_category_level').addEventListener('change', functi
             var sel = document.querySelector('select.cat-select[data-txid="' + txid + '"]');
             if (sel) { sel.value = String(a.new); sel.dispatchEvent(new Event('change')); }
           });
-          document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle appliquée à ' + (res.count || 0) + ' opérations');
+          document.getElementById('createRuleModal').style.display = 'none'; window.location.reload();
         }).catch(function(){ alert('Erreur réseau application en masse'); });
       } else {
         // single apply via existing endpoint
@@ -1025,7 +1063,7 @@ document.getElementById('rule_category_level').addEventListener('change', functi
         fetch('mon-site/api/apply_rule.php', { method: 'POST', body: new URLSearchParams({ rule_id: ruleId, tx_id: txid }) }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.ok) {
             var crit = res.criterion; var field = 'cat' + crit + '_id'; var sel = document.querySelector('select.cat-select[data-txid="' + txid + '"][data-field="' + field + '"]');
             if (sel) { sel.value = String(res.new); sel.dispatchEvent(new Event('change')); }
-            document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle appliquée');
+            document.getElementById('createRuleModal').style.display = 'none'; window.location.reload();
           } else { alert('Erreur application'); } }).catch(function(){ alert('Erreur réseau'); });
       }
     }).catch(function(){ alert('Erreur réseau création règle'); });
