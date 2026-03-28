@@ -959,9 +959,15 @@ document.getElementById('rule_category_level').addEventListener('change', functi
       var acct = acctHidden ? acctHidden.value : '';
       if (!acct) { matchesDiv.textContent = 'Pas de compte sélectionné'; return; }
       if (!q) { matchesDiv.textContent = 'Entrez un motif pour voir les opérations correspondantes'; return; }
-      fetch('mon-site/api/search_tx.php?account_id=' + encodeURIComponent(acct) + '&q=' + encodeURIComponent(q))
+      var clevel = (document.getElementById('rule_category_level_hidden')||{value:'0'}).value || '0';
+      var val = (document.getElementById('rule_valeur_a_affecter')||{value:'0'}).value || '0';
+      var url = 'mon-site/api/search_tx.php?account_id=' + encodeURIComponent(acct) + '&q=' + encodeURIComponent(q) + '&category_level=' + encodeURIComponent(clevel) + '&valeur=' + encodeURIComponent(val);
+      fetch(url)
         .then(function(r){ return r.json(); })
-        .then(function(j){ if (j && j.ok) renderRows(j.rows); else matchesDiv.textContent = 'Erreur recherche'; })
+        .then(function(j){ if (j && j.ok) {
+            if (j.rule_exists) { matchesDiv.textContent = 'La règle existe déjà'; return; }
+            renderRows(j.rows);
+          } else matchesDiv.textContent = 'Erreur recherche'; })
         .catch(function(){ matchesDiv.textContent = 'Erreur réseau'; });
     }
     if (inp) {
