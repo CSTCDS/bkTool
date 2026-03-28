@@ -695,10 +695,16 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
 // Save category selection via AJAX
 document.querySelectorAll('.cat-select').forEach(function(sel) {
   sel.addEventListener('change', function() {
+    var v = this.value || '';
+    // Ignore sentinel values used to open modals: 999999{n} = create category, 999998{n} = create rule
+    if (String(v).indexOf('999999') === 0 || String(v).indexOf('999998') === 0) {
+      // modal flow will handle creation; do not send update to server
+      return;
+    }
     var data = new FormData();
     data.append('tx_id', this.dataset.txid);
     data.append('field', this.dataset.field);
-    data.append('value', this.value);
+    data.append('value', v);
     fetch('save_tx_category.php', { method: 'POST', body: data })
       .then(function(r) { return r.json(); })
       .then(function(j) {
@@ -810,6 +816,8 @@ function openCreateRuleModal(criterion, txid) {
   // prefill pattern from transaction description if txid provided
   if (txid) {
     var row = document.getElementById('tx_' + txid);
+    // remember which tx opened the modal so apply actions can reference it
+    try { form.dataset.txid = txid; } catch(e) {}
     if (row) {
       var acc = row.getAttribute('data-account') || '';
       var desc = row.getAttribute('data-desc') || '';
@@ -1058,27 +1066,50 @@ document.getElementById('rule_category_level').addEventListener('change', functi
     fetch('mon-site/api/create_rule.php', { method: 'POST', body: data }).then(function(r){ return r.json(); }).then(function(j){
       if (!j) { alert('Erreur création règle'); return; }
       var ruleId = null;
+      var creationExists = false;
       if (j.exists) {
-        // rule already exists: do not create again, but use existing id to apply
+        creationExists = true;
         ruleId = j.rule_id || null;
       } else {
         if (!j.ok) { alert('Erreur création règle'); return; }
         ruleId = j.rule_id || null;
       }
       if (!ruleId) { alert('ID règle manquant'); return; }
-      // gather tx ids to apply
-      var txIds = [];
-      if (mode === 'all' || mode === 'unassigned') {
-        var selector = (mode === 'unassigned') ? '#rule_matches .match.unassigned' : '#rule_matches div[data-txid]';
-        var nodes = Array.from(document.querySelectorAll(selector));
-        nodes.forEach(function(n){ txIds.push(n.dataset.txid); });
-      } else {
-        // get current tx id from form dataset
-        var lastOpen = form.dataset.txid || '';
-        if (lastOpen) txIds.push(lastOpen);
+      // If the rule already existed, update it with the popup parameters before applying
+      var proceedAfterUpdate = Promise.resolve({ ok: true, rule_id: ruleId });
+      if (creationExists) {
+        var updFd = new FormData();
+        updFd.append('id', ruleId);
+        // copy relevant fields from the create form
+        try {
+          updFd.append('pattern', (document.getElementById('rule_pattern')||{value:''}).value || '');
+          updFd.append('category_level', (document.getElementById('rule_category_level_hidden')||{value:'0'}).value || '0');
+          updFd.append('valeur_a_affecter', (document.getElementById('rule_valeur_a_affecter')||{value:'0'}).value || '0');
+          updFd.append('scope_account_id', (document.getElementById('rule_scope_account_hidden')||{value:''}).value || '');
+          updFd.append('priority', (document.getElementById('rule_priority')||{value:'100'}).value || '100');
+          updFd.append('active', document.querySelector('#createRuleForm input[name=active]') && document.querySelector('#createRuleForm input[name=active]').checked ? '1' : '0');
+        } catch(e) {}
+        proceedAfterUpdate = fetch('mon-site/api/update_rule.php', { method: 'POST', body: updFd }).then(function(r){ return r.json(); });
       }
-      if (txIds.length === 0) { document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle créée'); return; }
-      if (mode === 'all' || mode === 'unassigned') {
+
+      proceedAfterUpdate.then(function(updRes){
+        if (!updRes || !updRes.ok) { alert('Erreur mise à jour règle existante'); return; }
+        ruleId = updRes.rule_id || ruleId;
+
+        // continue with apply flow
+        // gather tx ids to apply
+        var txIds = [];
+        if (mode === 'all' || mode === 'unassigned') {
+          var selector = (mode === 'unassigned') ? '#rule_matches .match.unassigned' : '#rule_matches div[data-txid]';
+          var nodes = Array.from(document.querySelectorAll(selector));
+          nodes.forEach(function(n){ txIds.push(n.dataset.txid); });
+        } else {
+          // get current tx id from form dataset
+          var lastOpen = form.dataset.txid || '';
+          if (lastOpen) txIds.push(lastOpen);
+        }
+        if (txIds.length === 0) { document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle créée'); return; }
+        if (mode === 'all' || mode === 'unassigned') {
         // confirm with user showing number of operations
         var cnt = txIds.length;
         if (cnt === 0) { document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle créée'); return; }
@@ -1098,15 +1129,16 @@ document.getElementById('rule_category_level').addEventListener('change', functi
           if ((res.count || 0) > 0) { window.location.reload(); }
           else { alert('Aucune opération modifiée'); window.location.reload(); }
         }).catch(function(){ alert('Erreur réseau application en masse'); });
-      } else {
-        // single apply via existing endpoint
-        var lastOpen = form.dataset.txid || '';
-        var txid = lastOpen;
-        fetch('mon-site/api/apply_rule.php', { method: 'POST', body: new URLSearchParams({ rule_id: ruleId, tx_id: txid }) }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.ok) {
-            document.getElementById('createRuleModal').style.display = 'none'; window.location.reload();
-          } else { alert('Erreur application'); }
-        }).catch(function(){ alert('Erreur réseau'); });
-      }
+        } else {
+          // single apply via existing endpoint
+          var lastOpen = form.dataset.txid || '';
+          var txid = lastOpen;
+          fetch('mon-site/api/apply_rule.php', { method: 'POST', body: new URLSearchParams({ rule_id: ruleId, tx_id: txid }) }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.ok) {
+              document.getElementById('createRuleModal').style.display = 'none'; window.location.reload();
+            } else { alert('Erreur application'); }
+          }).catch(function(){ alert('Erreur réseau'); });
+        }
+      }).catch(function(){ alert('Erreur réseau mise à jour règle'); });
     }).catch(function(){ alert('Erreur réseau création règle'); });
   }
 
