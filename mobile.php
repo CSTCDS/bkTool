@@ -430,7 +430,6 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
       <input type="hidden" name="category_level" value="">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <input name="pattern" placeholder="Motif / libellé" style="flex:1;padding:8px">
-        <label style="display:flex;align-items:center;gap:6px"><input type="checkbox" name="is_regex" value="1"> regexp</label>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <select name="scope_account_id">

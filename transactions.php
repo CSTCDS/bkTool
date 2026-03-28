@@ -770,11 +770,20 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
       </div>
 
       <!-- Row 4: boutons -->
-      <div style="display:flex;justify-content:flex-end;gap:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div>
+          <button type="button" id="createRuleCancel" class="btn">Annuler</button>
+        </div>
+        <div style="text-align:center">
+          <button type="button" id="createRuleApply" class="btn btn-primary">Appliquer</button>
+        </div>
+        <div style="text-align:right">
+          <button type="button" id="createRuleApplyAll" class="btn">Appliquer à tous</button>
+        </div>
         <input name="priority" id="rule_priority" value="100" style="width:70px;padding:6px;display:none">
-        <button class="btn" type="submit">Créer</button>
-        <button type="button" id="createRuleCancel" class="btn" style="margin-left:8px">Annuler</button>
       </div>
+      <!-- Matches list (populated dynamically) -->
+      <div id="rule_matches" style="margin-top:12px;max-height:240px;overflow:auto;border-top:1px solid #eee;padding-top:8px"></div>
     </form>
   </div>
 </div>
@@ -896,6 +905,82 @@ document.getElementById('rule_category_level').addEventListener('change', functi
   });
 
   document.getElementById('cc_cancel').addEventListener('click', function(){ document.getElementById('createCatModal').style.display = 'none'; });
+  // create-rule modal helpers
+  document.getElementById('createRuleCancel').addEventListener('click', function(){ document.getElementById('createRuleModal').style.display = 'none'; });
+  document.getElementById('rule_category_level').addEventListener('change', function(){ populateRuleValues(this.value); });
+
+  // Suggest matching transactions as user types motif
+  ;(function(){
+    var inp = document.getElementById('rule_pattern');
+    var matchesDiv = document.getElementById('rule_matches');
+    var acctHidden = document.getElementById('rule_scope_account_hidden');
+    var debounce = null;
+    function renderRows(rows) {
+      matchesDiv.innerHTML = '';
+      if (!rows || !rows.length) { matchesDiv.textContent = 'Aucune opération correspondante'; return; }
+      var ul = document.createElement('div');
+      rows.forEach(function(r){
+        var el = document.createElement('div');
+        el.style.padding = '6px 8px'; el.style.borderBottom = '1px solid #f0f0f0';
+        el.dataset.txid = r.id;
+        el.innerHTML = '<strong>' + (r.booking_date || '') + '</strong> &nbsp; ' + (r.amount ? Number(r.amount).toFixed(2) : '') + ' &nbsp; ' + (r.description ? r.description : '');
+        ul.appendChild(el);
+      });
+      matchesDiv.appendChild(ul);
+    }
+    function fetchMatches() {
+      if (!inp) return;
+      var q = inp.value || '';
+      var acct = acctHidden ? acctHidden.value : '';
+      if (!acct) { matchesDiv.textContent = 'Pas de compte sélectionné'; return; }
+      if (!q) { matchesDiv.textContent = 'Entrez un motif pour voir les opérations correspondantes'; return; }
+      fetch('mon-site/api/search_tx.php?account_id=' + encodeURIComponent(acct) + '&q=' + encodeURIComponent(q))
+        .then(function(r){ return r.json(); })
+        .then(function(j){ if (j && j.ok) renderRows(j.rows); else matchesDiv.textContent = 'Erreur recherche'; })
+        .catch(function(){ matchesDiv.textContent = 'Erreur réseau'; });
+    }
+    if (inp) {
+      inp.addEventListener('input', function(){ clearTimeout(debounce); debounce = setTimeout(fetchMatches, 300); });
+      // initial fetch
+      setTimeout(fetchMatches, 200);
+    }
+  })();
+
+  // Create rule via AJAX and optionally apply
+  function createRuleAndApply(applyToAll) {
+    var form = document.getElementById('createRuleForm');
+    var data = new FormData(form);
+    // ensure hidden fields present
+    var levelH = document.getElementById('rule_category_level_hidden'); if (levelH) data.set('category_level', levelH.value || '0');
+    var scopeH = document.getElementById('rule_scope_account_hidden'); if (scopeH) data.set('scope_account_id', scopeH.value || '');
+    fetch('mon-site/api/create_rule.php', { method: 'POST', body: data }).then(function(r){ return r.json(); }).then(function(j){
+      if (!j || !j.ok) { alert('Erreur création règle'); return; }
+      var ruleId = j.rule_id;
+      if (!ruleId) { alert('ID règle manquant'); return; }
+      // gather tx ids to apply
+      var txIds = [];
+      if (applyToAll) {
+        var nodes = Array.from(document.querySelectorAll('#rule_matches div[data-txid]'));
+        nodes.forEach(function(n){ txIds.push(n.dataset.txid); });
+      } else {
+        // get current tx id from form dataset
+        var lastOpen = form.dataset.txid || '';
+        if (lastOpen) txIds.push(lastOpen);
+      }
+      if (txIds.length === 0) { document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle créée'); return; }
+      // apply sequentially
+      var p = Promise.resolve();
+      txIds.forEach(function(txid){ p = p.then(function(){ return fetch('mon-site/api/apply_rule.php', { method: 'POST', body: new URLSearchParams({ rule_id: ruleId, tx_id: txid }) }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.ok) {
+            // update DOM: set select value for the relevant criterion
+            var crit = res.criterion; var field = 'cat' + crit + '_id'; var sel = document.querySelector('select.cat-select[data-txid="' + txid + '"][data-field="' + field + '"]');
+            if (sel) { sel.value = String(res.new); sel.dispatchEvent(new Event('change')); }
+          }}); }); });
+      p.then(function(){ document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle appliquée'); }).catch(function(){ alert('Erreur application'); });
+    }).catch(function(){ alert('Erreur réseau création règle'); });
+  }
+
+  document.getElementById('createRuleApply').addEventListener('click', function(){ createRuleAndApply(false); });
+  document.getElementById('createRuleApplyAll').addEventListener('click', function(){ createRuleAndApply(true); });
   // Parent/child selects behavior inside modal
   (function(){
     var parentSel = document.getElementById('cc_parent');

@@ -10,7 +10,7 @@ try {
 }
 
 $pattern = $_POST['pattern'] ?? '';
-$is_regex = !empty($_POST['is_regex']) ? 1 : 0;
+$is_regex = 0;
 $category_level = isset($_POST['category_level']) ? (int)$_POST['category_level'] : 0;
 $scope_account_id = $_POST['scope_account_id'] ?? null;
 $priority = isset($_POST['priority']) ? (int)$_POST['priority'] : 100;

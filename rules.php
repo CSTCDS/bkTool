@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   if ($action === 'update' && !empty($_POST['id'])) {
     $id = (int)$_POST['id'];
     $pattern = $_POST['pattern'] ?? '';
-    $is_regex = !empty($_POST['is_regex']) ? 1 : 0;
+    $is_regex = 0;
     // New fields: category_level (1..4) and valeur_a_affecter (category id to set)
     $valeur_a_affecter = isset($_POST['valeur_a_affecter']) ? (int)$_POST['valeur_a_affecter'] : 0;
     $category_level = isset($_POST['category_level']) ? (int)$_POST['category_level'] : 0;
@@ -34,14 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $scope_account_id = isset($_POST['scope_account_id']) ? ($_POST['scope_account_id'] === 'NULL' ? null : $_POST['scope_account_id']) : null;
     $priority = isset($_POST['priority']) ? (int)$_POST['priority'] : 100;
     $active = !empty($_POST['active']) ? 1 : 0;
-    // If pattern contains % treat it as wildcard -> build regex
-    if (strpos($pattern, '%') !== false) {
-      $is_regex = 1;
-      $parts = explode('%', $pattern);
-      $escaped = array_map(function($p){ return preg_quote($p, '/'); }, $parts);
-      $joined = implode('.*', $escaped);
-      $pattern = '/' . $joined . '/i';
-    }
+    // We use SQL LIKE with % wildcards; store pattern as provided
     // prefer to update new columns if present (valeur_a_affecter, category_level)
     $cols = ['pattern = :p', 'is_regex = :ir', 'scope_account_id = :scope', 'priority = :prio', 'active = :act'];
     $params = [':p'=>$pattern,':ir'=>$is_regex,':scope'=>$scope_account_id,':prio'=>$priority,':act'=>$active,':id'=>$id];
@@ -63,20 +56,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([':id'=>$id]);
   } elseif ($action === 'create') {
     $pattern = $_POST['pattern'] ?? '';
-    $is_regex = !empty($_POST['is_regex']) ? 1 : 0;
+    $is_regex = 0;
       $valeur_a_affecter = isset($_POST['valeur_a_affecter']) ? (int)$_POST['valeur_a_affecter'] : 0;
       $category_level = isset($_POST['category_level']) ? (int)$_POST['category_level'] : 0;
       $category_id = $valeur_a_affecter;
     $scope_account_id = isset($_POST['scope_account_id']) ? ($_POST['scope_account_id'] === 'NULL' ? null : $_POST['scope_account_id']) : null;
     $priority = isset($_POST['priority']) ? (int)$_POST['priority'] : 100;
-    // If pattern contains % treat it as wildcard -> build regex
-    if (strpos($pattern, '%') !== false) {
-      $is_regex = 1;
-      $parts = explode('%', $pattern);
-      $escaped = array_map(function($p){ return preg_quote($p, '/'); }, $parts);
-      $joined = implode('.*', $escaped);
-      $pattern = '/' . $joined . '/i';
-    }
+    // We use SQL LIKE with % wildcards; store pattern as provided
     if ($pattern !== '') {
       // insert, prefer to include new columns when present
       $cols = ['pattern','is_regex','scope_account_id','priority','active','created_by'];
@@ -253,7 +239,6 @@ document.addEventListener('DOMContentLoaded', function(){
       <?php endfor; ?>
     </select>
     <input name="pattern" placeholder="Motif / libellé" style="flex:2;padding:8px">
-    <label style="margin-left:6px"><input type="checkbox" name="is_regex" value="1"> regexp</label>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
     <select name="scope_account_id">
@@ -278,7 +263,6 @@ document.addEventListener('DOMContentLoaded', function(){
       <th rowspan="2">N°</th>
       <th>Critère</th>
       <th colspan="2">Motif</th>
-      <th>Regexp</th>
       <th>Actions</th>
     </tr>
     <tr style="background:#ddd;color:#111">
@@ -311,10 +295,7 @@ document.addEventListener('DOMContentLoaded', function(){
         Motif<br>
         <input name="pattern[<?php echo $r['id']; ?>]" value="<?php echo htmlspecialchars($r['pattern']); ?>" style="padding:6px">
       </td>
-      <td>
-        Regexp<br>
-        <input type="checkbox" name="is_regex[<?php echo $r['id']; ?>]" value="1" <?php echo (!empty($r['is_regex']) ? 'checked' : ''); ?>>
-      </td>
+      
       <td>
         <!-- Placeholder cell for actions: unified form is in the second row -->
       </td>
