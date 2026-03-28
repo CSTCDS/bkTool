@@ -778,6 +778,7 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
           <button type="button" id="createRuleApply" class="btn btn-primary">Appliquer</button>
         </div>
         <div style="text-align:right">
+          <button type="button" id="createRuleApplyUnassigned" class="btn">Appliquer uniquement aux opérations non affectées</button>
           <button type="button" id="createRuleApplyAll" class="btn">Appliquer à tous</button>
         </div>
         <input name="priority" id="rule_priority" value="100" style="width:70px;padding:6px;display:none">
@@ -918,15 +919,39 @@ document.getElementById('rule_category_level').addEventListener('change', functi
     function renderRows(rows) {
       matchesDiv.innerHTML = '';
       if (!rows || !rows.length) { matchesDiv.textContent = 'Aucune opération correspondante'; return; }
-      var ul = document.createElement('div');
+      var unassigned = [];
+      var different = [];
+      var matchingCount = 0;
+      var crit = parseInt((document.getElementById('rule_category_level_hidden')||{value:'0'}).value, 10) || 0;
+      var targetVal = (document.getElementById('rule_valeur_a_affecter')||{value:'0'}).value || '0';
       rows.forEach(function(r){
-        var el = document.createElement('div');
-        el.style.padding = '6px 8px'; el.style.borderBottom = '1px solid #f0f0f0';
-        el.dataset.txid = r.id;
-        el.innerHTML = '<strong>' + (r.booking_date || '') + '</strong> &nbsp; ' + (r.amount ? Number(r.amount).toFixed(2) : '') + ' &nbsp; ' + (r.description ? r.description : '');
-        ul.appendChild(el);
+        var catField = 'cat' + crit + '_id';
+        var cur = (r[catField] === null || typeof r[catField] === 'undefined') ? '0' : String(r[catField]);
+        if (cur === '0' || cur === '' || cur === null) {
+          unassigned.push(r);
+        } else if (String(cur) === String(targetVal)) {
+          matchingCount++;
+        } else {
+          different.push(r);
+        }
       });
-      matchesDiv.appendChild(ul);
+
+      // Summary line
+      var summary = document.createElement('div'); summary.style.marginBottom = '8px'; summary.style.fontSize = '0.95rem'; summary.style.color = '#333';
+      summary.textContent = 'Correspondances trouvées: ' + rows.length + ' — Déjà à la valeur: ' + matchingCount + ' opérations';
+      matchesDiv.appendChild(summary);
+
+      // Unassigned list
+      var h1 = document.createElement('div'); h1.textContent = 'Opérations non affectées (' + unassigned.length + ')'; h1.style.fontWeight = '700'; h1.style.marginTop = '6px'; matchesDiv.appendChild(h1);
+      var ul1 = document.createElement('div'); ul1.style.border = '1px solid #efefef'; ul1.style.marginBottom = '8px';
+      unassigned.forEach(function(r){ var el = document.createElement('div'); el.style.padding = '6px 8px'; el.style.borderBottom = '1px solid #f8f8f8'; el.dataset.txid = r.id; el.className = 'match unassigned'; el.dataset.current = (r['cat' + crit + '_id'] || '0'); el.innerHTML = '<strong>' + (r.booking_date || '') + '</strong> &nbsp; ' + (r.amount ? Number(r.amount).toFixed(2) : '') + ' &nbsp; ' + (r.description ? r.description : ''); ul1.appendChild(el); });
+      matchesDiv.appendChild(ul1);
+
+      // Different-assigned list
+      var h2 = document.createElement('div'); h2.textContent = 'Opérations affectées à une autre valeur (' + different.length + ')'; h2.style.fontWeight = '700'; h2.style.marginTop = '6px'; matchesDiv.appendChild(h2);
+      var ul2 = document.createElement('div'); ul2.style.border = '1px solid #efefef';
+      different.forEach(function(r){ var el = document.createElement('div'); el.style.padding = '6px 8px'; el.style.borderBottom = '1px solid #f8f8f8'; el.dataset.txid = r.id; el.className = 'match different'; el.dataset.current = (r['cat' + crit + '_id'] || '0'); el.innerHTML = '<strong>' + (r.booking_date || '') + '</strong> &nbsp; ' + (r.amount ? Number(r.amount).toFixed(2) : '') + ' &nbsp; ' + (r.description ? r.description : ''); ul2.appendChild(el); });
+      matchesDiv.appendChild(ul2);
     }
     function fetchMatches() {
       if (!inp) return;
@@ -947,7 +972,7 @@ document.getElementById('rule_category_level').addEventListener('change', functi
   })();
 
   // Create rule via AJAX and optionally apply
-  function createRuleAndApply(applyToAll) {
+  function createRuleAndApply(mode) {
     var form = document.getElementById('createRuleForm');
     var data = new FormData(form);
     // ensure hidden fields present
@@ -959,8 +984,9 @@ document.getElementById('rule_category_level').addEventListener('change', functi
       if (!ruleId) { alert('ID règle manquant'); return; }
       // gather tx ids to apply
       var txIds = [];
-      if (applyToAll) {
-        var nodes = Array.from(document.querySelectorAll('#rule_matches div[data-txid]'));
+      if (mode === 'all' || mode === 'unassigned') {
+        var selector = (mode === 'unassigned') ? '#rule_matches .match.unassigned' : '#rule_matches div[data-txid]';
+        var nodes = Array.from(document.querySelectorAll(selector));
         nodes.forEach(function(n){ txIds.push(n.dataset.txid); });
       } else {
         // get current tx id from form dataset
@@ -968,10 +994,12 @@ document.getElementById('rule_category_level').addEventListener('change', functi
         if (lastOpen) txIds.push(lastOpen);
       }
       if (txIds.length === 0) { document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle créée'); return; }
-      if (applyToAll) {
+      if (mode === 'all' || mode === 'unassigned') {
         // confirm with user showing number of operations
         var cnt = txIds.length;
-        if (!confirm('Appliquer la règle à ' + cnt + ' opérations ?')) return;
+        if (cnt === 0) { document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle créée'); return; }
+        var promptText = (mode === 'unassigned') ? ('Appliquer la règle à ' + cnt + ' opérations non affectées ?') : ('Appliquer la règle à ' + cnt + ' opérations ?');
+        if (!confirm(promptText)) return;
         // call bulk endpoint
         var payload = new URLSearchParams(); payload.append('rule_id', ruleId); payload.append('tx_ids', txIds.join(','));
         fetch('mon-site/api/apply_rule_bulk.php', { method: 'POST', body: payload }).then(function(r){ return r.json(); }).then(function(res){
@@ -979,9 +1007,6 @@ document.getElementById('rule_category_level').addEventListener('change', functi
           // update DOM for affected rows
           (res.affected || []).forEach(function(a){
             var txid = a.tx_id;
-            var crit = null;
-            // determine criterion by scanning affected (server didn't return criterion); attempt to find which field changed by checking selects
-            // try to update any cat-select for this tx with matching value
             var sel = document.querySelector('select.cat-select[data-txid="' + txid + '"]');
             if (sel) { sel.value = String(a.new); sel.dispatchEvent(new Event('change')); }
           });
@@ -1001,7 +1026,8 @@ document.getElementById('rule_category_level').addEventListener('change', functi
   }
 
   document.getElementById('createRuleApply').addEventListener('click', function(){ createRuleAndApply(false); });
-  document.getElementById('createRuleApplyAll').addEventListener('click', function(){ createRuleAndApply(true); });
+  document.getElementById('createRuleApplyAll').addEventListener('click', function(){ createRuleAndApply('all'); });
+  var btnUnassigned = document.getElementById('createRuleApplyUnassigned'); if (btnUnassigned) btnUnassigned.addEventListener('click', function(){ createRuleAndApply('unassigned'); });
   // Parent/child selects behavior inside modal
   (function(){
     var parentSel = document.getElementById('cc_parent');

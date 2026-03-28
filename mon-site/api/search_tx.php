@@ -12,7 +12,7 @@ $acct = $_GET['account_id'] ?? null;
 $q = $_GET['q'] ?? '';
 if (!$acct) { echo json_encode(['ok'=>false,'error'=>'account_id required']); exit; }
 $like = '%' . str_replace('%','', $q) . '%';
-$stmt = $pdo->prepare('SELECT id, account_id, booking_date, amount, description FROM transactions WHERE account_id = :acct AND description LIKE :like ORDER BY booking_date DESC, id DESC LIMIT 500');
+$stmt = $pdo->prepare('SELECT id, account_id, booking_date, amount, description, cat1_id, cat2_id, cat3_id, cat4_id FROM transactions WHERE account_id = :acct AND description LIKE :like ORDER BY booking_date DESC, id DESC LIMIT 500');
 $stmt->execute([':acct'=>$acct, ':like'=>$like]);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 echo json_encode(['ok'=>true,'rows'=>$rows]);
