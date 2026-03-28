@@ -803,7 +803,7 @@ document.querySelectorAll('.cat-select').forEach(function(sel) {
 var catsByCriterion = <?php echo json_encode($catsByCriterion); ?>;
 var catLabels = <?php echo json_encode($catLabels); ?>;
 
-function openCreateRuleModal(criterion, txid) {
+function openCreateRuleModal(criterion, txid, preselectVal) {
   var modal = document.getElementById('createRuleModal');
   var form = document.getElementById('createRuleForm');
   var levelSel = document.getElementById('rule_category_level');
@@ -831,6 +831,10 @@ function openCreateRuleModal(criterion, txid) {
   }
   // populate valeur_a_affecter for this criterion
   populateRuleValues(criterion);
+  // if a preselect value was provided (from the select previous value), use it
+  if (typeof preselectVal !== 'undefined' && preselectVal !== null && preselectVal !== '') {
+    try { document.getElementById('rule_valeur_a_affecter').value = preselectVal; } catch(e) {}
+  }
   // if txid provided, preselect the valeur_a_affecter to the transaction's current category for this criterion
   if (txid) {
     try {
@@ -947,7 +951,8 @@ document.getElementById('rule_category_level').addEventListener('change', functi
       // Open create-rule modal prefilled with transaction data
       try {
         var txid = el.getAttribute('data-txid');
-        openCreateRuleModal(crit2, txid);
+        var prev = el.dataset && el.dataset.prev ? el.dataset.prev : '';
+        openCreateRuleModal(crit2, txid, prev);
       } catch(e) { console.error(e); }
         setTimeout(function(){ try { el.value = (el.dataset && el.dataset.prev) ? el.dataset.prev : ''; } catch(e){ el.value = ''; } }, 200);
       return;
