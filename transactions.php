@@ -1037,6 +1037,16 @@ document.getElementById('rule_category_level').addEventListener('change', functi
     // ensure hidden fields present
     var levelH = document.getElementById('rule_category_level_hidden'); if (levelH) data.set('category_level', levelH.value || '0');
     var scopeH = document.getElementById('rule_scope_account_hidden'); if (scopeH) data.set('scope_account_id', scopeH.value || '');
+    // client-side validation to provide clearer feedback
+    var patternVal = (document.getElementById('rule_pattern')||{value:''}).value.trim();
+    var clevelVal = (levelH||{value:'0'}).value || '0';
+    var valeurSel = document.getElementById('rule_valeur_a_affecter');
+    var valeurVal = (valeurSel ? valeurSel.value : '0') || '0';
+    var missing = [];
+    if (!patternVal) missing.push('motif');
+    if (!clevelVal || parseInt(clevelVal,10) <= 0) missing.push('critère');
+    if (!valeurVal || valeurVal === '0') missing.push('valeur à affecter');
+    if (missing.length) { alert('Veuillez renseigner: ' + missing.join(', ')); return; }
     fetch('mon-site/api/create_rule.php', { method: 'POST', body: data }).then(function(r){ return r.json(); }).then(function(j){
       if (!j) { alert('Erreur création règle'); return; }
       var ruleId = null;
