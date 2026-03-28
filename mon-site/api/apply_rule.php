@@ -25,24 +25,20 @@ if (!$rule) {
     exit;
 }
 
-$categoryLevel = (int)$rule['category_level'];
-// find criterion for category
-$cstmt = $pdo->prepare('SELECT criterion FROM categories WHERE id = :id');
-$cstmt->execute([':id' => $categoryLevel]);
-$crit = $cstmt->fetchColumn();
-if ($crit === false) {
+$criterion = isset($rule['category_level']) ? (int)$rule['category_level'] : 0;
+$targetCat = isset($rule['valeur_a_affecter']) ? (int)$rule['valeur_a_affecter'] : 0;
+if ($criterion < 1 || $criterion > 4) {
     http_response_code(400);
-    echo json_encode(['ok' => false, 'error' => 'category not found']);
+    echo json_encode(['ok' => false, 'error' => 'invalid criterion']);
     exit;
 }
-$crit = (int)$crit;
-if ($crit < 1 || $crit > 4) {
+if (!$targetCat) {
     http_response_code(400);
-    echo json_encode(['ok' => false, 'error' => 'unsupported criterion']);
+    echo json_encode(['ok' => false, 'error' => 'no target category configured in rule']);
     exit;
 }
 
-$field = "cat{$crit}_id";
+$field = "cat{$criterion}_id";
 
 // fetch old value
 $tstmt = $pdo->prepare("SELECT {$field} FROM transactions WHERE id = :txid");
@@ -51,10 +47,10 @@ $old = $tstmt->fetchColumn();
 
 // update transaction
 $ustmt = $pdo->prepare("UPDATE transactions SET {$field} = :cid WHERE id = :txid");
-$ok = $ustmt->execute([':cid' => $categoryLevel, ':txid' => $txId]);
+$ok = $ustmt->execute([':cid' => $targetCat, ':txid' => $txId]);
 
 // log the change
 $log = $pdo->prepare('INSERT INTO transaction_changes_log (tx_id, old_category_id, new_category_id, rule_id, user_id) VALUES (:tx, :old, :new, :rule, :user)');
-    $log->execute([':tx' => $txId, ':old' => $old ?: null, ':new' => $categoryLevel, ':rule' => $ruleId, ':user' => ($_SERVER['REMOTE_USER'] ?? null)]);
+$log->execute([':tx' => $txId, ':old' => $old ?: null, ':new' => $targetCat, ':rule' => $ruleId, ':user' => ($_SERVER['REMOTE_USER'] ?? null)]);
 
-echo json_encode(['ok' => (bool)$ok, 'field' => $field, 'old' => $old, 'new' => $categoryLevel, 'criterion' => $crit]);
+echo json_encode(['ok' => (bool)$ok, 'field' => $field, 'old' => $old, 'new' => $targetCat, 'criterion' => $criterion]);
