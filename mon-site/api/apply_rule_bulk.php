@@ -52,9 +52,11 @@ $rows = $q->fetchAll(PDO::FETCH_ASSOC);
 $affected = [];
 try {
     $pdo->beginTransaction();
-    $u = $pdo->prepare('UPDATE transactions SET ' . $field . ' = :cid WHERE id IN (' . $placeholders . ')');
-    $u->bindValue(':cid', $targetCat, PDO::PARAM_INT);
-    $i = 1; foreach ($txIds as $v) $u->bindValue($i++, $v);
+    // Use positional placeholders for update: first param = new category, following = tx ids
+    $u = $pdo->prepare('UPDATE transactions SET ' . $field . ' = ? WHERE id IN (' . $placeholders . ')');
+    // bind new category as first positional parameter
+    $u->bindValue(1, $targetCat, PDO::PARAM_INT);
+    $i = 2; foreach ($txIds as $v) { $u->bindValue($i++, $v); }
     $u->execute();
 
     $log = $pdo->prepare('INSERT INTO transaction_changes_log (tx_id, old_category_id, new_category_id, rule_id, user_id) VALUES (:tx, :old, :new, :rule, :user)');

@@ -1087,7 +1087,7 @@ document.getElementById('rule_category_level').addEventListener('change', functi
         // call bulk endpoint
         var payload = new URLSearchParams(); payload.append('rule_id', ruleId); payload.append('tx_ids', txIds.join(','));
         fetch('mon-site/api/apply_rule_bulk.php', { method: 'POST', body: payload }).then(function(r){ return r.json(); }).then(function(res){
-          if (!res || !res.ok) { alert('Erreur application en masse'); return; }
+          if (!res || !res.ok) { alert('Erreur application en masse' + (res && (res.error || res.message) ? ': ' + (res.error || res.message) : '')); return; }
           // update DOM for affected rows
           (res.affected || []).forEach(function(a){
             var txid = a.tx_id;
