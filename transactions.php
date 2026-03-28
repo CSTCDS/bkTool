@@ -968,14 +968,35 @@ document.getElementById('rule_category_level').addEventListener('change', functi
         if (lastOpen) txIds.push(lastOpen);
       }
       if (txIds.length === 0) { document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle créée'); return; }
-      // apply sequentially
-      var p = Promise.resolve();
-      txIds.forEach(function(txid){ p = p.then(function(){ return fetch('mon-site/api/apply_rule.php', { method: 'POST', body: new URLSearchParams({ rule_id: ruleId, tx_id: txid }) }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.ok) {
-            // update DOM: set select value for the relevant criterion
+      if (applyToAll) {
+        // confirm with user showing number of operations
+        var cnt = txIds.length;
+        if (!confirm('Appliquer la règle à ' + cnt + ' opérations ?')) return;
+        // call bulk endpoint
+        var payload = new URLSearchParams(); payload.append('rule_id', ruleId); payload.append('tx_ids', txIds.join(','));
+        fetch('mon-site/api/apply_rule_bulk.php', { method: 'POST', body: payload }).then(function(r){ return r.json(); }).then(function(res){
+          if (!res || !res.ok) { alert('Erreur application en masse'); return; }
+          // update DOM for affected rows
+          (res.affected || []).forEach(function(a){
+            var txid = a.tx_id;
+            var crit = null;
+            // determine criterion by scanning affected (server didn't return criterion); attempt to find which field changed by checking selects
+            // try to update any cat-select for this tx with matching value
+            var sel = document.querySelector('select.cat-select[data-txid="' + txid + '"]');
+            if (sel) { sel.value = String(a.new); sel.dispatchEvent(new Event('change')); }
+          });
+          document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle appliquée à ' + (res.count || 0) + ' opérations');
+        }).catch(function(){ alert('Erreur réseau application en masse'); });
+      } else {
+        // single apply via existing endpoint
+        var lastOpen = form.dataset.txid || '';
+        var txid = lastOpen;
+        fetch('mon-site/api/apply_rule.php', { method: 'POST', body: new URLSearchParams({ rule_id: ruleId, tx_id: txid }) }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.ok) {
             var crit = res.criterion; var field = 'cat' + crit + '_id'; var sel = document.querySelector('select.cat-select[data-txid="' + txid + '"][data-field="' + field + '"]');
             if (sel) { sel.value = String(res.new); sel.dispatchEvent(new Event('change')); }
-          }}); }); });
-      p.then(function(){ document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle appliquée'); }).catch(function(){ alert('Erreur application'); });
+            document.getElementById('createRuleModal').style.display = 'none'; showToast('Règle appliquée');
+          } else { alert('Erreur application'); } }).catch(function(){ alert('Erreur réseau'); });
+      }
     }).catch(function(){ alert('Erreur réseau création règle'); });
   }
 
