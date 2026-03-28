@@ -1020,8 +1020,15 @@ document.getElementById('rule_category_level').addEventListener('change', functi
       fetch(url)
         .then(function(r){ return r.json(); })
         .then(function(j){ if (j && j.ok) {
-            if (j.rule_exists) { matchesDiv.textContent = 'La règle existe déjà'; return; }
             renderRows(j.rows);
+            if (j.rule_exists) {
+              var note = document.createElement('div');
+              note.textContent = 'La règle existe déjà';
+              note.style.color = 'orange';
+              note.style.fontWeight = '700';
+              note.style.marginTop = '8px';
+              matchesDiv.insertBefore(note, matchesDiv.firstChild);
+            }
           } else matchesDiv.textContent = 'Erreur recherche'; })
         .catch(function(){ matchesDiv.textContent = 'Erreur réseau'; });
     }
@@ -1087,17 +1094,18 @@ document.getElementById('rule_category_level').addEventListener('change', functi
             var sel = document.querySelector('select.cat-select[data-txid="' + txid + '"]');
             if (sel) { sel.value = String(a.new); sel.dispatchEvent(new Event('change')); }
           });
-          document.getElementById('createRuleModal').style.display = 'none'; window.location.reload();
+          document.getElementById('createRuleModal').style.display = 'none';
+          if ((res.count || 0) > 0) { window.location.reload(); }
+          else { alert('Aucune opération modifiée'); window.location.reload(); }
         }).catch(function(){ alert('Erreur réseau application en masse'); });
       } else {
         // single apply via existing endpoint
         var lastOpen = form.dataset.txid || '';
         var txid = lastOpen;
         fetch('mon-site/api/apply_rule.php', { method: 'POST', body: new URLSearchParams({ rule_id: ruleId, tx_id: txid }) }).then(function(r){ return r.json(); }).then(function(res){ if (res && res.ok) {
-            var crit = res.criterion; var field = 'cat' + crit + '_id'; var sel = document.querySelector('select.cat-select[data-txid="' + txid + '"][data-field="' + field + '"]');
-            if (sel) { sel.value = String(res.new); sel.dispatchEvent(new Event('change')); }
             document.getElementById('createRuleModal').style.display = 'none'; window.location.reload();
-          } else { alert('Erreur application'); } }).catch(function(){ alert('Erreur réseau'); });
+          } else { alert('Erreur application'); }
+        }).catch(function(){ alert('Erreur réseau'); });
       }
     }).catch(function(){ alert('Erreur réseau création règle'); });
   }
