@@ -694,6 +694,9 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
 <script>
 // Save category selection via AJAX
 document.querySelectorAll('.cat-select').forEach(function(sel) {
+  // remember previous value so we can restore it when opening a modal sentinel
+  sel.addEventListener('focus', function(){ try { this.dataset.prev = this.value; } catch(e){} });
+  sel.addEventListener('pointerdown', function(){ try { this.dataset.prev = this.value; } catch(e){} });
   sel.addEventListener('change', function() {
     var v = this.value || '';
     // Ignore sentinel values used to open modals: 999999{n} = create category, 999998{n} = create rule
@@ -935,7 +938,7 @@ document.getElementById('rule_category_level').addEventListener('change', functi
       var crit = parseInt(m[1], 10);
       var level = 1;
       openCreateModal(crit, level, el);
-      setTimeout(function(){ el.value = ''; }, 200);
+        setTimeout(function(){ try { el.value = (el.dataset && el.dataset.prev) ? el.dataset.prev : ''; } catch(e){ el.value = ''; } }, 200);
       return;
     }
     var r = v.match(/^999998(\d)$/);
@@ -946,7 +949,7 @@ document.getElementById('rule_category_level').addEventListener('change', functi
         var txid = el.getAttribute('data-txid');
         openCreateRuleModal(crit2, txid);
       } catch(e) { console.error(e); }
-      setTimeout(function(){ el.value = ''; }, 200);
+        setTimeout(function(){ try { el.value = (el.dataset && el.dataset.prev) ? el.dataset.prev : ''; } catch(e){ el.value = ''; } }, 200);
       return;
     }
   });
