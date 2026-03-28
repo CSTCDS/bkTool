@@ -998,8 +998,10 @@ document.getElementById('rule_category_level').addEventListener('change', functi
       // Rules block
       try {
         var rulesWrap = document.createElement('div');
-        var rulesHdr = document.createElement('div'); rulesHdr.textContent = 'Règles correspondant au libellé (' + (rules && rules.length ? rules.length : 0) + ')'; rulesHdr.style.fontWeight = '700'; rulesHdr.style.padding = '6px 0'; rulesHdr.style.borderBottom = '1px solid #eee';
-        var rulesContent = document.createElement('div'); rulesContent.style.marginBottom = '8px'; rulesContent.style.border = '1px solid #efefef';
+        var rulesHdr = document.createElement('div');
+        rulesHdr.textContent = 'Règles correspondant au libellé (' + (rules && rules.length ? rules.length : 0) + ')';
+        rulesHdr.style.fontWeight = '700'; rulesHdr.style.cursor = 'pointer'; rulesHdr.style.padding = '6px 0'; rulesHdr.style.borderBottom = '1px solid #eee';
+        var rulesContent = document.createElement('div'); rulesContent.style.marginBottom = '8px'; rulesContent.style.border = '1px solid #efefef'; rulesContent.style.display = 'none';
         if (rules && rules.length) {
           rules.forEach(function(rr){
             var el = document.createElement('div'); el.style.padding = '6px 8px'; el.style.borderBottom = '1px solid #f8f8f8';
@@ -1011,6 +1013,7 @@ document.getElementById('rule_category_level').addEventListener('change', functi
         } else {
           var none = document.createElement('div'); none.style.padding = '6px 8px'; none.textContent = 'Aucune règle trouvée'; rulesContent.appendChild(none);
         }
+        rulesHdr.addEventListener('click', function(){ rulesContent.style.display = (rulesContent.style.display === 'none') ? 'block' : 'none'; try { adjustModalHeights(); } catch(e){} });
         rulesWrap.appendChild(rulesHdr); rulesWrap.appendChild(rulesContent); matchesDiv.appendChild(rulesWrap);
       } catch(e) { /* ignore rendering rules */ }
 
