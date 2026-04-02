@@ -3,6 +3,72 @@
 // Reusable sync logic: fetch balances and transactions from Enable Banking session
 
 require_once __DIR__ . '/EnableBankingClient.php';
+require_once __DIR__ . '/AutoCategoryRule.php';
+
+/**
+ * Try to find an active auto-category rule matching the given description/account
+ * and apply it to the given transaction id. Returns a short message string
+ * describing the applied change (for sync logging) or null when nothing applied.
+ */
+function applyMatchingRuleToTransaction(PDO $pdo, string $txId, ?string $description, ?string $accountId): ?string
+{
+    $desc = (string)($description ?? '');
+    try {
+        $acr = new AutoCategoryRule($pdo);
+        $match = $acr->findMatchingRule($desc, $accountId);
+        if (!$match || empty($match['id'])) return null;
+
+        // fetch full rule row
+        $stmt = $pdo->prepare('SELECT * FROM auto_category_rules WHERE id = :id');
+        $stmt->execute([':id' => $match['id']]);
+        $rule = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$rule) return null;
+
+        // determine target category id (prefer valeur_a_affecter)
+        $targetCat = null;
+        if (!empty($rule['valeur_a_affecter'])) $targetCat = (int)$rule['valeur_a_affecter'];
+        elseif (!empty($rule['category_level'])) $targetCat = (int)$rule['category_level'];
+        if (!$targetCat) return null;
+
+        // determine the category criterion (prefers rule.category_level when valid)
+        $criterion = null;
+        if (!empty($rule['category_level']) && (int)$rule['category_level'] >= 1 && (int)$rule['category_level'] <= 4) {
+            $criterion = (int)$rule['category_level'];
+        } else {
+            // try to resolve from categories table when valeur_a_affecter is a category id
+            $cstmt = $pdo->prepare('SELECT criterion FROM categories WHERE id = :id');
+            $cstmt->execute([':id' => $targetCat]);
+            $crit = $cstmt->fetchColumn();
+            if ($crit === false) return null;
+            $criterion = (int)$crit;
+        }
+
+        $field = 'cat' . $criterion . '_id';
+
+        // fetch old value
+        $tstmt = $pdo->prepare("SELECT {$field} FROM transactions WHERE id = :id");
+        $tstmt->execute([':id' => $txId]);
+        $old = $tstmt->fetchColumn();
+
+        // if already set to same value, nothing to do
+        if ((int)$old === (int)$targetCat) return null;
+
+        // apply update
+        $ustmt = $pdo->prepare("UPDATE transactions SET {$field} = :cid WHERE id = :id");
+        $ustmt->execute([':cid' => $targetCat, ':id' => $txId]);
+
+        // log the change
+        $log = $pdo->prepare('INSERT INTO transaction_changes_log (tx_id, old_category_id, new_category_id, rule_id, user_id) VALUES (:tx, :old, :new, :rule, :user)');
+        $log->execute([':tx' => $txId, ':old' => ($old !== null ? $old : null), ':new' => $targetCat, ':rule' => $rule['id'], ':user' => ($_SERVER['REMOTE_USER'] ?? null)]);
+
+        // build a short French message for the cron log
+        $msg = 'Règle appliquée: op ' . $txId . ' → cat' . $criterion . ' = ' . $targetCat . ' (règle #' . $rule['id'] . ')';
+        return $msg;
+    } catch (Throwable $e) {
+        // don't break the sync on matching errors
+        return null;
+    }
+}
 
 function upsertAccount($pdo, $acc)
 {
@@ -81,7 +147,13 @@ function upsertAccount($pdo, $acc)
                 ':reference_date' => $reference_date
             ]);
         }
-        return ['action' => 'insert'];
+        // After inserting, try to apply a matching auto-category rule
+        try {
+            $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId);
+        } catch (Throwable $_) { $matchMsg = null; }
+        $ret = ['action' => 'insert'];
+        if ($matchMsg) $ret['match_message'] = $matchMsg;
+        return $ret;
     } else {
         if ($hasAccountTypeCol && $account_type !== null) {
             // try to update solde2eme if column exists
@@ -290,7 +362,13 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
                     'computed' => ['badge' => $badge, 'CountInVirtual' => (int)$countInVirtual]
                 ];
             }
-            return ['action' => 'noop'];
+            // still attempt matching even on noop (apply only if it changes a category)
+            try {
+                $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId);
+            } catch (Throwable $_) { $matchMsg = null; }
+            $ret = ['action' => 'noop'];
+            if ($matchMsg) $ret['match_message'] = $matchMsg;
+            return $ret;
         }
 
             // On updates, ne pas modifier NumImport (conserver la valeur existante)
@@ -322,7 +400,13 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
                     'computed' => ['badge' => $badge, 'CountInVirtual' => (int)$countInVirtual]
                 ];
             }
-            return ['action' => 'update'];
+            // After update, try to apply a matching rule
+            try {
+                $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId);
+            } catch (Throwable $_) { $matchMsg = null; }
+            $ret = ['action' => 'update'];
+            if ($matchMsg) $ret['match_message'] = $matchMsg;
+            return $ret;
     }
 }
 
@@ -337,6 +421,7 @@ function run_sync($pdo, $config, $opts = [])
         'transactions_update' => 0,
         'transactions_skipped' => 0,
         'skipped_transactions' => [],
+        'sync_messages' => [],
         'errors' => []
     ];
     // prepare debug capture if requested via opts
@@ -532,6 +617,7 @@ function run_sync($pdo, $config, $opts = [])
                 $result['transactions']++;
                 if (!empty($r2['action']) && $r2['action'] === 'insert') $result['transactions_insert']++;
                 if (!empty($r2['action']) && $r2['action'] === 'update') $result['transactions_update']++;
+                if (!empty($r2['match_message'])) $result['sync_messages'][] = $r2['match_message'];
             }
         }
     }

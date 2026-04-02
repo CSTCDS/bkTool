@@ -22,8 +22,9 @@ try {
 
 $out = run_sync($pdo, $config);
 
-// If sync produced errors, save the full JSON output in the logs table
-if (!empty($out['errors']) || !empty($out['skipped_transactions']) ) {
+// If sync produced errors, skipped transactions, or applied auto-rule matches,
+// save the concise summary (and messages) in the logs table
+if (!empty($out['errors']) || !empty($out['skipped_transactions']) || !empty($out['sync_messages'])) {
     try {
         // Build a concise French libellé from the sync result
         $accounts = isset($out['accounts']) ? (int)$out['accounts'] : 0;
@@ -33,6 +34,11 @@ if (!empty($out['errors']) || !empty($out['skipped_transactions']) ) {
         $tx_sk = isset($out['transactions_skipped']) ? (int)$out['transactions_skipped'] : 0;
         $sep = ' · ';
         $lib = 'Comptes lus: ' . $accounts . $sep . 'Opérations lues: ' . $tx_read . $sep . 'Créées: ' . $tx_ins . $sep . 'Modifiées: ' . $tx_upd . $sep . 'En attente: ' . $tx_sk;
+
+        // append any sync messages (one per applied rule) after the summary, separated by <br>
+        if (!empty($out['sync_messages'])) {
+            $lib .= '<br>' . implode('<br>', $out['sync_messages']);
+        }
 
         $stmt = $pdo->prepare('INSERT INTO logs (log_date, log_time, code_programme, libelle, payload, created_at) VALUES (CURDATE(), CURTIME(), :code, :lib, :payload, NOW())');
         $payload = json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
