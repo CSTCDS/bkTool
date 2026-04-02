@@ -411,10 +411,8 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         <div id="suggestLabel_<?php echo $ci; ?>" style="font-weight:700;margin-bottom:6px"></div>
         <div id="suggestDebug_<?php echo $ci; ?>" style="display:none;font-family:monospace;white-space:pre-wrap;margin-bottom:6px;color:#444"></div>
         <div style="display:flex;gap:8px">
-            <button class="applySuggestion btn">Appliquer</button>
-            <button class="createCategory btn">Créer catégorie</button>
-            <button class="createRule btn">Créer une règle</button>
-            <button class="ignoreSuggestion btn">Ignorer</button>
+          <button class="createCategory btn">Créer catégorie</button>
+          <button class="createRule btn">Créer une règle</button>
         </div>
       </div>
     <?php endfor; ?>
@@ -546,12 +544,12 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
                     const catLabel = catLabels[s.category_level] || ('#' + s.category_level);
                     if (lbl) lbl.textContent = catLabel + (s.is_regex ? ' (regex)' : '');
                     if (dbg) { dbg.style.display = 'block'; dbg.textContent = JSON.stringify(data, null, 2); }
-                    // enable apply
-                    const applyBtn = bx.querySelector('.applySuggestion'); if (applyBtn) { applyBtn.disabled = false; applyBtn.dataset.cat = s.category_level; }
+                    // store suggested category on the box element
+                    try { bx.dataset.suggestedCat = String(s.category_level); } catch(e) {}
                   } else {
                     if (lbl) lbl.textContent = 'Aucune suggestion';
                     if (dbg) { dbg.style.display = 'none'; dbg.textContent = ''; }
-                    const applyBtn = bx.querySelector('.applySuggestion'); if (applyBtn) applyBtn.disabled = true;
+                    try { delete bx.dataset.suggestedCat; } catch(e) {}
                   }
                 } else {
                   if (lbl) lbl.textContent = 'Aucune suggestion';
@@ -559,29 +557,10 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
                   const applyBtn = bx.querySelector('.applySuggestion'); if (applyBtn) applyBtn.disabled = true;
                 }
 
-                // Apply handler (works only when a category id is present in dataset)
-                bx.querySelector('.applySuggestion').onclick = function(){
-                  const catId = this.dataset.cat;
-                  if (!catId) { showToast('Aucune suggestion à appliquer', 'error'); return; }
-                  const fieldName = 'cat'+crit+'_id';
-                  // find form similar to before
-                  function findForm(field) {
-                    let f = document.querySelector('.m-cats form[data-field="'+field+'"][data-txid="'+txId+'"]'); if (f) return {form:f};
-                    f = document.querySelector('.m-cats form[data-field="'+field+'"]'); if (f) return {form:f};
-                    const forms = Array.from(document.querySelectorAll('.m-cats form'));
-                    for (const fr of forms) { const hf = fr.querySelector('input[name="field"]'); if (hf && hf.value === field) return {form:fr}; }
-                    return null;
-                  }
-                  const found = findForm(fieldName);
-                  if (!found) { showToast('Formulaire cible introuvable', 'error'); return; }
-                  const form = found.form; const sel = form.querySelector('select[name="value"]'); if (!sel) { showToast('Sélecteur introuvable', 'error'); return; }
-                  sel.value = catId; form.submit();
-                };
-
+                
                 // Create rule handler: open modal using the suggested category
                 bx.querySelector('.createRule').onclick = function(){
-                  const applyBtn = bx.querySelector('.applySuggestion');
-                  const suggestedCat = (applyBtn && applyBtn.dataset && applyBtn.dataset.cat) ? applyBtn.dataset.cat : null;
+                  const suggestedCat = (bx && bx.dataset && bx.dataset.suggestedCat) ? bx.dataset.suggestedCat : null;
                   const lbl = document.getElementById('suggestLabel_' + crit);
                   const catLabelText = lbl ? lbl.textContent : '';
                   if (!suggestedCat) { showToast('Aucune catégorie suggérée', 'error'); return; }
@@ -603,8 +582,7 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
                 var createCatBtn = bx.querySelector('.createCategory');
                 if (createCatBtn) {
                   createCatBtn.onclick = function(){
-                    const applyBtn = bx.querySelector('.applySuggestion');
-                    const suggestedCat = (applyBtn && applyBtn.dataset && applyBtn.dataset.cat) ? applyBtn.dataset.cat : null;
+                    const suggestedCat = (bx && bx.dataset && bx.dataset.suggestedCat) ? bx.dataset.suggestedCat : null;
                     const critNum = crit;
                     // open modal
                     const cm = document.getElementById('createCatModalMobile');
@@ -637,7 +615,7 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
                   };
                 }
 
-                bx.querySelector('.ignoreSuggestion').onclick = function(){ bx.style.display='none'; };
+                // ignoreSuggestion button removed; keep behaviour accessible via createCategory/createRule flows
               }
             }).catch(e => { console.debug('suggest debug fetch error', e); logDebug('suggest debug fetch error', String(e)); });
         })
