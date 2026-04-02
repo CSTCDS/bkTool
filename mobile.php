@@ -411,9 +411,10 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         <div id="suggestLabel_<?php echo $ci; ?>" style="font-weight:700;margin-bottom:6px"></div>
         <div id="suggestDebug_<?php echo $ci; ?>" style="display:none;font-family:monospace;white-space:pre-wrap;margin-bottom:6px;color:#444"></div>
         <div style="display:flex;gap:8px">
-          <button class="applySuggestion btn">Appliquer</button>
-          <button class="createRule btn">Créer une règle</button>
-          <button class="ignoreSuggestion btn">Ignorer</button>
+            <button class="applySuggestion btn">Appliquer</button>
+            <button class="createCategory btn">Créer catégorie</button>
+            <button class="createRule btn">Créer une règle</button>
+            <button class="ignoreSuggestion btn">Ignorer</button>
         </div>
       </div>
     <?php endfor; ?>
@@ -444,6 +445,31 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
           <button id="createRuleSubmit" class="btn" type="button">Créer</button>
           <button id="createRuleCancel" class="btn" type="button">Annuler</button>
         </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modal: Create Category (mobile) -->
+  <div id="createCatModalMobile" style="display:none;position:fixed;z-index:3001;left:0;right:0;top:80px;margin:0 auto;max-width:720px;padding:12px;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.16)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong>Créer une catégorie liée</strong>
+      <button id="closeCreateCatMobile" class="btn">X</button>
+    </div>
+    <form id="createCatFormMobile">
+      <input type="hidden" name="criterion" value="">
+      <div style="margin-bottom:8px">
+        <label>Parent (facultatif):
+          <select name="parent_id" id="createCatParentMobile" style="width:100%">
+            <option value="0">Créer un nouveau code de niveau 1</option>
+          </select>
+        </label>
+      </div>
+      <div style="margin-bottom:8px">
+        <label>Libellé: <input name="label" id="createCatLabelMobile" required style="width:100%;padding:8px"></label>
+      </div>
+      <div style="text-align:right">
+        <button type="button" id="createCatSubmitMobile" class="btn">Créer</button>
+        <button type="button" id="createCatCancelMobile" class="btn">Annuler</button>
       </div>
     </form>
   </div>
@@ -573,6 +599,44 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
                   modal.style.display = 'block';
                 };
 
+                // Create category button handler (mobile): open create modal and prefill
+                var createCatBtn = bx.querySelector('.createCategory');
+                if (createCatBtn) {
+                  createCatBtn.onclick = function(){
+                    const applyBtn = bx.querySelector('.applySuggestion');
+                    const suggestedCat = (applyBtn && applyBtn.dataset && applyBtn.dataset.cat) ? applyBtn.dataset.cat : null;
+                    const critNum = crit;
+                    // open modal
+                    const cm = document.getElementById('createCatModalMobile');
+                    if (!cm) { showToast('Modal création catégorie introuvable', 'error'); return; }
+                    cm.style.display = 'block';
+                    cm.querySelector('[name="criterion"]').value = String(critNum);
+                    // populate parent select for this criterion
+                    const parentSel = document.getElementById('createCatParentMobile');
+                    parentSel.innerHTML = '<option value="0">Créer un nouveau code de niveau 1</option>';
+                    try {
+                      var parents = (<?php echo json_encode($catTree); ?>)[critNum] || {};
+                      Object.keys(parents).forEach(function(pid){ var node = parents[pid]; if (node && node.info) { var o = document.createElement('option'); o.value = node.info.id; o.textContent = node.info.label; parentSel.appendChild(o); } });
+                    } catch(e) { console.debug('populate parents error', e); }
+                    // prefill label using txDescription
+                    var lab = document.getElementById('createCatLabelMobile'); if (lab) lab.value = txDescription || '';
+                    // if we have suggestedCat and can map it to a parent, try to preselect that parent
+                    try {
+                      var childToParent = <?php
+                        $childParents = [];
+                        foreach ($allCats as $c) {
+                          if ($c['parent_id'] !== null) { $childParents[$c['id']] = $c['parent_id']; }
+                        }
+                        echo json_encode($childParents);
+                      ?>;
+                      if (suggestedCat && childToParent[suggestedCat]) {
+                        var pval = childToParent[suggestedCat];
+                        for (const o of parentSel.options) { if (String(o.value) === String(pval)) { o.selected = true; break; } }
+                      }
+                    } catch(e){}
+                  };
+                }
+
                 bx.querySelector('.ignoreSuggestion').onclick = function(){ bx.style.display='none'; };
               }
             }).catch(e => { console.debug('suggest debug fetch error', e); logDebug('suggest debug fetch error', String(e)); });
@@ -601,6 +665,72 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
             if (resp && resp.ok) { showToast('Règle créée', 'success'); modal.style.display='none'; }
             else { console.error(resp); alert('Erreur création règle'); }
           }).catch(function(e){ console.error(e); alert('Erreur réseau'); });
+      });
+    })();
+
+    // Swipe navigation: detect left/right swipes to move prev/next
+    (function(){
+      var startX = null, startY = null, startTime = null;
+      var threshold = 40; // px
+      var allowedTime = 500; // ms
+      function onTouchStart(e){
+        var t = e.touches ? e.touches[0] : (e.changedTouches ? e.changedTouches[0] : e);
+        startX = t.clientX; startY = t.clientY; startTime = Date.now();
+      }
+      function onTouchEnd(e){
+        if (startX === null) return;
+        var t = e.changedTouches ? e.changedTouches[0] : e;
+        var distX = t.clientX - startX; var distY = t.clientY - startY; var elapsed = Date.now() - startTime;
+        startX = startY = startTime = null;
+        if (elapsed > allowedTime) return;
+        if (Math.abs(distX) > Math.abs(distY) && Math.abs(distX) > threshold) {
+          // horizontal swipe
+          var go = null;
+          if (distX > 0) go = Math.max(0, <?php echo (int)$idx; ?> - 1);
+          else go = Math.min(<?php echo (int)$total; ?> - 1, <?php echo (int)$idx; ?> + 1);
+          if (go === null) return;
+          var url = 'mobile.php?idx=' + encodeURIComponent(go) + '&show_pending=' + encodeURIComponent(<?php echo $showPending ? '1' : '0'; ?>);
+          var acct = <?php echo json_encode((string)$acctSel); ?>;
+          if (acct && acct !== '') url += '&account=' + encodeURIComponent(acct);
+          location.href = url;
+        }
+      }
+      document.addEventListener('touchstart', onTouchStart, {passive:true});
+      document.addEventListener('touchend', onTouchEnd, {passive:true});
+      // fallback for mouse drag on desktops
+      var mouseDown = false;
+      document.addEventListener('pointerdown', function(e){ mouseDown = true; onTouchStart(e); });
+      document.addEventListener('pointerup', function(e){ if (!mouseDown) return; mouseDown = false; onTouchEnd(e); });
+    })();
+
+    // Modal handlers for create category (mobile)
+    (function(){
+      var modal = document.getElementById('createCatModalMobile');
+      if (!modal) return;
+      document.getElementById('closeCreateCatMobile').addEventListener('click', function(){ modal.style.display='none'; });
+      document.getElementById('createCatCancelMobile').addEventListener('click', function(){ modal.style.display='none'; });
+      document.getElementById('createCatSubmitMobile').addEventListener('click', function(){
+        var f = document.getElementById('createCatFormMobile');
+        var fd = new FormData(f);
+        var criterion = fd.get('criterion') || '1';
+        var parent_id = fd.get('parent_id') || '0';
+        var label = fd.get('label') || '';
+        if (!label || label.trim() === '') { alert('Libellé requis'); return; }
+        var payload = new URLSearchParams();
+        if (parent_id && parent_id !== '0') {
+          payload.append('action','add_level2');
+          payload.append('parent_id', parent_id);
+          payload.append('label', label);
+        } else {
+          payload.append('action','add_level1');
+          payload.append('label', label);
+        }
+        payload.append('criterion', criterion);
+        payload.append('ajax', '1');
+        fetch('categories.php', { method: 'POST', body: payload }).then(r=>r.json()).then(function(resp){
+          if (resp && resp.ok) { showToast('Catégorie créée', 'success'); modal.style.display='none'; setTimeout(function(){ location.reload(); }, 600); }
+          else { console.error(resp); alert('Erreur création catégorie'); }
+        }).catch(function(e){ console.error(e); alert('Erreur réseau'); });
       });
     })();
     </script>
