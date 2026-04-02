@@ -30,10 +30,11 @@ class AutoCategoryRule
             if (!empty($r['scope_account_id']) && $accountId !== null && (string)$r['scope_account_id'] !== (string)$accountId) {
                 continue;
             }
+            $pattern = trim((string)($r['pattern'] ?? ''));
+            if ($pattern === '') continue;
 
-            $pattern = $r['pattern'];
-            if ($r['is_regex']) {
-                // safe preg match
+            if (!empty($r['is_regex'])) {
+                // safe preg match (rule.pattern expected to be a valid regex)
                 try {
                     if (@preg_match($pattern, $description) === 1) {
                         return $r;
@@ -43,8 +44,23 @@ class AutoCategoryRule
                     continue;
                 }
             } else {
-                if (stripos($description, $pattern) !== false) {
-                    return $r;
+                // support SQL LIKE-style patterns when user included % or _
+                if (strpos($pattern, '%') !== false || strpos($pattern, '_') !== false) {
+                    // convert SQL LIKE to a safe regex: escape then replace % -> .* and _ -> .
+                    $quoted = preg_quote($pattern, '/');
+                    $regex = '/^' . str_replace(['%', '_'], ['.*', '.'], $quoted) . '$/i';
+                    try {
+                        if (@preg_match($regex, $description) === 1) {
+                            return $r;
+                        }
+                    } catch (Throwable $e) {
+                        continue;
+                    }
+                } else {
+                    // simple substring match (case-insensitive)
+                    if (stripos($description, $pattern) !== false) {
+                        return $r;
+                    }
                 }
             }
         }
