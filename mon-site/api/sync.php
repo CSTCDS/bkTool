@@ -13,7 +13,7 @@ require_once __DIR__ . '/AutoCategoryRule.php';
  * When $debugLog is true, detailed trace lines are written to the `logs` table
  * under code_programme = 'SyncRuleDebug' so you can diagnose matching issues.
  */
-function applyMatchingRuleToTransaction(PDO $pdo, string $txId, ?string $description, ?string $accountId, bool $debugLog = false): ?string
+function applyMatchingRuleToTransaction(PDO $pdo, string $txId, ?string $description, ?string $accountId, bool $debugLog = false, $amount = null): ?string
 {
     $desc = (string)($description ?? '');
 
@@ -31,7 +31,7 @@ function applyMatchingRuleToTransaction(PDO $pdo, string $txId, ?string $descrip
     };
 
     try {
-        $logDebug('TX=' . $txId . ' desc="' . mb_substr($desc, 0, 80) . '" account=' . ($accountId ?? 'null'));
+        $logDebug('TX=' . $txId . ' montant=' . ($amount !== null ? number_format((float)$amount, 2, '.', '') : '?') . ' desc="' . mb_substr($desc, 0, 80) . '" account=' . ($accountId ?? 'null'));
 
         $acr = new AutoCategoryRule($pdo);
         $rules = $acr->fetchActiveRules();
@@ -178,13 +178,7 @@ function upsertAccount($pdo, $acc)
                 ':reference_date' => $reference_date
             ]);
         }
-        // After inserting, try to apply a matching auto-category rule
-        try {
-            $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId, !empty($GLOBALS['SYNC_RULE_DEBUG']));
-        } catch (Throwable $_) { $matchMsg = null; }
-        $ret = ['action' => 'insert'];
-        if ($matchMsg) $ret['match_message'] = $matchMsg;
-        return $ret;
+        return ['action' => 'insert'];
     } else {
         if ($hasAccountTypeCol && $account_type !== null) {
             // try to update solde2eme if column exists
@@ -366,7 +360,13 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
         } catch (Throwable $e) {
             // ignore, don't break the sync on this optional step
         }
-        return ['action' => 'insert'];
+        // After inserting, try to apply a matching auto-category rule
+        try {
+            $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId, !empty($GLOBALS['SYNC_RULE_DEBUG']), $amount);
+        } catch (Throwable $_) { $matchMsg = null; }
+        $ret = ['action' => 'insert'];
+        if ($matchMsg) $ret['match_message'] = $matchMsg;
+        return $ret;
     } else {
         // Compare fields: booking_date, amount, status, description, badge, CountInVirtual
         $existsDesc = (string)($existing['description'] ?? '');
@@ -395,7 +395,7 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
             }
             // still attempt matching even on noop (apply only if it changes a category)
             try {
-                $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId, !empty($GLOBALS['SYNC_RULE_DEBUG']));
+                $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId, !empty($GLOBALS['SYNC_RULE_DEBUG']), $amount);
             } catch (Throwable $_) { $matchMsg = null; }
             $ret = ['action' => 'noop'];
             if ($matchMsg) $ret['match_message'] = $matchMsg;
@@ -433,7 +433,7 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
             }
             // After update, try to apply a matching rule
             try {
-                $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId, !empty($GLOBALS['SYNC_RULE_DEBUG']));
+                $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId, !empty($GLOBALS['SYNC_RULE_DEBUG']), $amount);
             } catch (Throwable $_) { $matchMsg = null; }
             $ret = ['action' => 'update'];
             if ($matchMsg) $ret['match_message'] = $matchMsg;
