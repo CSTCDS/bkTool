@@ -376,7 +376,7 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     <div class="mobile-card-row"><span class="mobile-card-label">Montant</span><span class="m-value" style="color:<?php echo ($tx['amount'] < 0) ? '#c62828' : '#2e7d32'; ?>"><?php echo htmlspecialchars(number_format((float)$tx['amount'], 2, ',', ' ')); ?></span></div>
     <?php /* Statut row removed: badge is shown on the date line */ ?>
     <div class="mobile-card-row"><span class="mobile-card-label">Devise</span><span class="m-value"><?php echo htmlspecialchars($tx['currency'] ?? ''); ?></span></div>
-    <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Libellé</span><span class="m-value"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>
+    <div class="mobile-card-row mc-desc"><span class="mobile-card-label">Libellé</span><span class="m-value" style="white-space:normal;word-break:break-word;overflow-wrap:break-word;"><?php echo htmlspecialchars($tx['description'] ?? ''); ?></span></div>
     <?php if ($displayBalance !== null): ?>
       <div class="mobile-card-row"><span class="mobile-card-label">Solde</span><span class="m-value"><?php echo htmlspecialchars(number_format($displayBalance, 2, ',', ' ')); ?></span></div>
     <?php endif; ?>
