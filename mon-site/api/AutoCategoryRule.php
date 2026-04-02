@@ -46,9 +46,16 @@ class AutoCategoryRule
             } else {
                 // support SQL LIKE-style patterns when user included % or _
                 if (strpos($pattern, '%') !== false || strpos($pattern, '_') !== false) {
-                    // convert SQL LIKE to a safe regex: escape then replace % -> .* and _ -> .
-                    $quoted = preg_quote($pattern, '/');
-                    $regex = '/^' . str_replace(['%', '_'], ['.*', '.'], $quoted) . '$/i';
+                    // convert SQL LIKE to a safe regex:
+                    // 1) split on wildcards, escape each literal part, then rejoin with regex equivalents
+                    $parts = preg_split('/(%|_)/', $pattern, -1, PREG_SPLIT_DELIM_CAPTURE);
+                    $regexBody = '';
+                    foreach ($parts as $part) {
+                        if ($part === '%') { $regexBody .= '.*'; }
+                        elseif ($part === '_') { $regexBody .= '.'; }
+                        else { $regexBody .= preg_quote($part, '/'); }
+                    }
+                    $regex = '/^' . $regexBody . '$/i';
                     try {
                         if (@preg_match($regex, $description) === 1) {
                             return $r;

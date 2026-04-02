@@ -9,26 +9,52 @@ require_once __DIR__ . '/AutoCategoryRule.php';
  * Try to find an active auto-category rule matching the given description/account
  * and apply it to the given transaction id. Returns a short message string
  * describing the applied change (for sync logging) or null when nothing applied.
+ *
+ * When $debugLog is true, detailed trace lines are written to the `logs` table
+ * under code_programme = 'SyncRuleDebug' so you can diagnose matching issues.
  */
-function applyMatchingRuleToTransaction(PDO $pdo, string $txId, ?string $description, ?string $accountId): ?string
+function applyMatchingRuleToTransaction(PDO $pdo, string $txId, ?string $description, ?string $accountId, bool $debugLog = false): ?string
 {
     $desc = (string)($description ?? '');
+
+    // helper: write a debug line to `logs`
+    $logDebug = function(string $lib, $payload = null) use ($pdo, $debugLog) {
+        if (!$debugLog) return;
+        try {
+            $stmt = $pdo->prepare('INSERT INTO logs (log_date, log_time, code_programme, libelle, payload, created_at) VALUES (CURDATE(), CURTIME(), :code, :lib, :payload, NOW())');
+            $stmt->execute([
+                ':code' => 'SyncRuleDebug',
+                ':lib' => mb_substr($lib, 0, 500),
+                ':payload' => ($payload !== null ? (is_string($payload) ? $payload : json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) : null)
+            ]);
+        } catch (Throwable $e) { /* ignore */ }
+    };
+
     try {
+        $logDebug('TX=' . $txId . ' desc="' . mb_substr($desc, 0, 80) . '" account=' . ($accountId ?? 'null'));
+
         $acr = new AutoCategoryRule($pdo);
+        $rules = $acr->fetchActiveRules();
+        $logDebug('Règles actives: ' . count($rules), array_map(function($r){ return ['id'=>$r['id'],'pattern'=>$r['pattern'],'scope'=>$r['scope_account_id']??null,'level'=>$r['category_level']??null]; }, $rules));
+
         $match = $acr->findMatchingRule($desc, $accountId);
-        if (!$match || empty($match['id'])) return null;
+        if (!$match || empty($match['id'])) {
+            $logDebug('Aucun match trouvé pour desc="' . mb_substr($desc, 0, 80) . '"');
+            return null;
+        }
+        $logDebug('Match trouvé: règle #' . $match['id'] . ' pattern="' . ($match['pattern'] ?? '') . '"');
 
         // fetch full rule row
         $stmt = $pdo->prepare('SELECT * FROM auto_category_rules WHERE id = :id');
         $stmt->execute([':id' => $match['id']]);
         $rule = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$rule) return null;
+        if (!$rule) { $logDebug('Règle #' . $match['id'] . ' introuvable en BDD'); return null; }
 
         // determine target category id (prefer valeur_a_affecter)
         $targetCat = null;
         if (!empty($rule['valeur_a_affecter'])) $targetCat = (int)$rule['valeur_a_affecter'];
         elseif (!empty($rule['category_level'])) $targetCat = (int)$rule['category_level'];
-        if (!$targetCat) return null;
+        if (!$targetCat) { $logDebug('Règle #' . $rule['id'] . ': pas de catégorie cible (valeur_a_affecter=' . ($rule['valeur_a_affecter']??'null') . ')'); return null; }
 
         // determine the category criterion (prefers rule.category_level when valid)
         $criterion = null;
@@ -39,11 +65,12 @@ function applyMatchingRuleToTransaction(PDO $pdo, string $txId, ?string $descrip
             $cstmt = $pdo->prepare('SELECT criterion FROM categories WHERE id = :id');
             $cstmt->execute([':id' => $targetCat]);
             $crit = $cstmt->fetchColumn();
-            if ($crit === false) return null;
+            if ($crit === false) { $logDebug('Catégorie cible #' . $targetCat . ' introuvable dans categories'); return null; }
             $criterion = (int)$crit;
         }
 
         $field = 'cat' . $criterion . '_id';
+        $logDebug('Cible: field=' . $field . ' targetCat=' . $targetCat . ' criterion=' . $criterion);
 
         // fetch old value
         $tstmt = $pdo->prepare("SELECT {$field} FROM transactions WHERE id = :id");
@@ -51,7 +78,10 @@ function applyMatchingRuleToTransaction(PDO $pdo, string $txId, ?string $descrip
         $old = $tstmt->fetchColumn();
 
         // if already set to same value, nothing to do
-        if ((int)$old === (int)$targetCat) return null;
+        if ((int)$old === (int)$targetCat) {
+            $logDebug('TX ' . $txId . ': déjà affecté à ' . $targetCat . ', skip');
+            return null;
+        }
 
         // apply update
         $ustmt = $pdo->prepare("UPDATE transactions SET {$field} = :cid WHERE id = :id");
@@ -62,10 +92,11 @@ function applyMatchingRuleToTransaction(PDO $pdo, string $txId, ?string $descrip
         $log->execute([':tx' => $txId, ':old' => ($old !== null ? $old : null), ':new' => $targetCat, ':rule' => $rule['id'], ':user' => ($_SERVER['REMOTE_USER'] ?? null)]);
 
         // build a short French message for the cron log
-        $msg = 'Règle appliquée: op ' . $txId . ' → cat' . $criterion . ' = ' . $targetCat . ' (règle #' . $rule['id'] . ')';
+        $msg = 'Règle #' . $rule['id'] . ' appliquée: ' . $field . ' = ' . $targetCat . ' (motif "' . ($rule['pattern'] ?? '') . '")';
+        $logDebug('APPLIQUÉ: ' . $msg);
         return $msg;
     } catch (Throwable $e) {
-        // don't break the sync on matching errors
+        $logDebug('ERREUR matching TX=' . $txId . ': ' . $e->getMessage());
         return null;
     }
 }
@@ -149,7 +180,7 @@ function upsertAccount($pdo, $acc)
         }
         // After inserting, try to apply a matching auto-category rule
         try {
-            $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId);
+            $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId, !empty($GLOBALS['SYNC_RULE_DEBUG']));
         } catch (Throwable $_) { $matchMsg = null; }
         $ret = ['action' => 'insert'];
         if ($matchMsg) $ret['match_message'] = $matchMsg;
@@ -364,7 +395,7 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
             }
             // still attempt matching even on noop (apply only if it changes a category)
             try {
-                $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId);
+                $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId, !empty($GLOBALS['SYNC_RULE_DEBUG']));
             } catch (Throwable $_) { $matchMsg = null; }
             $ret = ['action' => 'noop'];
             if ($matchMsg) $ret['match_message'] = $matchMsg;
@@ -402,7 +433,7 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
             }
             // After update, try to apply a matching rule
             try {
-                $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId);
+                $matchMsg = applyMatchingRuleToTransaction($pdo, $id, $description, $accountId, !empty($GLOBALS['SYNC_RULE_DEBUG']));
             } catch (Throwable $_) { $matchMsg = null; }
             $ret = ['action' => 'update'];
             if ($matchMsg) $ret['match_message'] = $matchMsg;
@@ -433,6 +464,8 @@ function run_sync($pdo, $config, $opts = [])
         $GLOBALS['SYNC_DEBUG_ENABLED'] = false;
         $GLOBALS['SYNC_DEBUG'] = [];
     }
+    // Always enable rule-matching debug so traces go to logs table
+    $GLOBALS['SYNC_RULE_DEBUG'] = true;
     
 
     // Get stored session_id

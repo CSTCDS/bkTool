@@ -72,7 +72,6 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
   <?php include __DIR__ . '/header.php'; ?>
   <div style="margin-top:8px">
     <button id="restartSyncBtn" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;background:#f5f5f5;cursor:pointer">Relancer la synchro</button>
-    <label style="margin-left:12px; font-size:0.9rem"><input type="checkbox" id="debugSync"> Debug</label>
   </div>
   <div id="syncArea">
     <div id="loader" style="margin-top:12px">🔄 <strong>Synchronisation en cours...</strong></div>
@@ -299,9 +298,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
           body: new URLSearchParams({ ajax_log: '1', code: 'Synchro manuelle', lib: 'start' })
         }).catch(function(e){ /* ignore logging errors */ });
       } catch(e) { /* ignore */ }
-      var dbg = document.getElementById('debugSync');
       var syncUrl = 'sync.php';
-      if (dbg && dbg.checked) syncUrl += '?debug=1';
       return fetch(syncUrl, { method: 'GET' })
         .then(function(r){
           return r.text();
@@ -321,11 +318,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
           }
           if (!j) { alerts.innerHTML = '<div style="color:#c62828">Erreur: réponse vide</div>'; return; }
           if (j.status === 'ok') {
-            // show debug lines if present
-            if (j.result && j.result.debug && Array.isArray(j.result.debug) && j.result.debug.length) {
-              var dbg = document.createElement('pre'); dbg.style.whiteSpace = 'pre-wrap'; dbg.style.maxHeight = '240px'; dbg.style.overflow = 'auto'; dbg.style.border = '1px solid #eee'; dbg.style.padding = '8px'; dbg.style.background = '#f7f7f7'; dbg.style.marginBottom = '8px';
-              dbg.textContent = j.result.debug.map(function(d){ return JSON.stringify(d); }).join('\n');
-              alerts.appendChild(dbg);
+            // show sync_messages (auto-rule applied during sync) if present
+            var res = j.result || {};
+            if (res.sync_messages && Array.isArray(res.sync_messages) && res.sync_messages.length) {
+              var smDiv = document.createElement('div'); smDiv.style.marginBottom = '10px'; smDiv.style.padding = '8px'; smDiv.style.background = '#e8f5e9'; smDiv.style.border = '1px solid #a5d6a7'; smDiv.style.borderRadius = '6px';
+              smDiv.innerHTML = '<strong>Règles auto appliquées (' + res.sync_messages.length + ')&nbsp;:</strong><br>' + res.sync_messages.map(escapeHtml).join('<br>');
+              alerts.appendChild(smDiv);
             }
             // Group skipped transactions by account for per-account display
             var res = j.result || {};
@@ -341,7 +339,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
             var imp = (res && typeof res.import_num !== 'undefined') ? res.import_num : null;
             // If sync produced errors or skipped transactions, log the result into DB
             try {
-              var hasProblems = (res.errors && res.errors.length) || (res.transactions_skipped && res.transactions_skipped > 0);
+              var hasProblems = (res.errors && res.errors.length) || (res.transactions_skipped && res.transactions_skipped > 0) || (res.sync_messages && res.sync_messages.length > 0);
               if (hasProblems) {
                 var accounts = (res.accounts) ? (res.accounts) : 0;
                 var tx_read = (res.transactions) ? res.transactions : 0;
@@ -350,6 +348,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
                 var tx_sk = (res.transactions_skipped) ? res.transactions_skipped : 0;
                 var sep = ' · ';
                 var lib = 'Comptes lus: ' + accounts + sep + 'Opérations lues: ' + tx_read + sep + 'Créées: ' + tx_ins + sep + 'Modifiées: ' + tx_upd + sep + 'En attente: ' + tx_sk;
+                if (res.sync_messages && res.sync_messages.length) lib += '<br>' + res.sync_messages.join('<br>');
                 var payload = JSON.stringify(res);
                 fetch('synchsmart.php', {
                   method: 'POST',

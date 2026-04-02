@@ -27,9 +27,7 @@ if ($expected) {
 }
 
 try {
-    $debug = (isset($_GET['debug']) && ($_GET['debug'] === '1' || $_GET['debug'] === 'true')) ? true : false;
-    $res = run_sync($pdo, $config, ['debug' => $debug]);
-    if (!empty($GLOBALS['SYNC_DEBUG'])) $res['debug'] = $GLOBALS['SYNC_DEBUG'];
+    $res = run_sync($pdo, $config);
     echo json_encode(['status'=>'ok', 'result'=>$res]);
 } catch (Throwable $e) {
     http_response_code(500);
