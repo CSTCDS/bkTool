@@ -464,8 +464,8 @@ function run_sync($pdo, $config, $opts = [])
         $GLOBALS['SYNC_DEBUG_ENABLED'] = false;
         $GLOBALS['SYNC_DEBUG'] = [];
     }
-    // Always enable rule-matching debug so traces go to logs table
-    $GLOBALS['SYNC_RULE_DEBUG'] = true;
+    // Enable rule-matching debug only when requested via opts['rule_debug']
+    $GLOBALS['SYNC_RULE_DEBUG'] = !empty($opts['rule_debug']);
     
 
     // Get stored session_id

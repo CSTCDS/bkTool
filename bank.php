@@ -96,7 +96,7 @@ if (!in_array($pane, ['', 'sync', 'connect', 'testsync', 'logs'], true)) {
         <label><strong>Action :</strong>
           <select name="pane" onchange="this.form.submit()">
             <option value="" <?php echo ($pane === '') ? 'selected' : ''; ?>>---</option>
-            <option value="sync" <?php echo ($pane === 'sync') ? 'selected' : ''; ?>>Synchroniser banque</option>
+            <option value="sync" <?php echo ($pane === 'sync') ? 'selected' : ''; ?>>Synchro mode debug</option>
             <option value="testsync" <?php echo ($pane === 'testsync') ? 'selected' : ''; ?>>Test synchro</option>
             <option value="connect" <?php echo ($pane === 'connect') ? 'selected' : ''; ?>>Connecter banque</option>
             <option value="logs" <?php echo ($pane === 'logs') ? 'selected' : ''; ?>>Voir les logs</option>
@@ -107,19 +107,32 @@ if (!in_array($pane, ['', 'sync', 'connect', 'testsync', 'logs'], true)) {
 
     <div style="flex:1">
       <?php if ($pane === 'sync'): ?>
-        <h2>Synchronisation</h2>
-        <p>Lancer la synchronisation et afficher les statistiques ci-dessous.</p>
+        <h2>Synchronisation (mode debug)</h2>
+        <p>La synchronisation est lancée automatiquement en mode debug et les traces sont enregistrées dans les logs.</p>
+        <?php
+          // Run server-side sync in debug mode so we don't prompt for token client-side
+            try {
+            $db = require __DIR__ . '/mon-site/api/db.php';
+            require_once __DIR__ . '/mon-site/api/sync.php';
+            $serverSync = run_sync($db, $config, ['debug' => true, 'rule_debug' => true]);
+            if (!empty($GLOBALS['SYNC_DEBUG'])) $serverSync['debug'] = $GLOBALS['SYNC_DEBUG'];
+          } catch (Throwable $e) {
+            $serverSync = ['errors' => ['Erreur serveur: ' . $e->getMessage()]];
+          }
+        ?>
         <p>
-          <button id="startSync">Lancer synchronisation</button>
-          <span id="syncResult" style="margin-left:12px"></span>
+          <span id="syncResult"><?php
+            if (!empty($serverSync['errors'])) echo 'Erreur: ' . htmlspecialchars(implode('; ', (array)$serverSync['errors']));
+            else echo 'OK — comptes: ' . ($serverSync['accounts'] ?? 0) . ' ; lignes: ' . ($serverSync['transactions'] ?? 0);
+          ?></span>
         </p>
-        <div id="syncStats" style="margin-top:12px;background:#fafafa;padding:10px;border:1px solid #eee;display:none">
-          <pre id="syncJson" style="white-space:pre-wrap;font-size:.95rem"></pre>
+        <div id="syncStats" style="margin-top:12px;background:#fafafa;padding:10px;border:1px solid #eee;display:block">
+          <pre id="syncJson" style="white-space:pre-wrap;font-size:.95rem"><?php echo htmlspecialchars(json_encode($serverSync, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)); ?></pre>
         </div>
-        <div id="pendingWrites" style="margin-top:12px;background:#fff8e1;padding:10px;border:1px solid #ffe58f;display:none">
+        <div id="pendingWrites" style="margin-top:12px;background:#fff8e1;padding:10px;border:1px solid #ffe58f;display:<?php echo (!empty($serverSync['transactions_skipped']) ? 'block' : 'none'); ?>">
           <h3 style="margin:0 0 8px 0">Écritures en attente</h3>
-          <div id="pendingCount" style="font-weight:600;margin-bottom:6px"></div>
-          <pre id="pendingJson" style="white-space:pre-wrap;font-size:.9rem;margin:0"></pre>
+          <div id="pendingCount" style="font-weight:600;margin-bottom:6px"><?php echo (int)($serverSync['transactions_skipped'] ?? 0); ?> écriture(s) en attente</div>
+          <pre id="pendingJson" style="white-space:pre-wrap;font-size:.9rem;margin:0"><?php echo htmlspecialchars(json_encode($serverSync['skipped_transactions'] ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)); ?></pre>
         </div>
 
       <?php elseif ($pane === 'testsync'): ?>
