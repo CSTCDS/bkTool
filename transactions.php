@@ -35,50 +35,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['tx_id']) && !empty($
 $accs = $pdo->query('SELECT id, name, balance, solde2eme, account_type, color, reference_date, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage ASC, name ASC')->fetchAll(PDO::FETCH_ASSOC);
 $accMap = [];
 $accBalances = [];
-$accSecond = [];
-$accTypeMap = [];
-$accRefMap = [];
-foreach ($accs as $a) {
-  $accMap[$a['id']] = $a['name'];
-  $accBalances[$a['id']] = (float)($a['balance'] ?? 0);
-  $accSecond[$a['id']] = (float)($a['solde2eme'] ?? 0);
-  $accTypeMap[$a['id']] = $a['account_type'] ?? null;
-  $accRefMap[$a['id']] = (!empty($a['reference_date']) ? $a['reference_date'] : null);
-}
-
-// Palette de couleurs identique au graphe du Dashboard
-$palette = [
-  'rgba(54,162,235,0.18)',
-  'rgba(255,99,132,0.18)',
-  'rgba(75,192,192,0.18)',
-  'rgba(255,159,64,0.18)',
-  'rgba(153,102,255,0.18)',
-  'rgba(255,205,86,0.18)'
-];
-$accColorMap = [];
-$ci = 0;
-  foreach ($accs as $a) {
-    $c = trim((string)($a['color'] ?? ''));
-    $bg = null;
-    if ($c !== '') {
-      // If stored as hex or rgb(a), prefer using it directly as background
-      if (preg_match('/^#([0-9a-fA-F]{6})$/', $c)) {
-        $bg = $c; // use hex as-is
-      } elseif (strpos($c, 'rgb') === 0) {
-        $bg = $c; // rgb(...) or rgba(...)
       } else {
-        // fallback to using raw value
-        $bg = $c;
-      }
-    }
-    if ($bg === null) {
-      // fallback to palette with light alpha
-      $bg = $palette[$ci % count($palette)];
-    }
-    $accColorMap[$a['id']] = $bg;
-    $ci++;
-  }
+        // legacy fallback: compute from accounting_date/reference_date
+        if ($statusUpper === 'OTHR') {
+          $acctDate = isset($t['accounting_date']) && $t['accounting_date'] !== null && $t['accounting_date'] !== '' ? (string)$t['accounting_date'] : null;
+          $txDate = isset($t['booking_date']) && $t['booking_date'] !== null && $t['booking_date'] !== '' ? (string)$t['booking_date'] : null;
+          $accRef = isset($accRefMap[$t['account_id']]) ? $accRefMap[$t['account_id']] : null;
 
+          // Prefer accounting_date when present (paiement différé / today / payé)
+          if ($acctDate) {
+            if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; }
+            elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
+            else { $badgeHtml = '<span class="badge-paid">Payé</span>'; }
+          }
+          // Otherwise, fall back to reference_date vs transaction date to detect 'mois prochain'
+          elseif ($txDate && $accRef) {
+            try {
+              $dtx = new DateTime($txDate);
+              $dref = new DateTime($accRef);
+              if ($dtx >= $dref) {
+                $badgeHtml = '<span class="badge-nextmonth">Mois prochain</span>';
+              } else {
+                // no accounting_date and tx before reference -> treat as paiement différé
+                $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
+              }
+            } catch (Throwable $e) {
+              $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
+            }
+          } else {
+            // default: paiement différé
+            $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
+          }
+        }
+      }
 // Noms des critères
 $criterionNames = [];
 for ($i = 1; $i <= 4; $i++) {
