@@ -1,0 +1,4 @@
+#!/bin/sh
+# Versioned post-commit hook to push on commit.
+# To enable locally: `git config core.hooksPath githooks`
+git push origin
