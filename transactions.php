@@ -35,39 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['tx_id']) && !empty($
 $accs = $pdo->query('SELECT id, name, balance, solde2eme, account_type, color, reference_date, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage ASC, name ASC')->fetchAll(PDO::FETCH_ASSOC);
 $accMap = [];
 $accBalances = [];
-      } else {
-        // legacy fallback: compute from accounting_date/reference_date
-        if ($statusUpper === 'OTHR') {
-          $acctDate = isset($t['accounting_date']) && $t['accounting_date'] !== null && $t['accounting_date'] !== '' ? (string)$t['accounting_date'] : null;
-          $txDate = isset($t['booking_date']) && $t['booking_date'] !== null && $t['booking_date'] !== '' ? (string)$t['booking_date'] : null;
-          $accRef = isset($accRefMap[$t['account_id']]) ? $accRefMap[$t['account_id']] : null;
-
-          // Prefer accounting_date when present (paiement différé / today / payé)
-          if ($acctDate) {
-            if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; }
-            elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
-            else { $badgeHtml = '<span class="badge-paid">Payé</span>'; }
-          }
-          // Otherwise, fall back to reference_date vs transaction date to detect 'mois prochain'
-          elseif ($txDate && $accRef) {
-            try {
-              $dtx = new DateTime($txDate);
-              $dref = new DateTime($accRef);
-              if ($dtx >= $dref) {
-                $badgeHtml = '<span class="badge-nextmonth">Mois prochain</span>';
-              } else {
-                // no accounting_date and tx before reference -> treat as paiement différé
-                $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
-              }
-            } catch (Throwable $e) {
-              $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
-            }
-          } else {
-            // default: paiement différé
-            $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
-          }
-        }
-      }
+$accSecond = [];
+$accTypeMap = [];
+$accRefMap = [];
+foreach ($accs as $a) {
+  $accMap[$a['id']] = $a['name'];
+  $accBalances[$a['id']] = (float)($a['balance'] ?? 0);
+  $accSecond[$a['id']] = (float)($a['solde2eme'] ?? 0);
+  $accTypeMap[$a['id']] = $a['account_type'] ?? null;
+  $accRefMap[$a['id']] = (!empty($a['reference_date']) ? $a['reference_date'] : null);
+}
 // Noms des critères
 $criterionNames = [];
 for ($i = 1; $i <= 4; $i++) {
