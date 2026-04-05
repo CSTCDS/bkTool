@@ -444,33 +444,48 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           $acctDate = isset($t['accounting_date']) && $t['accounting_date'] !== null && $t['accounting_date'] !== '' ? (string)$t['accounting_date'] : null;
           $txDate = isset($t['booking_date']) && $t['booking_date'] !== null && $t['booking_date'] !== '' ? (string)$t['booking_date'] : null;
           $accRef = isset($accRefMap[$t['account_id']]) ? $accRefMap[$t['account_id']] : null;
-          if ($txDate && $accRef) {
+
+          // If this is a card account and the account reference_date falls in the current month,
+          // treat operations as 'Paiement différé' (deferred).
+          if (isset($accTypeMap[$t['account_id']]) && $accTypeMap[$t['account_id']] === 'card' && $accRef) {
             try {
-              $dtx = new DateTime($txDate);
               $dref = new DateTime($accRef);
-              if ($dtx >= $dref) {
-                $badgeHtml = '<span class="badge-nextmonth">Mois prochain</span>';
-              } else {
+              $now = new DateTime();
+              if ($dref->format('Y-m') === $now->format('Y-m')) {
+                $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
+              }
+            } catch (Throwable $e) { /* ignore malformed reference_date */ }
+          }
+
+          if ($badgeHtml === '') {
+            if ($txDate && $accRef) {
+              try {
+                $dtx = new DateTime($txDate);
+                $dref = new DateTime($accRef);
+                if ($dtx >= $dref) {
+                  $badgeHtml = '<span class="badge-nextmonth">Mois prochain</span>';
+                } else {
+                  if ($acctDate) {
+                    if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; }
+                    elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
+                    else { $badgeHtml = '<span class="badge-paid">Payé</span>'; }
+                  } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
+                }
+              } catch (Throwable $e) {
                 if ($acctDate) {
                   if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; }
                   elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
                   else { $badgeHtml = '<span class="badge-paid">Payé</span>'; }
                 } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
               }
-            } catch (Throwable $e) {
+            } else {
               if ($acctDate) {
                 if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; }
                 elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
                 else { $badgeHtml = '<span class="badge-paid">Payé</span>'; }
-              } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
-            }
-          } else {
-            if ($acctDate) {
-              if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; }
-              elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; }
-              else { $badgeHtml = '<span class="badge-paid">Payé</span>'; }
-            } else {
-              $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
+              } else {
+                $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
+              }
             }
           }
         }

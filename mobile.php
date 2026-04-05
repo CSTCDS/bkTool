@@ -32,14 +32,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['tx_id']) && !empty($
 
 // Accounts list: order by numero_affichage (NULLs last), then numero_affichage, then name
 // Load accounts including secondary balance and account type
-$accs = $pdo->query('SELECT id, name, balance, solde2eme, account_type, currency, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage ASC, name ASC')->fetchAll(PDO::FETCH_ASSOC);
+$accs = $pdo->query('SELECT id, name, balance, solde2eme, account_type, currency, reference_date, numero_affichage FROM accounts ORDER BY (numero_affichage IS NULL), numero_affichage ASC, name ASC')->fetchAll(PDO::FETCH_ASSOC);
 $acctSel = $_GET['account'] ?? ($_COOKIE['selected_account'] ?? '');
 
 // Build quick maps for balances, second balances, types and names
 $accBalances = [];
 $accSecond = [];
 $accTypeMap = [];
+// reference_date map for card handling
+$accRefMap = [];
 foreach ($accs as $a) { $accBalances[$a['id']] = (float)($a['balance'] ?? 0.0); $accSecond[$a['id']] = (float)($a['solde2eme'] ?? 0.0); $accTypeMap[$a['id']] = $a['account_type'] ?? null; }
+foreach ($accs as $a) { $accRefMap[$a['id']] = (!empty($a['reference_date']) ? $a['reference_date'] : null); }
 
 // Check if transactions.accounting_date column exists (migration may not have been run yet)
 $hasAccountingDate = false;
@@ -271,11 +274,27 @@ $tx = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     // legacy fallback: keep previous accounting_date behaviour
     $acctDate = isset($tx['accounting_date']) && $tx['accounting_date'] !== null && $tx['accounting_date'] !== '' ? (string)$tx['accounting_date'] : null;
     if ($statusUpper === 'OTHR') {
-      if ($acctDate) {
-        if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; $countInVirtualRow = false; }
-        elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtualRow = true; }
-        else { $badgeHtml = '<span class="badge-paid">Payé</span>'; $countInVirtualRow = false; }
-      } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtualRow = false; }
+      // If this is a card account and the account reference_date falls in the current month,
+      // treat the operation as 'Paiement différé' and count it in virtual balance.
+      $accRef = isset($accRefMap[$tx['account_id']]) ? $accRefMap[$tx['account_id']] : null;
+      if (isset($accTypeMap[$tx['account_id']]) && $accTypeMap[$tx['account_id']] === 'card' && $accRef) {
+        try {
+          $dref = new DateTime($accRef);
+          $now = new DateTime();
+          if ($dref->format('Y-m') === $now->format('Y-m')) {
+            $badgeHtml = '<span class="badge-pending">Paiement différé</span>';
+            $countInVirtualRow = true;
+          }
+        } catch (Throwable $e) { /* ignore malformed reference_date */ }
+      }
+
+      if ($badgeHtml === '') {
+        if ($acctDate) {
+          if ($today === $acctDate) { $badgeHtml = '<span class="badge-today">Aujourd\'hui</span>'; $countInVirtualRow = false; }
+          elseif ($today < $acctDate) { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtualRow = true; }
+          else { $badgeHtml = '<span class="badge-paid">Payé</span>'; $countInVirtualRow = false; }
+        } else { $badgeHtml = '<span class="badge-pending">Paiement différé</span>'; $countInVirtualRow = false; }
+      }
     }
   }
 
