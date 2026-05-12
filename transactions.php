@@ -283,9 +283,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           <button id="moreBtn" type="button" class="btn" style="margin-left:8px;padding:4px 8px;font-weight:700">+</button>
           <div id="screenWidthDisplay" style="font-size:0.85rem;color:#666;margin-top:6px">Largeur écran: -- px</div>
         </div>
-        <div style="position:relative;margin-top:8px;width:50%;left:50%;transform:translateX(-50%)">
-          <label style="display:inline-block;width:100%">Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" style="width:100%"></label>
-        </div>
+        <!-- search moved to central column -->
       </div>
         <div class="tx-col tx-center" style="flex:1;text-align:center">
         <div style="display:flex;flex-direction:column;align-items:center">
@@ -316,6 +314,11 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           </select>
             <!-- 'Afficher les mouvements carte' checkbox removed (UI-only) -->
           </div>
+        </div>
+
+        <!-- Ligne 2 centrale : Recherche (label + champ sur une seule ligne) -->
+        <div style="width:100%;text-align:center;margin-top:8px">
+          <label style="display:inline-block">Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" style="min-width:360px;margin-left:8px;display:inline-block"></label>
         </div>
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end;justify-content:flex-start">
