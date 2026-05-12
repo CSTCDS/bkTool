@@ -318,7 +318,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
 
         <!-- Ligne 2 centrale : Recherche (label + champ sur une seule ligne) -->
         <div style="width:100%;text-align:center;margin-top:8px">
-          <label style="display:inline-block">Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" style="min-width:360px;margin-left:8px;display:inline-block"></label>
+          <label style="display:inline-block">Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" onchange="this.form.submit()" style="min-width:360px;margin-left:8px;display:inline-block"></label>
         </div>
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end;justify-content:flex-start">
