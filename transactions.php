@@ -283,7 +283,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           <button id="moreBtn" type="button" class="btn" style="margin-left:8px;padding:4px 8px;font-weight:700">+</button>
           <div id="screenWidthDisplay" style="font-size:0.85rem;color:#666;margin-top:6px">Largeur écran: -- px</div>
         </div>
-        <div style="position:relative;margin-top:8px;width:60%;left:40%">
+        <div style="position:relative;margin-top:8px;width:50%;left:50%;transform:translateX(-50%)">
           <label style="display:inline-block;width:100%">Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" style="width:100%"></label>
         </div>
       </div>
@@ -344,6 +344,8 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initToast); else initToast();
       })();
       </script>
+            <select name="fcat1" onchange="this.form.submit()">
+              <option value=""><?php echo htmlspecialchars($criterionNames[1]); ?></option>
               <?php if (!empty($catTree[1])): foreach ($catTree[1] as $pid => $node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
                 <?php foreach ($node['children'] as $child): ?>
@@ -351,7 +353,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
                 <?php endforeach; ?>
               </optgroup>
             <?php endforeach; endif; ?>
-          </select>
+            </select>
         </div>
         <div>
           <select name="fcat2" onchange="this.form.submit()">
