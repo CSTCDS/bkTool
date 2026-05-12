@@ -318,7 +318,12 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
         <!-- Critères 1 & 2 (ligne 1, droite) -->
         <div>
-              <select name="fcat1" onchange="this.form.submit()">
+          <div style="width:100%;text-align:center;margin:8px 0">
+            <label>Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" style="min-width:360px"></label>
+            <button type="submit" class="btn">Filtrer</button>
+          </div>
+
+          <div class="tx-header-row" style="display:flex;gap:12px;align-items:center">
             <option value=""><?php echo htmlspecialchars($criterionNames[1]); ?></option>
         
       <script>
@@ -402,11 +407,6 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       </div>
     </div>
   
-    <div style="margin:8px 0;text-align:center">
-      <label>Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" style="min-width:360px"></label>
-      <button type="submit" class="btn">Filtrer</button>
-    </div>
-
   </form>
 
     <div style="height:8px;margin:8px 0"></div>
