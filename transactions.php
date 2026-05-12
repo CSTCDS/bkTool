@@ -318,7 +318,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
           </div>
         </div>
       </div>
-      <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
+      <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end;justify-content:flex-start">
         <!-- Critères 1 & 2 (ligne 1, droite) -->
           <div>
 
