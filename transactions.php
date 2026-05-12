@@ -371,10 +371,6 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         <div id="dateRangeFields" style="<?php echo $dateFieldsVisible; ?>">
           <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ($_COOKIE['selected_from'] ?? '')); ?>"></label>
           <label>Au : <input type="date" name="to" value="<?php echo htmlspecialchars($_GET['to'] ?? ($_COOKIE['selected_to'] ?? '')); ?>"></label>
-              <div style="margin-top:8px">
-                <label>Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" style="min-width:320px"></label>
-                <button type="submit" class="btn">Filtrer</button>
-              </div>
         </div>
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
@@ -405,9 +401,14 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         </div>
       </div>
     </div>
+  
+    <div style="margin:8px 0;text-align:center">
+      <label>Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" style="min-width:360px"></label>
+      <button type="submit" class="btn">Filtrer</button>
+    </div>
+
   </form>
 
-        
     <div style="height:8px;margin:8px 0"></div>
 
   <table class="tx-table">
