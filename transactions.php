@@ -276,12 +276,15 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
 ?>
   <form method="get" class="tx-filter-header" style="margin-bottom:16px">
     <div class="tx-header-row" style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
-      <div class="tx-col tx-left" style="flex:1">
+      <div class="tx-col tx-left" style="flex:1; position:relative">
         <h1 style="margin:0">Transactions</h1>
         <div style="margin-top:6px;font-size:0.95rem;color:#555">
           <span id="limitDisplay">Affichage: <?php echo htmlspecialchars((int)$limit); ?> opérations</span>
           <button id="moreBtn" type="button" class="btn" style="margin-left:8px;padding:4px 8px;font-weight:700">+</button>
           <div id="screenWidthDisplay" style="font-size:0.85rem;color:#666;margin-top:6px">Largeur écran: -- px</div>
+        </div>
+        <div style="position:relative;margin-top:8px;width:60%;left:40%">
+          <label style="display:inline-block;width:100%">Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" style="width:100%"></label>
         </div>
       </div>
         <div class="tx-col tx-center" style="flex:1;text-align:center">
@@ -317,14 +320,9 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">
         <!-- Critères 1 & 2 (ligne 1, droite) -->
-        <div>
-          <div style="width:100%;text-align:center;margin:8px 0">
-            <label>Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" style="min-width:360px"></label>
-            <button type="submit" class="btn">Filtrer</button>
-          </div>
+          <div>
 
           <div class="tx-header-row" style="display:flex;gap:12px;align-items:center">
-            <option value=""><?php echo htmlspecialchars($criterionNames[1]); ?></option>
         
       <script>
       (function(){
