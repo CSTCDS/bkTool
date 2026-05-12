@@ -344,7 +344,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initToast); else initToast();
       })();
       </script>
-            <select name="fcat1" onchange="this.form.submit()">
+            <select name="fcat1" onchange="this.form.submit()" style="display:block;width:220px;margin-bottom:8px">
               <option value=""><?php echo htmlspecialchars($criterionNames[1]); ?></option>
               <?php if (!empty($catTree[1])): foreach ($catTree[1] as $pid => $node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
@@ -356,7 +356,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
             </select>
         </div>
         <div style="margin-top:8px">
-          <select name="fcat2" onchange="this.form.submit()">
+          <select name="fcat2" onchange="this.form.submit()" style="display:block;width:220px;margin-top:8px">
             <option value=""><?php echo htmlspecialchars($criterionNames[2]); ?></option>
             <?php if (!empty($catTree[2])): foreach ($catTree[2] as $pid => $node): if (!$node['info']) continue; ?>
               <optgroup label="<?php echo htmlspecialchars($node['info']['label']); ?>">
