@@ -182,7 +182,25 @@ for ($fi = 1; $fi <= 4; $fi++) {
   }
 }
 
-$sql = 'SELECT t.*, a.name AS account_name FROM transactions t LEFT JOIN accounts a ON a.id = t.account_id';
+// If a free-text search is requested, we'll match it against transaction description
+// and against the labels of the selected category ids (cat1..cat4). To do that
+// we join the categories table up to 4 times and include the LIKE predicate.
+$sql = 'SELECT t.*, a.name AS account_name, c1.label AS cat1_label, c2.label AS cat2_label, c3.label AS cat3_label, c4.label AS cat4_label'
+   . ' FROM transactions t'
+   . ' LEFT JOIN accounts a ON a.id = t.account_id'
+   . ' LEFT JOIN categories c1 ON c1.id = t.cat1_id'
+   . ' LEFT JOIN categories c2 ON c2.id = t.cat2_id'
+   . ' LEFT JOIN categories c3 ON c3.id = t.cat3_id'
+   . ' LEFT JOIN categories c4 ON c4.id = t.cat4_id';
+
+// Add free-text filter into WHERE clauses if provided
+if (!empty($_GET['q'])) {
+  $qterm = trim((string)($_GET['q'] ?? ''));
+  if ($qterm !== '') {
+    $where[] = '(COALESCE(t.description,"") LIKE :q OR COALESCE(c1.label,"") LIKE :q OR COALESCE(c2.label,"") LIKE :q OR COALESCE(c3.label,"") LIKE :q OR COALESCE(c4.label,"") LIKE :q)';
+    $params[':q'] = '%' . $qterm . '%';
+  }
+}
 if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
  $sql .= ' ORDER BY t.booking_date DESC, t.id DESC LIMIT :limit OFFSET :offset';
 
@@ -353,6 +371,10 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
         <div id="dateRangeFields" style="<?php echo $dateFieldsVisible; ?>">
           <label>Du : <input type="date" name="from" value="<?php echo htmlspecialchars($_GET['from'] ?? ($_COOKIE['selected_from'] ?? '')); ?>"></label>
           <label>Au : <input type="date" name="to" value="<?php echo htmlspecialchars($_GET['to'] ?? ($_COOKIE['selected_to'] ?? '')); ?>"></label>
+              <div style="margin-top:8px">
+                <label>Recherche : <input type="text" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" style="min-width:320px"></label>
+                <button type="submit" class="btn">Filtrer</button>
+              </div>
         </div>
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;gap:8px;justify-content:flex-end">

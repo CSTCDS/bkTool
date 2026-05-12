@@ -285,17 +285,54 @@ function insertTransaction($pdo, $tx, $importNum, $hasNumImport = true)
 
     // Compute expected badge/count BEFORE checking existing row so comparison is accurate
     if (strtoupper((string)$status) === 'OTHR') {
-        if ($account_type === 'card' && !empty($account_ref_date) && $bookingDate >= $account_ref_date) {
-            $badge = 'nextmonth';
-            $countInVirtual = 0;
-        } else {
-            if ($accountingDate) {
-                if ($today === $accountingDate) { $badge = 'today'; $countInVirtual = 0; }
-                elseif ($today < $accountingDate) { $badge = 'pending'; $countInVirtual = ($account_type === 'current' ? 1 : 1); }
-                else { $badge = 'paid'; $countInVirtual = 0; }
+        // For card accounts, decide status and badge based on accounting_date
+        if ($account_type === 'card') {
+            if (!empty($accountingDate)) {
+                try {
+                    $accDt = new DateTime($accountingDate);
+                    $firstOfMonth = new DateTime('first day of this month');
+                    $firstOfMonth->setTime(0,0,0);
+                    $lastOfMonth = new DateTime('last day of this month');
+                    $lastOfMonth->setTime(23,59,59);
+                    // accounting_date already passed -> consider it BOOK and clear badge
+                    if ($accDt < new DateTime($today)) {
+                        $status = 'BOOK';
+                        $badge = '';
+                        $countInVirtual = 1;
+                    } else {
+                        // accounting_date is in future: if it's in current month -> pending, else nextmonth
+                        if ($accDt >= $firstOfMonth && $accDt <= $lastOfMonth) {
+                            $badge = 'pending';
+                            $countInVirtual = 0;
+                        } else {
+                            $badge = 'nextmonth';
+                            $countInVirtual = 0;
+                        }
+                    }
+                } catch (Throwable $e) {
+                    // fallback to conservative pending when parse fails
+                    $badge = 'pending';
+                    $countInVirtual = 0;
+                }
             } else {
+                // no accounting_date: keep existing heuristic (fallback to pending)
                 $badge = 'pending';
                 $countInVirtual = 0;
+            }
+        } else {
+            // non-card accounts: previous behaviour
+            if ($account_type === 'card' && !empty($account_ref_date) && $bookingDate >= $account_ref_date) {
+                $badge = 'nextmonth';
+                $countInVirtual = 0;
+            } else {
+                if ($accountingDate) {
+                    if ($today === $accountingDate) { $badge = 'today'; $countInVirtual = 0; }
+                    elseif ($today < $accountingDate) { $badge = 'pending'; $countInVirtual = ($account_type === 'current' ? 1 : 1); }
+                    else { $badge = 'paid'; $countInVirtual = 0; }
+                } else {
+                    $badge = 'pending';
+                    $countInVirtual = 0;
+                }
             }
         }
     } else {
