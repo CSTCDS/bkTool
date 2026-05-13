@@ -318,7 +318,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
 
         <!-- Ligne 2 centrale : Recherche (label + champ sur une seule ligne) -->
         <div style="width:100%;text-align:center;margin-top:8px">
-          <label style="display:inline-block">Recherche : <input type="text" id="qInput" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" oninput="debounceSubmit(this,300)" style="min-width:360px;margin-left:8px;display:inline-block"></label>
+          <label style="display:inline-block">Recherche : <input type="text" id="qInput" name="q" value="<?php echo htmlspecialchars($_GET['q'] ?? ''); ?>" placeholder="libellé ou catégorie" oninput="debounceSubmit(this,1000)" style="min-width:360px;margin-left:8px;display:inline-block"></label>
         </div>
       </div>
       <div class="tx-col tx-right" style="flex:1;text-align:right;display:flex;flex-direction:column;gap:8px;align-items:flex-end;justify-content:flex-start">
@@ -351,7 +351,7 @@ $dateFieldsVisible = ($selectedQuickRange === 'custom') ? '' : 'display:none';
       (function(){
         window._qTimer = null;
         window.debounceSubmit = function(el, ms){
-          ms = ms || 300;
+          ms = ms || 1000;
           if(window._qTimer) clearTimeout(window._qTimer);
           window._qTimer = setTimeout(function(){ try{ el.form.submit(); }catch(e){} window._qTimer = null; }, ms);
         };
